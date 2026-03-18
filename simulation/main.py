@@ -1,16 +1,7 @@
 """
-Mars Greenhouse Agent System — Backend Entry Point
+Mars Greenhouse Simulation Engine — entry point.
 
-FastAPI server that orchestrates AI agents for autonomous Martian greenhouse management.
-Agents communicate with the AWS AgentCore gateway for domain knowledge and coordinate
-to optimize crop planning, environment control, and resource allocation.
+Run with:  uv run uvicorn main:app --reload
 """
 
-from fastapi import FastAPI
-
-app = FastAPI(title="Mars Greenhouse Agent System")
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
+from src.app import app  # noqa: F401  (re-exported for uvicorn)
