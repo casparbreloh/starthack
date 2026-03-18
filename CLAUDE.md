@@ -8,11 +8,12 @@ Mars Greenhouse Agent System — a hackathon project for the Syngenta START Hack
 
 ## Stack
 
-- **Backend**: Python, FastAPI
+- **Agent**: Python, deployed on AWS AgentCore
+- **Simulation**: Python, FastAPI
 - **Frontend**: React, TypeScript
 - **AI**: AWS AgentCore gateway (Syngenta knowledge base)
 
 ## Commands
 
-- **Backend**: `cd backend && uv run uvicorn main:app --reload`
+- **Simulation**: `cd simulation && uv run uvicorn main:app --reload`
 - **Frontend**: `cd frontend && npm install && npm run dev`
