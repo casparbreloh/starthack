@@ -6,3 +6,16 @@ __pycache__/
 node_modules/
 dist/
 .context/
+
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+logs
+*.log

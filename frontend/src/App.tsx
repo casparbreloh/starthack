@@ -1,18 +1,7 @@
-/**
- * Mars Greenhouse Agent System — Frontend Entry Point
- *
- * Digital twin visualization and control interface for the Martian greenhouse.
- * Displays real-time simulation state, agent decisions, crop status,
- * and resource metrics for a 450-day surface-stay mission.
- */
-
-function App() {
+export default function App() {
   return (
-    <div>
-      <h1>Mars Greenhouse</h1>
-      <p>Autonomous AI Agent System for Martian Agriculture</p>
+    <div className="flex min-h-screen items-center justify-center">
+      <h1 className="text-4xl font-bold">Hello World</h1>
     </div>
-  );
+  )
 }
-
-export default App;
