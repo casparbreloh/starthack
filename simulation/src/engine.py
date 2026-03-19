@@ -15,6 +15,7 @@ unit-tested in isolation.
 from __future__ import annotations
 
 import math
+import random
 from collections import deque
 from dataclasses import dataclass
 from typing import Any
