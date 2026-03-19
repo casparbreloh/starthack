@@ -28,6 +28,14 @@ const CROP_IMAGES: Record<string, { healthy: string; unhealthy: string }> = {
 const HEALTH_THRESHOLD = 0.6
 const BEDS_PER_ZONE = 4
 
+/* Isometric grid layout — tune these to adjust pot alignment */
+const TILE_W = 260
+const TILE_H = Math.round(TILE_W * (512 / 509)) // match image aspect ratio
+const ISO_STEP_X = 105 // horizontal offset per grid step
+const ISO_STEP_Y = 76 // vertical offset per grid step
+const GRID_W = ISO_STEP_X * 2 + TILE_W
+const GRID_H = ISO_STEP_Y * 2 + TILE_H
+
 /** Format zone ID for display — "A" → "ZONE A", "zone_a" → "ZONE A" */
 function formatZoneLabel(zoneId: string): string {
   const cleaned = zoneId.replace(/^zone[_-]?/i, "").toUpperCase()
@@ -185,23 +193,23 @@ function ZoneTabs({
   onSelect: (z: string) => void
 }) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-3">
       {zones.map((z) => {
         const isActive = z === active
         return (
           <button
             key={z}
             onClick={() => onSelect(z)}
-            className="cursor-pointer rounded px-2.5 py-1 font-mono text-[10px] font-semibold tracking-[0.12em] uppercase transition-colors"
+            className="cursor-pointer rounded px-3.5 py-1.5 font-mono text-[11px] font-semibold tracking-[0.14em] uppercase transition-colors"
             style={{
               background: isActive ? "var(--color-void-surface-elevated)" : "transparent",
               color: isActive
                 ? "var(--color-void-text-primary)"
                 : "var(--color-void-text-tertiary)",
-              border: isActive ? "1px solid var(--color-void-border)" : "1px solid transparent",
+              border: isActive ? "1px solid var(--color-void-ok)" : "1px solid transparent",
             }}
           >
-            {formatZoneTab(z)}
+            {formatZoneLabel(z)}
           </button>
         )
       })}
@@ -264,14 +272,17 @@ export default function GreenhouseMap({ crops }: GreenhouseMapProps) {
   const label = formatZoneLabel(effectiveZone)
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-4">
-      {/* Zone tabs */}
+    <div className="flex h-full w-full flex-col items-center pt-10 px-4 pb-4">
+      {/* Zone tabs — pinned to top center */}
       {zones.length > 1 && (
         <ZoneTabs zones={zones} active={effectiveZone} onSelect={(z) => setActiveZone(z)} />
       )}
 
-      {/* Zone label */}
-      <div className="text-center">
+      {/* Spacer pushes label + grid toward vertical center */}
+      <div className="flex-1" />
+
+      {/* Zone label — just above the grid */}
+      <div className="mb-4 text-center">
         <span
           className="font-mono text-xs font-semibold tracking-[0.2em] uppercase"
           style={{ color: "var(--color-void-text-muted)" }}
@@ -281,27 +292,39 @@ export default function GreenhouseMap({ crops }: GreenhouseMapProps) {
       </div>
 
       {/* Isometric bed grid */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={effectiveZone}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.2 }}
-          className="flex flex-col items-center"
-        >
-          <div>
-            <BedImage crop={beds[0]} index={0} />
-          </div>
-          <div className="-mt-44 flex">
-            <BedImage crop={beds[1]} index={1} />
-            <BedImage crop={beds[2]} index={2} />
-          </div>
-          <div className="-mt-44">
-            <BedImage crop={beds[3]} index={3} />
-          </div>
-        </motion.div>
-      </AnimatePresence>
+      <div className="flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={effectiveZone}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="relative"
+            style={{ width: GRID_W, height: GRID_H }}
+          >
+            {/* Top */}
+            <div className="absolute" style={{ left: ISO_STEP_X, top: 0 }}>
+              <BedImage crop={beds[0]} index={0} />
+            </div>
+            {/* Left */}
+            <div className="absolute" style={{ left: 0, top: ISO_STEP_Y }}>
+              <BedImage crop={beds[1]} index={1} />
+            </div>
+            {/* Right */}
+            <div className="absolute" style={{ left: ISO_STEP_X * 2, top: ISO_STEP_Y }}>
+              <BedImage crop={beds[2]} index={2} />
+            </div>
+            {/* Bottom */}
+            <div className="absolute" style={{ left: ISO_STEP_X, top: ISO_STEP_Y * 2 }}>
+              <BedImage crop={beds[3]} index={3} />
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Bottom spacer to balance vertical centering */}
+      <div className="flex-1" />
     </div>
   )
 }
