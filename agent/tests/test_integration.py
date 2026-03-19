@@ -1,7 +1,7 @@
 """Integration tests for the Mars greenhouse agent.
 
 These tests require:
-  1. A running simulation at SIM_BASE_URL (default http://localhost:8000)
+  1. A running simulation at SIM_BASE_URL (default http://localhost:8080)
   2. AWS Bedrock credentials with access to the configured model
 
 Both are skipped gracefully if unavailable. [HIGH-6, M-9]
@@ -10,6 +10,7 @@ Both are skipped gracefully if unavailable. [HIGH-6, M-9]
 from __future__ import annotations
 
 import os
+
 import pytest
 
 # Check Bedrock availability at module level [HIGH-6]
@@ -18,19 +19,22 @@ _BEDROCK_SKIP_REASON = "AWS Bedrock not available"
 
 try:
     import boto3
-    bedrock_client = boto3.client("bedrock-runtime", region_name="us-east-1")
+
+    # Use the control-plane client (not bedrock-runtime) for model listing
+    bedrock_client = boto3.client("bedrock", region_name="us-east-1")
     bedrock_client.list_foundation_models()
     _BEDROCK_AVAILABLE = True
 except Exception as e:
     _BEDROCK_SKIP_REASON = f"AWS Bedrock not available: {e}"
 
 # Check simulation availability
-_SIM_URL = os.environ.get("SIM_BASE_URL", "http://localhost:8000")
+_SIM_URL = os.environ.get("SIM_BASE_URL", "http://localhost:8080")
 _SIM_AVAILABLE = False
 _SIM_SKIP_REASON = f"Simulation not available at {_SIM_URL}"
 
 try:
     import httpx
+
     resp = httpx.get(f"{_SIM_URL}/sim/status", timeout=2.0)
     if resp.status_code == 200:
         _SIM_AVAILABLE = True
@@ -50,8 +54,8 @@ def test_10_sol_run():
     - Score remains above 50 (no harvests in 10 sols so threshold is conservative)
     - No unhandled exceptions
     """
-    from src.sim_client import SimClient
     from src.agents.orchestrator import run_mission
+    from src.sim_client import SimClient
 
     client = SimClient(_SIM_URL)
 
@@ -95,10 +99,20 @@ def test_read_all_telemetry_live():
     telemetry = client.read_all_telemetry()
 
     expected_keys = [
-        "sim_status", "weather_current", "weather_history", "weather_forecast",
-        "energy_status", "greenhouse_environment", "water_status", "crops_status",
-        "nutrients_status", "crew_nutrition", "sensors_readings", "events_log",
-        "active_crises", "score_current",
+        "sim_status",
+        "weather_current",
+        "weather_history",
+        "weather_forecast",
+        "energy_status",
+        "greenhouse_environment",
+        "water_status",
+        "crops_status",
+        "nutrients_status",
+        "crew_nutrition",
+        "sensors_readings",
+        "events_log",
+        "active_crises",
+        "score_current",
     ]
     for key in expected_keys:
         assert key in telemetry, f"Missing key: {key}"

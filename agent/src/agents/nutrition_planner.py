@@ -10,8 +10,9 @@ from strands.models.bedrock import BedrockModel
 
 from ..config import AGENT_TEMPERATURE, MODEL_ID
 from ..prompts import NUTRITION_PLANNER_PROMPT
-from ..tools.actions import adjust_nutrients, harvest_crop, plant_crop
-from ..tools.telemetry import get_crops_status
+from ..tools._state import get_client
+from ..tools.actions import create_action_tools
+from ..tools.telemetry import create_telemetry_tools
 
 
 @tool
@@ -43,11 +44,19 @@ def nutrition_planner_agent(
     Returns:
         String describing the nutrition crisis response actions taken.
     """
+    client = get_client()
+    actions = create_action_tools(client)
+    telemetry = create_telemetry_tools(client)
     model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
     agent = Agent(
         model=model,
         system_prompt=NUTRITION_PLANNER_PROMPT,
-        tools=[harvest_crop, plant_crop, get_crops_status, adjust_nutrients],
+        tools=[
+            actions["harvest_crop"],
+            actions["plant_crop"],
+            telemetry["get_crops_status"],
+            actions["adjust_nutrients"],
+        ],
     )
 
     sols_remaining = mission_sols - current_sol

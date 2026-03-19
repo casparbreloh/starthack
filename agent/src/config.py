@@ -9,7 +9,7 @@ _AGENT_DIR = _SRC_DIR.parent  # agent/
 _PROJECT_DIR = _AGENT_DIR.parent  # project root (STARTHack/)
 
 # -- Environment variables (with defaults) --
-SIM_BASE_URL: str = os.environ.get("SIM_BASE_URL", "http://localhost:8000")
+SIM_BASE_URL: str = os.environ.get("SIM_BASE_URL", "http://localhost:8080")
 MODEL_ID: str = os.environ.get(
     "MODEL_ID",
     "us.anthropic.claude-sonnet-4-6-20250819-v1:0",

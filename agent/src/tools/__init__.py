@@ -1,59 +1,9 @@
-"""Tool re-exports for the Mars greenhouse agent."""
+"""Tool factory re-exports for the Mars greenhouse agent."""
 
-from .actions import (
-    adjust_nutrients,
-    advance_simulation,
-    allocate_energy,
-    clean_water_filters,
-    harvest_crop,
-    plant_crop,
-    remove_crop,
-    set_irrigation,
-    set_zone_environment,
-)
-from .telemetry import (
-    get_active_crises,
-    get_crew_nutrition,
-    get_crop_catalog,
-    get_crops_status,
-    get_current_score,
-    get_current_weather,
-    get_energy_status,
-    get_events_log,
-    get_greenhouse_environment,
-    get_nutrients_status,
-    get_sensors_readings,
-    get_simulation_status,
-    get_water_status,
-    get_weather_forecast,
-    get_weather_history,
-    read_all_telemetry,
-)
+from .actions import create_action_tools
+from .telemetry import create_telemetry_tools
 
 __all__ = [
-    "get_simulation_status",
-    "get_current_weather",
-    "get_weather_forecast",
-    "get_weather_history",
-    "get_energy_status",
-    "get_greenhouse_environment",
-    "get_water_status",
-    "get_crops_status",
-    "get_nutrients_status",
-    "get_crew_nutrition",
-    "get_sensors_readings",
-    "get_events_log",
-    "get_active_crises",
-    "get_current_score",
-    "read_all_telemetry",
-    "get_crop_catalog",
-    "allocate_energy",
-    "set_zone_environment",
-    "set_irrigation",
-    "clean_water_filters",
-    "plant_crop",
-    "harvest_crop",
-    "remove_crop",
-    "adjust_nutrients",
-    "advance_simulation",
+    "create_action_tools",
+    "create_telemetry_tools",
 ]

@@ -217,8 +217,8 @@ def _impute_context_df(df):
 
     # Forward-fill remaining NaN
     df = df.ffill()
-    # Backfill remaining NaN with column means
-    for col in df.columns:
+    # Backfill remaining NaN with column means (numeric columns only)
+    for col in df.select_dtypes(include="number").columns:
         if df[col].isna().any():
             col_mean = df[col].mean()
             if not _pd.isna(col_mean):

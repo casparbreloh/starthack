@@ -24,7 +24,7 @@ async def agent_handler(payload: dict[str, Any], context: RequestContext):
     """Handle incoming agent requests.
 
     Supports two modes based on payload 'action' field:
-      - "run_mission": Run the full mission loop (yields sol-by-sol progress)
+      - "run_mission": Run the full mission loop (yields start/complete/error events)
       - "query" (or no action): Answer a single question about the greenhouse
 
     Payload schema:
@@ -38,7 +38,7 @@ async def agent_handler(payload: dict[str, Any], context: RequestContext):
             }
         }
 
-    Yields AG-UI streaming events during the mission loop. [MEDIUM-8]
+    Yields mission_start, mission_complete/mission_error, or query_response events.
     """
     action = payload.get("action", "query")
 
@@ -118,35 +118,27 @@ async def agent_handler(payload: dict[str, Any], context: RequestContext):
         from strands import Agent
         from strands.models.bedrock import BedrockModel
 
-        from .config import AGENT_TEMPERATURE, MODEL_ID
+        from .config import AGENT_TEMPERATURE, MODEL_ID, SIM_BASE_URL
         from .prompts import ORCHESTRATOR_SYSTEM_PROMPT
-        from .tools.actions import (
-            adjust_nutrients,
-            allocate_energy,
-            clean_water_filters,
-            harvest_crop,
-            plant_crop,
-            remove_crop,
-            set_irrigation,
-            set_zone_environment,
-        )
-        from .tools.telemetry import get_crop_catalog, read_all_telemetry
+        from .sim_client import SimClient
+        from .tools._state import set_client
+        from .tools.actions import create_action_tools
+        from .tools.telemetry import create_telemetry_tools
+
+        query_client = SimClient(SIM_BASE_URL)
+        set_client(query_client)
+        telemetry_tools = create_telemetry_tools(query_client)
+        action_tools = create_action_tools(query_client)
+        action_tools.pop("advance_simulation")  # not for query mode
 
         model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
         agent = Agent(
             model=model,
             system_prompt=ORCHESTRATOR_SYSTEM_PROMPT,
             tools=[
-                read_all_telemetry,
-                get_crop_catalog,
-                allocate_energy,
-                set_zone_environment,
-                set_irrigation,
-                clean_water_filters,
-                plant_crop,
-                harvest_crop,
-                remove_crop,
-                adjust_nutrients,
+                telemetry_tools["read_all_telemetry"],
+                telemetry_tools["get_crop_catalog"],
+                *action_tools.values(),
             ],
         )
 

@@ -10,7 +10,8 @@ from strands.models.bedrock import BedrockModel
 
 from ..config import AGENT_TEMPERATURE, MODEL_ID
 from ..prompts import CLIMATE_EMERGENCY_PROMPT
-from ..tools.actions import adjust_nutrients, allocate_energy, set_zone_environment
+from ..tools._state import get_client
+from ..tools.actions import create_action_tools
 
 
 @tool
@@ -42,11 +43,16 @@ def climate_emergency_agent(
     Returns:
         String describing the climate emergency response actions taken.
     """
+    actions = create_action_tools(get_client())
     model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
     agent = Agent(
         model=model,
         system_prompt=CLIMATE_EMERGENCY_PROMPT,
-        tools=[set_zone_environment, allocate_energy, adjust_nutrients],
+        tools=[
+            actions["set_zone_environment"],
+            actions["allocate_energy"],
+            actions["adjust_nutrients"],
+        ],
     )
 
     prompt = (

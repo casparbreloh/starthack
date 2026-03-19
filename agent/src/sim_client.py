@@ -15,6 +15,16 @@ class SimClient:
     def __init__(self, base_url: str) -> None:
         self.client = httpx.Client(base_url=base_url, timeout=30.0)
 
+    def close(self) -> None:
+        """Close the underlying HTTP client connection pool."""
+        self.client.close()
+
+    def __enter__(self) -> SimClient:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
     # ------------------------------------------------------------------
     # Telemetry (GET)
     # ------------------------------------------------------------------

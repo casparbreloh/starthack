@@ -21,18 +21,9 @@ from ..journal import CrossSessionLearning, DecisionJournal, compact_state_summa
 from ..mcp_client import create_mcp_client, discover_kb_tools
 from ..prompts import ORCHESTRATOR_SYSTEM_PROMPT
 from ..sim_client import SimClient
-from ..tools.actions import (
-    adjust_nutrients,
-    advance_simulation,
-    allocate_energy,
-    clean_water_filters,
-    harvest_crop,
-    plant_crop,
-    remove_crop,
-    set_irrigation,
-    set_zone_environment,
-)
-from ..tools.telemetry import get_crop_catalog, read_all_telemetry
+from ..tools._state import set_client
+from ..tools.actions import create_action_tools
+from ..tools.telemetry import create_telemetry_tools
 from ..weather_integration import WeatherForecaster
 from .climate_emergency import climate_emergency_agent
 from .energy_crisis import energy_crisis_agent
@@ -43,18 +34,6 @@ from .triage import triage_agent
 from .water_crisis import water_crisis_agent
 
 logger = logging.getLogger(__name__)
-
-# All 8 action tools (NOT advance_simulation)
-ACTION_TOOLS = [
-    allocate_energy,
-    set_zone_environment,
-    set_irrigation,
-    clean_water_filters,
-    plant_crop,
-    harvest_crop,
-    remove_crop,
-    adjust_nutrients,
-]
 
 # All 7 specialist agent tools
 SPECIALIST_TOOLS = [
@@ -69,25 +48,24 @@ SPECIALIST_TOOLS = [
 
 
 def create_orchestrator(
+    client: SimClient,
     cross_session_context: str = "",
     kb_tools: list | None = None,
-) -> Agent:
-    """Create a fresh orchestrator Agent instance.
+) -> tuple[Agent, dict]:
+    """Create a fresh orchestrator Agent instance with tools bound to client.
 
     Creates a new Agent each sol to prevent unbounded internal message history
     accumulation. [R8-M6] Cross-sol context comes from the decision journal,
     not Agent state.
 
-    Tool count: 1 read_all_telemetry + 1 get_crop_catalog + 8 action tools +
-    7 specialist agent tools + N MCP KB tools = 17 + N tools. [SC-2, R6-MCP5]
-    advance_simulation is NOT included — it is called programmatically. [H-7]
-
     Args:
+        client: SimClient instance — all tools will use this client.
         cross_session_context: Previous run summaries formatted for prompt injection. [R5-H7]
         kb_tools: List of MCP KB tool objects discovered from AgentCore gateway. [R6-MCP1]
 
     Returns:
-        Configured Strands Agent ready to run a sol.
+        Tuple of (Agent, tool_funcs_dict) where tool_funcs_dict contains
+        advance_simulation and other non-tool functions.
     """
     n_kb = len(kb_tools or [])
     logger.info("Creating orchestrator with %d KB tools", n_kb)  # [R10-M2]
@@ -102,26 +80,34 @@ def create_orchestrator(
             system_prompt + "\n\n## Previous Run Learnings\n" + cross_session_context
         )
 
+    # Create tools bound to the shared client
+    telemetry_tools = create_telemetry_tools(client)
+    action_tools = create_action_tools(client)
+
+    # Separate advance_simulation (not given to LLM)
+    advance_simulation = action_tools.pop("advance_simulation")
+
     tools = [
-        read_all_telemetry,
-        get_crop_catalog,
-        *ACTION_TOOLS,
+        telemetry_tools["read_all_telemetry"],
+        telemetry_tools["get_crop_catalog"],
+        *action_tools.values(),
         *SPECIALIST_TOOLS,
         *(kb_tools or []),
     ]
 
     model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
-    return Agent(
+    agent = Agent(
         model=model,
         system_prompt=system_prompt,
         tools=tools,
     )
+    return agent, {"advance_simulation": advance_simulation}
 
 
 def run_sol(
     client: SimClient,
-    sol: int,
     orchestrator: Agent,
+    advance_simulation_fn: callable,  # type: ignore[valid-type]
     weather_forecaster: WeatherForecaster,
     journal: DecisionJournal,
     prev_score: float | None = None,
@@ -141,8 +127,8 @@ def run_sol(
 
     Args:
         client: SimClient instance
-        sol: Current sol number (0-indexed; advance makes sim sol = sol+1)
         orchestrator: Freshly-created orchestrator Agent
+        advance_simulation_fn: Function to advance the simulation (bound to same client)
         weather_forecaster: WeatherForecaster for LSTM forecasts
         journal: DecisionJournal for feedback loop
         prev_score: Overall score from previous sol (for score_delta)
@@ -150,15 +136,16 @@ def run_sol(
     Returns:
         Dict with keys: sol, actions, crises_handled, score, advance_response, mission_phase
     """
-    logger.info("=== Sol %d ===", sol)
-    actions_list: list[str] = []
-    crises_handled: list[str] = []
-
     # ------------------------------------------------------------------ #
     # Step 1: Read all telemetry                                          #
     # ------------------------------------------------------------------ #
     state = client.read_all_telemetry()
+    sol = state["sim_status"]["current_sol"]  # Use authoritative sol from sim
     pre_advance_crises = state["active_crises"]  # [R7-H1]
+
+    logger.info("=== Sol %d ===", sol)
+    actions_list: list[str] = []
+    crises_handled: list[str] = []
 
     # ------------------------------------------------------------------ #
     # Step 2: LSTM weather forecast + energy projection [ARCH-1, ARCH-2] #
@@ -249,7 +236,7 @@ def run_sol(
     advance_response: dict = {}
     mission_phase = "active"
     try:
-        advance_response = advance_simulation(1)
+        advance_response = advance_simulation_fn(1)
         mission_phase = advance_response.get("mission_phase", "active")
     except Exception as exc:
         logger.warning("Sol %d: advance_simulation failed (%s)", sol, exc)
@@ -296,7 +283,7 @@ def run_sol(
             "Please call the appropriate specialist agent(s) to handle these crises."
         )
         try:
-            crisis_orchestrator = create_orchestrator()
+            crisis_orchestrator, _ = create_orchestrator(client)
             crisis_result = crisis_orchestrator(crisis_prompt)
             # Track which crisis types were handled
             crises_handled = [c.get("type", "unknown") for c in new_crises]
@@ -415,6 +402,9 @@ def run_mission(
     Returns:
         Mission summary dict with final score and stats.
     """
+    # Step 0: Set shared client for specialist agents
+    set_client(client)
+
     # Step 1: Reset simulation
     client.reset(seed=seed, difficulty=difficulty)
     logger.info(
@@ -434,7 +424,6 @@ def run_mission(
         kb_tools = discover_kb_tools(mcp_client)
 
         # Step 5: Create orchestrator with cross-session context + KB tools [R5-H7]
-        # (Fresh instance per sol in the loop; this is just for setup)
         logger.info("KB tools discovered: %d", len(kb_tools))
 
         # Step 6: Initialize WeatherForecaster [ARCH-1]
@@ -449,15 +438,22 @@ def run_mission(
         last_advance_response: dict = {}
         total_crises_seen = 0
 
-        for sol in range(mission_sols):
-            if sol % 50 == 0:
-                logger.info("Progress: sol %d / %d", sol, mission_sols)
+        for _loop_idx in range(mission_sols):
+            if _loop_idx % 50 == 0:
+                logger.info("Progress: loop iteration %d / %d", _loop_idx, mission_sols)
 
             # [R8-M6] Fresh orchestrator per sol to prevent history accumulation
-            orchestrator = create_orchestrator(cross_session_context, kb_tools)
+            orchestrator, funcs = create_orchestrator(
+                client, cross_session_context, kb_tools
+            )
 
             sol_result = run_sol(
-                client, sol, orchestrator, weather_forecaster, journal, prev_score
+                client,
+                orchestrator,
+                funcs["advance_simulation"],
+                weather_forecaster,
+                journal,
+                prev_score,
             )
             prev_score = sol_result["score"]
             last_advance_response = sol_result["advance_response"]
@@ -465,7 +461,7 @@ def run_mission(
 
             # [R5-H8] Check for mission completion
             if sol_result["mission_phase"] == "complete":
-                logger.info("Mission completed at sol %d", sol)
+                logger.info("Mission completed at sol %d", sol_result["sol"])
                 break
 
         # Step 11: Fetch final score [R5-H8]
@@ -482,7 +478,9 @@ def run_mission(
         logger.info("Final score: %.2f", final_score)
 
         # Step 12: Generate cross-session summary [ARCH-5, R5-M4, R8-M4]
-        summary_agent = create_orchestrator()  # [R9-M4] No KB tools for summary
+        summary_agent, _ = create_orchestrator(
+            client
+        )  # [R9-M4] No KB tools for summary
         summary_prompt = (
             "Generate a structured mission summary as JSON in a ```json code block.\n\n"
             f"Run ID: {run_id}\n"
