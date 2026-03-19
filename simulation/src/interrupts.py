@@ -21,6 +21,7 @@ def detect_interrupts(
     pre_ready_crops: set[str],
     tick_events: list[dict[str, Any]],
     previous_phase: MissionPhase,
+    last_interrupt_sols: dict[str, int] | None = None,
 ) -> list[dict[str, Any]]:
     """
     Detect interrupts that occurred during the last tick.
@@ -31,10 +32,15 @@ def detect_interrupts(
         pre_ready_crops: Set of crop IDs that were harvest-ready before the tick.
         tick_events: Events returned by engine.advance() for this tick.
         previous_phase: Mission phase before the tick.
+        last_interrupt_sols: Mutable dict tracking the last sol each interrupt
+            type fired. Used to deduplicate persistent-condition interrupts
+            (water_critical, battery_critical) so they fire at most once per sol.
 
     Returns:
         List of interrupt dicts, each with 'type' and 'detail' keys.
     """
+    if last_interrupt_sols is None:
+        last_interrupt_sols = {}
     interrupts: list[dict[str, Any]] = []
 
     # New crises
@@ -86,27 +92,31 @@ def detect_interrupts(
             }
         )
 
-    # Water critical
+    # Water critical (deduplicate: fire at most once per sol)
     if engine.water.state.reservoir_liters < CRISIS_WATER_RESERVOIR_L:
-        interrupts.append(
-            {
-                "type": "water_critical",
-                "detail": {
-                    "reservoir_liters": engine.water.state.reservoir_liters,
-                },
-            }
-        )
+        if last_interrupt_sols.get("water_critical", -1) < engine.current_sol:
+            last_interrupt_sols["water_critical"] = engine.current_sol
+            interrupts.append(
+                {
+                    "type": "water_critical",
+                    "detail": {
+                        "reservoir_liters": engine.water.state.reservoir_liters,
+                    },
+                }
+            )
 
-    # Battery critical
+    # Battery critical (deduplicate: fire at most once per sol)
     if engine.energy.battery_pct < CRISIS_BATTERY_PCT:
-        interrupts.append(
-            {
-                "type": "battery_critical",
-                "detail": {
-                    "battery_pct": engine.energy.battery_pct,
-                },
-            }
-        )
+        if last_interrupt_sols.get("battery_critical", -1) < engine.current_sol:
+            last_interrupt_sols["battery_critical"] = engine.current_sol
+            interrupts.append(
+                {
+                    "type": "battery_critical",
+                    "detail": {
+                        "battery_pct": engine.energy.battery_pct,
+                    },
+                }
+            )
 
     # Mission phase change
     if engine.mission_phase != previous_phase:

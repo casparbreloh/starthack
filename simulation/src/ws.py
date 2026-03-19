@@ -204,7 +204,7 @@ async def _handle_agent_actions(
         return
     session = session_manager.get(session_id)
     session.pending_actions = payload.get("actions", [])
-    session.next_checkin = payload.get("next_checkin", 1)
+    session.next_checkin = max(1, min(50, int(payload.get("next_checkin", 1))))
 
     # Record agent decision telemetry if provided
     log_decision = payload.get("log_decision")

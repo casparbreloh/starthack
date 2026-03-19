@@ -27,6 +27,7 @@ class ConnectionManager:
         if role == "agent":
             if self.agent is not None:
                 logger.warning("Replacing existing agent connection")
+                self.disconnect(self.agent)
             self.agent = ws
         elif role == "frontend":
             self.frontends.append(ws)
