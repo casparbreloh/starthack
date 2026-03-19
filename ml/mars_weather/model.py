@@ -14,9 +14,15 @@ class MarsWeatherDataset(Dataset):
         self.targets = df[targets].values.astype(np.float32)
         self.seq_len = seq_len
         self.horizon = horizon
+        n = len(self.features) - self.seq_len - self.horizon + 1
+        if n <= 0:
+            raise ValueError(
+                f"Dataset too small: {len(self.features)} rows for "
+                f"seq_len={seq_len} + horizon={horizon} (need at least {seq_len + horizon})"
+            )
 
     def __len__(self):
-        return len(self.features) - self.seq_len - self.horizon + 1
+        return max(0, len(self.features) - self.seq_len - self.horizon + 1)
 
     def __getitem__(self, idx):
         x = self.features[idx : idx + self.seq_len]

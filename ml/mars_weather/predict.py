@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import torch
 
-from mars_weather.data import load_raw, engineer_features, TARGETS
-from mars_weather.model import LSTMPredictor
+from .data import load_raw, engineer_features, TARGETS
+from .model import LSTMPredictor
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 
@@ -93,15 +93,9 @@ def predict_next(n_sols=7, horizon=1, model_dir=MODEL_DIR):
             pred_dict[target] = round(float(pred[i]), 1)
         predictions.append(pred_dict)
 
-        # Build next feature row from predicted values
-        new_raw = pd.DataFrame([{
-            "sol": pred_sol,
-            "min_temp": pred[0], "max_temp": pred[1], "pressure": pred[2],
-            "min_gts_temp": pred[3], "max_gts_temp": pred[4],
-        }])
-        recent_raw = pd.concat([recent_raw, new_raw], ignore_index=True)
-
         # Reconstruct features for the new row
+        # Compute lag/rolling features BEFORE appending current prediction
+        # so that lag1 = previous sol (not current)
         sol = pred_sol
         ls_approx = (sol % 668) / 668 * 360  # approximate solar longitude
         ls_rad = np.deg2rad(ls_approx)
@@ -115,7 +109,7 @@ def predict_next(n_sols=7, horizon=1, model_dir=MODEL_DIR):
         new_features["mars_year"] = sol // 668
         new_features["uv_index"] = 1.0  # default moderate
 
-        # Lag features from recent_raw
+        # Lag features from recent_raw (before appending current prediction)
         for col in ["min_temp", "max_temp", "pressure"]:
             vals = recent_raw[col].values
             for lag in [1, 2, 3, 7]:
@@ -123,6 +117,14 @@ def predict_next(n_sols=7, horizon=1, model_dir=MODEL_DIR):
             for window in [7, 30]:
                 w = min(window, len(vals))
                 new_features[f"{col}_roll{window}"] = np.mean(vals[-w:])
+
+        # NOW append current prediction for future lag computation
+        new_raw = pd.DataFrame([{
+            "sol": pred_sol,
+            "min_temp": pred[0], "max_temp": pred[1], "pressure": pred[2],
+            "min_gts_temp": pred[3], "max_gts_temp": pred[4],
+        }])
+        recent_raw = pd.concat([recent_raw, new_raw], ignore_index=True)
 
         # Build feature vector in correct column order and scale
         new_row_df = pd.DataFrame([[new_features.get(c, 0.0) for c in feature_cols]], columns=feature_cols)

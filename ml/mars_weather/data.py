@@ -107,9 +107,12 @@ def prepare_dataset(path: str = DATA_PATH):
     test_df = df[df["sol"] > VAL_SOL].copy()
 
     # Impute missing values per split (forward-fill only to avoid lookahead)
-    train_df = train_df.ffill().bfill()
-    val_df = val_df.ffill().bfill()
-    test_df = test_df.ffill().bfill()
+    # Remaining NaN at the start of each split are filled with train-set means
+    train_df = train_df.ffill()
+    train_means = train_df.mean(numeric_only=True)
+    train_df = train_df.fillna(train_means)
+    val_df = val_df.ffill().fillna(train_means)
+    test_df = test_df.ffill().fillna(train_means)
 
     # Identify feature columns (everything except sol and targets)
     feature_cols = [c for c in df.columns if c not in TARGETS and c != "sol"]

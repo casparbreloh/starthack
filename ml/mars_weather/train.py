@@ -9,8 +9,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from mars_weather.data import prepare_dataset, TARGETS
-from mars_weather.model import LSTMPredictor, MarsWeatherDataset, SeasonalBaseline
+from .data import prepare_dataset, TARGETS
+from .model import LSTMPredictor, MarsWeatherDataset, SeasonalBaseline
 
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 SEQ_LEN = 30
