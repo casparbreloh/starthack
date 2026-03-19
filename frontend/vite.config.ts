@@ -3,5 +3,5 @@ import viteReact from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
 export default defineConfig({
-  plugins: [tailwindcss(), viteReact()]
+  plugins: [tailwindcss(), viteReact()],
 })

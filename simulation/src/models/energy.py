@@ -26,8 +26,8 @@ from src.constants import (
 )
 
 if TYPE_CHECKING:
-    from src.models.weather import WeatherState
     from src.models.climate import ClimateModel
+    from src.models.weather import WeatherState
 
 
 @dataclass
@@ -38,27 +38,31 @@ class EnergyState:
     total_consumption_wh: float = 0.0
     surplus_wh: float = 0.0
     deficit: bool = False
-    breakdown: dict = field(default_factory=lambda: {
-        "heating_wh": 0.0,
-        "lighting_wh": 0.0,
-        "water_recycling_wh": RECYCLING_WH,
-        "nutrient_pumps_wh": NUTRIENT_PUMPS_WH,
-        "sensors_control_wh": SENSORS_CONTROL_WH,
-        "other_wh": 0.0,
-    })
+    breakdown: dict = field(
+        default_factory=lambda: {
+            "heating_wh": 0.0,
+            "lighting_wh": 0.0,
+            "water_recycling_wh": RECYCLING_WH,
+            "nutrient_pumps_wh": NUTRIENT_PUMPS_WH,
+            "sensors_control_wh": SENSORS_CONTROL_WH,
+            "other_wh": 0.0,
+        }
+    )
     # Agent-set allocation percentages (must sum to ~100)
-    allocation: dict = field(default_factory=lambda: {
-        "heating_pct": 47,
-        "lighting_pct": 30,
-        "water_recycling_pct": 12,
-        "nutrient_pumps_pct": 5,
-        "reserve_pct": 6,
-    })
+    allocation: dict = field(
+        default_factory=lambda: {
+            "heating_pct": 47,
+            "lighting_pct": 30,
+            "water_recycling_pct": 12,
+            "nutrient_pumps_pct": 5,
+            "reserve_pct": 6,
+        }
+    )
 
 
 @dataclass
 class EnergyRates:
-    d_battery_wh: float = 0.0    # net change this sol
+    d_battery_wh: float = 0.0  # net change this sol
 
 
 class EnergyModel:
@@ -77,7 +81,7 @@ class EnergyModel:
     # PCSE lifecycle
     # ------------------------------------------------------------------
 
-    def calc_rates(self, weather: "WeatherState", climate: "ClimateModel") -> None:
+    def calc_rates(self, weather: WeatherState, climate: ClimateModel) -> None:
         """Phase 1: compute generation and consumption for this sol."""
         # Solar generation (dust attenuates — already in irradiance_wm2)
         solar = (
@@ -118,7 +122,9 @@ class EnergyModel:
     def integrate(self) -> None:
         """Phase 2: apply rates to battery state."""
         new_level = self.state.battery_level_wh + self.rates.d_battery_wh
-        self.state.battery_level_wh = round(max(0.0, min(BATTERY_CAPACITY_WH, new_level)), 1)
+        self.state.battery_level_wh = round(
+            max(0.0, min(BATTERY_CAPACITY_WH, new_level)), 1
+        )
         surplus = self.rates.d_battery_wh
         self.state.surplus_wh = round(surplus, 1)
         self.state.deficit = self.state.battery_level_wh <= 0.0

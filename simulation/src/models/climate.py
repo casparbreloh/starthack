@@ -46,7 +46,7 @@ class ZoneClimate:
 
 @dataclass
 class ClimateRates:
-    d_temp: dict = field(default_factory=dict)     # zone_id → °C/sol
+    d_temp: dict = field(default_factory=dict)  # zone_id → °C/sol
     d_co2: dict = field(default_factory=dict)
     d_humidity: dict = field(default_factory=dict)
 
@@ -70,12 +70,12 @@ class ClimateModel:
     # PCSE lifecycle
     # ------------------------------------------------------------------
 
-    def calc_rates(self, weather: "WeatherState", energy: "EnergyModel") -> None:
+    def calc_rates(self, weather: WeatherState, energy: EnergyModel) -> None:
         """
         Compute how far each zone moves toward its setpoints.
         Energy factor scales how well HVAC/LED can maintain setpoints.
         """
-        ef = energy.energy_factor       # 0 = no energy, 1 = full energy
+        ef = energy.energy_factor  # 0 = no energy, 1 = full energy
         outside_temp = weather.avg_temp_c
 
         for z in self.state.values():
@@ -92,15 +92,25 @@ class ClimateModel:
                 self.rates.d_co2[z.zone_id] = (400.0 - z.co2_ppm) * 0.1 * (1 - ef)
 
             # Humidity: maintained within wide band; minor drift only
-            self.rates.d_humidity[z.zone_id] = (z.target_humidity_pct - z.humidity_pct) * 0.4 * ef
+            self.rates.d_humidity[z.zone_id] = (
+                (z.target_humidity_pct - z.humidity_pct) * 0.4 * ef
+            )
 
     def integrate(self) -> None:
         """Phase 2: apply climate rates."""
         for z in self.state.values():
             z.temp_c = round(z.temp_c + self.rates.d_temp.get(z.zone_id, 0.0), 2)
-            z.co2_ppm = round(max(350.0, z.co2_ppm + self.rates.d_co2.get(z.zone_id, 0.0)), 1)
+            z.co2_ppm = round(
+                max(350.0, z.co2_ppm + self.rates.d_co2.get(z.zone_id, 0.0)), 1
+            )
             z.humidity_pct = round(
-                max(10.0, min(95.0, z.humidity_pct + self.rates.d_humidity.get(z.zone_id, 0.0))), 1
+                max(
+                    10.0,
+                    min(
+                        95.0, z.humidity_pct + self.rates.d_humidity.get(z.zone_id, 0.0)
+                    ),
+                ),
+                1,
             )
             # PAR and photoperiod are set directly by agent; no drift model needed
             z.par_umol_m2s = z.target_par

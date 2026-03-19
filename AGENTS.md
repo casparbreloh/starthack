@@ -18,3 +18,5 @@
 - `make dev-agent` — run agent only
 - `make dev-simulation` — run simulation only
 - `make dev-frontend` — run frontend only
+- `make check` — lint, format-check, and type-check all projects
+- `make check-fix` — auto-fix lint and format issues in all projects
