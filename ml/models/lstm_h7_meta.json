@@ -1,0 +1,43 @@
+{
+  "feature_cols": [
+    "ls_sin",
+    "ls_cos",
+    "diurnal_range",
+    "ground_air_max_diff",
+    "ground_air_min_diff",
+    "sol_in_year",
+    "mars_year",
+    "uv_index",
+    "min_temp_lag1",
+    "min_temp_lag2",
+    "min_temp_lag3",
+    "min_temp_lag7",
+    "max_temp_lag1",
+    "max_temp_lag2",
+    "max_temp_lag3",
+    "max_temp_lag7",
+    "pressure_lag1",
+    "pressure_lag2",
+    "pressure_lag3",
+    "pressure_lag7",
+    "min_temp_roll7",
+    "min_temp_roll30",
+    "max_temp_roll7",
+    "max_temp_roll30",
+    "pressure_roll7",
+    "pressure_roll30"
+  ],
+  "targets": [
+    "min_temp",
+    "max_temp",
+    "pressure",
+    "min_gts_temp",
+    "max_gts_temp"
+  ],
+  "seq_len": 30,
+  "horizon": 7,
+  "input_size": 26,
+  "hidden_size": 64,
+  "num_layers": 2,
+  "output_size": 5
+}
