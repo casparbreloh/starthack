@@ -1,24 +1,23 @@
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useMemo } from "react"
 
-import type { SimulationData, CrewMembers } from "../types/simulation"
-import { useWebSocket } from "./useWebSocket"
+import type {
+  SimulationData,
+  SimStatus,
+  WeatherCurrent,
+  EnergyStatus,
+  GreenhouseEnvironment,
+  WaterStatus,
+  CropsStatus,
+  NutrientsStatus,
+  CrewNutrition,
+  CrewHealth,
+  CrewMembers,
+  ActiveCrises,
+  EventsLog,
+  ScoreData,
+} from "../types/simulation"
+import { useWebSocketControls } from "./useGameData"
 import type { WebSocketState } from "./useWebSocket"
-
-const empty: SimulationData = {
-  status: null,
-  weather: null,
-  energy: null,
-  greenhouse: null,
-  water: null,
-  crops: null,
-  nutrients: null,
-  crew: null,
-  crewMembers: null,
-  crises: null,
-  score: null,
-  loading: true,
-  error: null,
-}
 
 export interface SimulationControls extends SimulationData {
   running: boolean
@@ -26,55 +25,61 @@ export interface SimulationControls extends SimulationData {
   ws: WebSocketState
 }
 
-/**
- * Map a sol_tick state snapshot from the WebSocket into the SimulationData shape.
- * The snapshot keys match the telemetry endpoint names.
- */
-function mapSnapshotToData(
-  state: NonNullable<WebSocketState["lastState"]>,
-  prevCrewMembers: CrewMembers | null,
-): SimulationData {
-  return {
-    status: state.sim_status,
-    weather: state.weather_current,
-    energy: state.energy_status,
-    greenhouse: state.greenhouse_environment,
-    water: state.water_status,
-    crops: state.crops_status,
-    nutrients: state.nutrients_status,
-    crew: state.crew_nutrition,
-    crewMembers: prevCrewMembers,
-    crises: state.active_crises,
-    score: state.score_current,
-    loading: false,
-    error: null,
-  }
-}
-
 export function useSimulation(): SimulationControls {
-  const [data, setData] = useState<SimulationData>(empty)
+  const ws = useWebSocketControls()
   const [running, setRunning] = useState(true)
-
-  const ws = useWebSocket()
-
-  // When WS receives a tick, map it to SimulationData
-  useEffect(() => {
-    if (ws.lastState) {
-      setData((prev) => mapSnapshotToData(ws.lastState!, prev.crewMembers))
-    }
-  }, [ws.lastState])
 
   const toggleRunning = useCallback(() => {
     setRunning((prev) => {
-      const next = !prev
-      if (next) {
-        ws.resume()
-      } else {
+      if (prev) {
         ws.pause()
+      } else {
+        ws.resume()
       }
-      return next
+      return !prev
     })
   }, [ws])
+
+  const data: SimulationData = useMemo(() => {
+    const s = ws.lastState
+    if (!s) {
+      return {
+        status: null,
+        weather: null,
+        energy: null,
+        greenhouse: null,
+        water: null,
+        crops: null,
+        nutrients: null,
+        crew: null,
+        crewHealth: null,
+        crewMembers: null,
+        crises: null,
+        events: null,
+        score: null,
+        loading: true,
+        error: null,
+      }
+    }
+
+    return {
+      status: (s.sim_status as SimStatus) ?? null,
+      weather: (s.weather_current as WeatherCurrent) ?? null,
+      energy: (s.energy_status as EnergyStatus) ?? null,
+      greenhouse: (s.greenhouse_environment as GreenhouseEnvironment) ?? null,
+      water: (s.water_status as WaterStatus) ?? null,
+      crops: (s.crops_status as CropsStatus) ?? null,
+      nutrients: (s.nutrients_status as NutrientsStatus) ?? null,
+      crew: (s.crew_nutrition as CrewNutrition) ?? null,
+      crewHealth: (s.crew_health as CrewHealth) ?? null,
+      crewMembers: (s.crew_members as CrewMembers) ?? null,
+      crises: (s.active_crises as ActiveCrises) ?? null,
+      events: s.events ? ({ events: s.events } as EventsLog) : null,
+      score: (s.score_current as ScoreData) ?? null,
+      loading: false,
+      error: null,
+    }
+  }, [ws.lastState])
 
   return { ...data, running, toggleRunning, ws }
 }

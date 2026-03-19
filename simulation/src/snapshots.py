@@ -34,6 +34,8 @@ def build_state_snapshot(engine: SimulationEngine) -> dict[str, Any]:
         "crew_nutrition": _crew_nutrition(engine),
         "active_crises": _active_crises(engine),
         "score_current": _score_current(engine),
+        "crew_members": _crew_members(engine),
+        "crew_health": _crew_health(engine),
     }
 
 
@@ -329,5 +331,80 @@ def _score_current(engine: SimulationEngine) -> dict[str, Any]:
             "resource_efficiency": snap.resource_efficiency,
             "crisis_management": snap.crisis_management,
             "overall_score": snap.overall_score,
+        },
+    }
+
+
+def _crew_members(engine: SimulationEngine) -> dict[str, Any]:
+    return {
+        "current_sol": engine.current_sol,
+        "crew_size": len(engine.crew.health.members),
+        "members": [
+            {
+                "member_id": m.member_id,
+                "name": m.name,
+                "alive": m.alive,
+                "status": m.status.value,
+                "health_pct": m.health_pct,
+                "hydration_pct": m.hydration_pct,
+                "cumulative_radiation_msv": m.cumulative_radiation_msv,
+            }
+            for m in engine.crew.health.members
+        ],
+    }
+
+
+def _crew_health(engine: SimulationEngine) -> dict[str, Any]:
+    h = engine.crew.health
+    return {
+        "current_sol": engine.current_sol,
+        "alive": h.alive,
+        "cause_of_death": h.cause_of_death,
+        "overall_health_pct": h.overall_health_pct,
+        "hydration": {
+            "hydration_pct": h.hydration_pct,
+            "level": h.dehydration_level.value,
+            "daily_water_received_l": h.daily_water_received_l,
+            "daily_water_required_l": h.daily_water_required_l,
+            "water_fraction_met": round(h.water_fraction_met, 3),
+            "consecutive_deficit_sols": h.consecutive_water_deficit_sols,
+        },
+        "radiation": {
+            "cumulative_msv": h.cumulative_radiation_msv,
+            "daily_dose_msv": round(h.daily_radiation_msv, 3),
+            "warning_active": h.radiation_warning_active,
+            "critical_active": h.radiation_critical_active,
+            "nasa_career_limit_msv": 600.0,
+            "pct_of_career_limit": round(h.cumulative_radiation_msv / 600.0 * 100.0, 1),
+        },
+        "temperature": {
+            "ambient_temp_c": h.ambient_temp_c,
+            "hypothermia_risk": h.hypothermia_risk,
+            "hyperthermia_risk": h.hyperthermia_risk,
+            "health_penalty_pct": h.temperature_health_penalty,
+            "nasa_comfort_range_c": [18.3, 26.7],
+        },
+        "co2": {
+            "ambient_co2_ppm": h.ambient_co2_ppm,
+            "health_impaired": h.co2_health_impaired,
+            "health_penalty_pct": h.co2_health_penalty,
+            "osha_8h_limit_ppm": 5000,
+        },
+        "starvation": {
+            "level": h.starvation_level.value,
+            "consecutive_deficit_sols": h.consecutive_caloric_deficit_sols,
+            "health_penalty_pct": h.starvation_health_penalty,
+        },
+        "micronutrients": {
+            "level": h.micronutrient_level.value,
+            "consecutive_deficit_sols": h.consecutive_micronutrient_deficit_sols,
+            "health_penalty_pct": h.micronutrient_health_penalty,
+        },
+        "illness": {
+            "active": h.illness.active,
+            "sick_member_name": h.illness.sick_member_name,
+            "duration_remaining_sols": h.illness.duration_remaining_sols,
+            "kcal_multiplier": h.illness.kcal_multiplier,
+            "protein_multiplier": h.illness.protein_multiplier,
         },
     }
