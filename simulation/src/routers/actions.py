@@ -15,6 +15,7 @@ with the simulation.
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from src.catalog import CROP_CATALOG
 from src.constants import ZONE_AREAS_M2
 from src.enums import CropType
 from src.state import engine
@@ -194,8 +195,6 @@ def crops_plant(req: PlantRequest):
         )
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
-
-    from src.catalog import CROP_CATALOG
 
     growth_days = CROP_CATALOG[req.type]["growth_days"]
     engine.events.log(

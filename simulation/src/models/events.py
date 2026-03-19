@@ -9,7 +9,14 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from src.enums import CrisisType, Severity
+from src.constants import (
+    CRISIS_WATER_RESERVOIR_L,
+    HYDRATION_MODERATE_PCT,
+    RADIATION_CRITICAL_MSV,
+    RADIATION_WARNING_MSV,
+    WARNING_KCAL_DAYS,
+)
+from src.enums import CrisisType, DehydrationLevel, Severity, StarvationLevel
 
 
 @dataclass
@@ -21,6 +28,17 @@ class Event:
     severity: Severity = Severity.INFO
     zone: str | None = None
     data: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "sol": self.sol,
+            "type": self.type,
+            "category": self.category,
+            "message": self.message,
+            "severity": self.severity.value,
+            "zone": self.zone,
+            "data": self.data,
+        }
 
 
 @dataclass
@@ -160,15 +178,6 @@ class EventLog:
         crew_starvation_level=None,
         cumulative_radiation_msv: float = 0.0,
     ) -> None:
-        from src.constants import (
-            CRISIS_WATER_RESERVOIR_L,
-            HYDRATION_MODERATE_PCT,
-            RADIATION_CRITICAL_MSV,
-            RADIATION_WARNING_MSV,
-            WARNING_KCAL_DAYS,
-        )
-        from src.enums import DehydrationLevel, StarvationLevel
-
         # Water recycling decline
         if water_recycling_pct < 85.0:
             sev = Severity.CRITICAL if water_recycling_pct < 70.0 else Severity.WARNING
