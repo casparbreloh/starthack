@@ -47,6 +47,9 @@ class ZoneNutrients:
     base_salt_ppm: float = 20.0
     # Setpoints
     target_ph: float = TARGET_PH
+    # Per-sol boost flags (reset each integrate tick)
+    nitrogen_boost: bool = False
+    potassium_boost: bool = False
 
 
 @dataclass
