@@ -189,6 +189,12 @@ class DecisionJournal:
 class CrossSessionLearning:
     """Reads and writes end-of-run summaries for cross-session learning.
 
+    .. deprecated::
+        CrossSessionLearning is deprecated in favour of AgentCore Memory
+        (bedrock_agentcore.memory). It remains functional for the legacy
+        path (when BEDROCK_AGENTCORE_MEMORY_ID env var is not set).
+        Do not use in new code — use src.memory and src.tools.memory_tool instead.
+
     After each 450-sol run, the LLM generates a structured summary saved
     to session_logs/. On subsequent runs, previous summaries are injected
     into the orchestrator's system prompt so the agent learns over time.

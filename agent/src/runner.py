@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 
 from .config import SIM_BASE_URL, VALID_DIFFICULTIES
-from .sim_client import SimClient
 
 
 def main() -> None:
@@ -52,8 +52,22 @@ def main() -> None:
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         help="Logging level (default: INFO)",
     )
+    parser.add_argument(
+        "--no-memory",
+        action="store_true",
+        default=False,
+        help=(
+            "Disable AgentCore Memory and use legacy file-based cross-session learning. "
+            "Useful for local testing without AWS credentials. "
+            "Clears BEDROCK_AGENTCORE_MEMORY_ID before loading orchestrator."
+        ),
+    )
 
     args = parser.parse_args()
+
+    # Apply --no-memory before importing orchestrator (config is read at import time)
+    if args.no_memory:
+        os.environ.pop("BEDROCK_AGENTCORE_MEMORY_ID", None)
 
     # Configure logging with sol numbers in format
     logging.basicConfig(
@@ -63,10 +77,18 @@ def main() -> None:
     )
     logger = logging.getLogger(__name__)
 
+    if args.no_memory:
+        logger.info(
+            "--no-memory flag set: using legacy file-based cross-session learning."
+        )
+
     # Lazy import to avoid loading torch/strands at import time
     from .agents.orchestrator import run_mission
 
-    client = SimClient(args.sim_url)
+    client_url = args.sim_url
+    from .sim_client import SimClient
+
+    client = SimClient(client_url)
 
     logger.info(
         "Starting Mars Greenhouse Mission: seed=%d, difficulty=%s, sols=%d",
