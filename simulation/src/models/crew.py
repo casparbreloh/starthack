@@ -63,7 +63,13 @@ from src.constants import (
     STARVATION_PENALTY_UNDERFED_PER_SOL,
     STARVATION_SEVERE_DEFICIT_SOLS,
 )
-from src.enums import CrewCauseOfDeath, CrewStatus, DehydrationLevel, MicronutrientLevel, StarvationLevel
+from src.enums import (
+    CrewCauseOfDeath,
+    CrewStatus,
+    DehydrationLevel,
+    MicronutrientLevel,
+    StarvationLevel,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Individual crew member
