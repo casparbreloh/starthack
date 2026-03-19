@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import type { CropBatch } from "@/types/simulation";
+import type { CropBatch } from "@/types/game";
 
 // Crop images - healthy
 import healthyPotato from "@/assets/crops/healthy_potato.png";

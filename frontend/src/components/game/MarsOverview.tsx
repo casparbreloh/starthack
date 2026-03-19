@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import marsLandscape from "@/assets/mars-landscape.png";
-import type { WeatherCurrent, SimStatus } from "@/types/simulation";
+import type { WeatherCurrent, SimStatus } from "@/types/game";
 import { Thermometer, Sun, CloudFog, Gauge, AlertTriangle, CheckCircle } from "lucide-react";
 import { useActiveCrises, useScore } from "@/hooks/useGameData";
 

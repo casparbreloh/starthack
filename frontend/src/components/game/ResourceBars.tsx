@@ -1,4 +1,4 @@
-import type { WaterStatus, EnergyStatus } from "@/types/simulation";
+import type { WaterStatus, EnergyStatus } from "@/types/game";
 
 interface ResourceBarsProps {
   water: WaterStatus;

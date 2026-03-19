@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import type { CrewMember } from "@/types/simulation";
+import type { CrewMember } from "@/types/game";
 
 interface CrewPanelProps {
   members: CrewMember[];

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Thermometer, Gauge, Wind, Sun, CloudFog } from "lucide-react";
-import type { WeatherCurrent } from "@/types/simulation";
+import type { WeatherCurrent } from "@/types/game";
 
 interface WeatherPanelProps {
   weather: WeatherCurrent;

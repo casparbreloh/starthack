@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import greenhouseDome from "@/assets/greenhouse-dome.png";
-import type { CropBatch, ZoneEnvironment, ZoneNutrients } from "@/types/simulation";
+import type { CropBatch, ZoneEnvironment, ZoneNutrients } from "@/types/game";
 import { useWater, useEnergy } from "@/hooks/useGameData";
 
 // Reuse crop images

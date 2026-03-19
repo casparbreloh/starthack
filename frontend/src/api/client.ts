@@ -1,0 +1,51 @@
+import type {
+  SimAdvanceResponse,
+  SimStatus,
+  WeatherCurrent,
+  EnergyStatus,
+  GreenhouseEnvironment,
+  WaterStatus,
+  CropsStatus,
+  NutrientsStatus,
+  CrewNutrition,
+  CrewHealth,
+  CrewMembers,
+  ActiveCrises,
+  EventsLog,
+  ScoreData,
+} from "../types/simulation"
+
+const BASE = "/simulation"
+
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`)
+  if (!res.ok) throw new Error(`${path} → ${res.status}`)
+  return res.json() as Promise<T>
+}
+
+async function post<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+  if (!res.ok) throw new Error(`${path} → ${res.status}`)
+  return res.json() as Promise<T>
+}
+
+export const api = {
+  advance: (sols: number) => post<SimAdvanceResponse>("/sim/advance", { sols }),
+  getStatus: () => get<SimStatus>("/sim/status"),
+  getWeather: () => get<WeatherCurrent>("/weather/current"),
+  getEnergy: () => get<EnergyStatus>("/energy/status"),
+  getGreenhouse: () => get<GreenhouseEnvironment>("/greenhouse/environment"),
+  getWater: () => get<WaterStatus>("/water/status"),
+  getCrops: () => get<CropsStatus>("/crops/status"),
+  getNutrients: () => get<NutrientsStatus>("/nutrients/status"),
+  getCrew: () => get<CrewNutrition>("/crew/nutrition"),
+  getCrewHealth: () => get<CrewHealth>("/crew/health"),
+  getCrewMembers: () => get<CrewMembers>("/crew/members"),
+  getCrises: () => get<ActiveCrises>("/events/active_crises"),
+  getEvents: (sinceSol = 0) => get<EventsLog>(`/events/log?since_sol=${sinceSol}`),
+  getScore: () => get<ScoreData>("/score/current"),
+}

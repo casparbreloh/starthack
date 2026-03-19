@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import type { EventLogEntry } from "@/types/simulation";
+import type { EventLogEntry } from "@/types/game";
 
 interface EventLogPanelProps {
   events: EventLogEntry[];

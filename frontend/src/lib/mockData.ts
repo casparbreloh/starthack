@@ -1,4 +1,4 @@
-import type * as T from "@/types/simulation";
+import type * as T from "@/types/game";
 
 // Mock data used when the backend API is not reachable
 

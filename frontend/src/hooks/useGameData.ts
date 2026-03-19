@@ -1,7 +1,7 @@
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import * as mock from "@/lib/mockData";
-import type * as T from "@/types/simulation";
+import type * as T from "@/types/game";
 
 const REFETCH = 3000;
 

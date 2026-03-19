@@ -7,7 +7,7 @@
  * expect (field renames, unit conversions, flattening wrappers).
  */
 
-import type * as T from "@/types/simulation";
+import type * as T from "@/types/game";
 
 const BASE_URL = "http://localhost:8080";
 
