@@ -207,7 +207,7 @@ class SimulationEngine:
 
     def reset(
         self,
-        _seed: int = 0,
+        seed: int = 0,
         difficulty: Difficulty = Difficulty.NORMAL,
         starting_reserves: dict[str, float] | None = None,
     ) -> None:

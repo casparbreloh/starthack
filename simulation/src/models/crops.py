@@ -68,6 +68,7 @@ class CropBatch:
     age_days: int = 0  # sols since planting
     soil_moisture_pct: float = 60.0
     stress_indicators: list[StressIndicator] = field(default_factory=list)
+    is_bolting: bool = False  # True once bolting triggered (permanent, lettuce only)
     # Internal water tracking
     _soil_water_L: float = field(default=0.0, repr=False)
 
