@@ -1,7 +1,7 @@
 """LSTM weather model integration for the Mars greenhouse agent.
 
-Wraps the pre-trained LSTM models to provide weather forecasts based on
-simulation weather history. Maps simulation field names to LSTM field names.
+Calls the ML forecast sidecar service via HTTP to get weather predictions.
+This avoids bundling torch/sklearn/pandas in the agent image.
 
 The LSTM models were trained on Curiosity rover data (4,586 sols). By feeding
 simulation weather history as context, the forecasts reflect the simulation's
@@ -11,28 +11,10 @@ actual weather trajectory, not static Curiosity data. [ARCH-1, R5-C2]
 from __future__ import annotations
 
 import logging
-import os
-import pickle
-import sys
 
-# [R9-M2] sys.path manipulation at MODULE LEVEL (before any mars_weather import)
-# so that top-level imports of mars_weather work correctly.
-_ML_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "ml")
-_ML_DIR = os.path.abspath(_ML_DIR)
-if _ML_DIR not in sys.path:
-    sys.path.insert(0, _ML_DIR)
+import httpx
 
-from mars_weather.predict import (  # noqa: E402  # type: ignore[import-not-found]
-    predict_at_horizon_from_context,
-    predict_from_context,
-)
-
-from .config import ML_MODELS_DIR  # noqa: E402
-
-try:
-    import pandas as pd
-except ImportError:
-    pd = None  # type: ignore[assignment]
+from .config import ML_SERVICE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -51,86 +33,54 @@ SIM_TO_LSTM_FIELDS: dict[str, str] = {
 class WeatherForecaster:
     """LSTM-based weather forecaster for the Mars greenhouse agent.
 
-    Feeds simulation weather history to pre-trained LSTM models to provide:
+    Calls the ML forecast service to provide:
     - 7-sol autoregressive forecast
     - 30-sol single-shot forecast
     - 668-sol seasonal baseline outlook
     - Sensor sanity checking (3-sigma deviation detection)
     """
 
-    def __init__(self, model_dir: str = ML_MODELS_DIR) -> None:
-        """Initialize the WeatherForecaster.
+    def __init__(self, service_url: str = ML_SERVICE_URL) -> None:
+        self._client = httpx.Client(base_url=service_url, timeout=30.0)
 
-        Args:
-            model_dir: Path to trained model artifacts directory.
-        """
-        self.model_dir = model_dir
-
-        # [R8-H5] Load seasonal baseline with graceful failure
-        seasonal_pkl = os.path.join(model_dir, "seasonal_baseline.pkl")
-        try:
-            with open(seasonal_pkl, "rb") as f:
-                self.seasonal_baseline = pickle.load(f)
-            logger.info("Loaded seasonal baseline from %s", seasonal_pkl)
-        except FileNotFoundError:
-            logger.warning(
-                "seasonal_baseline.pkl not found at %s. "
-                "Seasonal forecasting will be unavailable.",
-                seasonal_pkl,
-            )
-            self.seasonal_baseline = None
-        except Exception as exc:
-            logger.warning("Failed to load seasonal_baseline.pkl: %s", exc)
-            self.seasonal_baseline = None
-
-    def _sim_history_to_lstm_df(self, weather_history: list[dict]):
-        """Convert simulation weather history to LSTM-compatible DataFrame.
+    def _sim_history_to_lstm_records(self, weather_history: list[dict]) -> list[dict]:
+        """Convert simulation weather history to LSTM-compatible records.
 
         Maps simulation field names to LSTM field names via SIM_TO_LSTM_FIELDS.
-        All other columns (ls, sol, dust_opacity, solar_irradiance_wm2, etc.)
-        pass through unchanged. [R9-M1]
-
-        Sets min_gts_temp and max_gts_temp to NaN since simulation does not
-        provide ground temperature sensors — predict_from_context() handles
-        imputation with proxy offsets. [R10-H1]
-
-        Args:
-            weather_history: List of dicts from SimClient.get_weather_history()
-
-        Returns:
-            pd.DataFrame with LSTM-compatible column names.
+        Sets min_gts_temp and max_gts_temp to None since simulation does not
+        provide ground temperature sensors — the ML service handles imputation.
         """
         if not weather_history:
-            return pd.DataFrame()  # type: ignore[union-attr]
+            return []
 
-        df = pd.DataFrame(weather_history)  # type: ignore[union-attr]
+        records = []
+        for row in weather_history:
+            mapped = {}
+            for key, value in row.items():
+                mapped_key = SIM_TO_LSTM_FIELDS.get(key, key)
+                mapped[mapped_key] = value
+            mapped["min_gts_temp"] = None
+            mapped["max_gts_temp"] = None
+            records.append(mapped)
 
-        # Rename divergent fields
-        df = df.rename(columns=SIM_TO_LSTM_FIELDS)
-
-        # Set ground temperature columns to NaN (not in simulation weather output)
-        # predict_from_context() will impute with: min_temp-5.0, max_temp+10.0
-        df["min_gts_temp"] = float("nan")
-        df["max_gts_temp"] = float("nan")
-
-        return df
+        return records
 
     def get_7sol_forecast(self, weather_history: list[dict]) -> list[dict]:
         """Get 7-sol autoregressive forecast from simulation weather history.
 
-        Args:
-            weather_history: List of weather dicts from SimClient.get_weather_history()
-
         Returns:
-            List of up to 7 forecast dicts with sol and target fields.
-            Empty list if history is too short (<30 sols) or forecast fails. [R8-C1]
+            List of up to 7 forecast dicts. Empty list on failure.
         """
         try:
-            df = self._sim_history_to_lstm_df(weather_history)
-            if df.empty:
+            records = self._sim_history_to_lstm_records(weather_history)
+            if not records:
                 return []
-            result = predict_from_context(df, n_sols=7, model_dir=self.model_dir)
-            return result if result else []
+            resp = self._client.post(
+                "/predict",
+                json={"weather_history": records, "n_sols": 7},
+            )
+            resp.raise_for_status()
+            return resp.json().get("forecast", [])
         except Exception as exc:
             logger.warning("7-sol LSTM forecast failed: %s", exc)
             return []
@@ -138,21 +88,19 @@ class WeatherForecaster:
     def get_30sol_forecast(self, weather_history: list[dict]) -> dict:
         """Get 30-sol single-shot forecast from simulation weather history.
 
-        Args:
-            weather_history: List of weather dicts from SimClient.get_weather_history()
-
         Returns:
-            Single forecast dict with sol and target fields.
-            Empty dict if forecast fails.
+            Single forecast dict. Empty dict on failure.
         """
         try:
-            df = self._sim_history_to_lstm_df(weather_history)
-            if df.empty:
+            records = self._sim_history_to_lstm_records(weather_history)
+            if not records:
                 return {}
-            result = predict_at_horizon_from_context(
-                df, horizon=30, model_dir=self.model_dir
+            resp = self._client.post(
+                "/predict_at_horizon",
+                json={"weather_history": records, "horizon": 30},
             )
-            return result if result else {}
+            resp.raise_for_status()
+            return resp.json().get("forecast", {})
         except Exception as exc:
             logger.warning("30-sol LSTM forecast failed: %s", exc)
             return {}
@@ -162,47 +110,17 @@ class WeatherForecaster:
     ) -> list[dict]:
         """Get seasonal baseline forecast for long-term crop planning.
 
-        Uses the 668-sol Martian year seasonal model for crop cycle timing
-        and winter preparation guidance.
-
-        Args:
-            current_sol: Current simulation sol number
-            lookahead: Number of sols to look ahead for seasonal guidance (default 90)
-
         Returns:
             List of dicts with sol and predicted target values.
-            Empty list if seasonal baseline is unavailable. [R8-H5]
+            Empty list if unavailable.
         """
-        # [R8-H5] Return empty list if baseline not loaded
-        if self.seasonal_baseline is None:
-            return []
-
         try:
-            # [R5-H1] SeasonalBaseline.predict() returns {target: [values]} dict
-            # Transpose to list of dicts format
-            prediction = self.seasonal_baseline.predict(
-                current_sol, lookahead=lookahead
+            resp = self._client.post(
+                "/seasonal_baseline",
+                json={"current_sol": current_sol, "lookahead": lookahead},
             )
-            if not prediction:
-                return []
-
-            # Get the target keys and their value lists
-            target_keys = list(prediction.keys())
-            if not target_keys:
-                return []
-
-            n_points = len(prediction[target_keys[0]])
-            result = []
-            for i in range(n_points):
-                entry = {"sol": current_sol + i}
-                for key in target_keys:
-                    vals = prediction[key]
-                    if i < len(vals):
-                        entry[key] = vals[i]
-                result.append(entry)
-
-            return result
-
+            resp.raise_for_status()
+            return resp.json().get("forecast", [])
         except Exception as exc:
             logger.warning("Seasonal baseline forecast failed: %s", exc)
             return []

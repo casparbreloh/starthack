@@ -1,5 +1,5 @@
-.PHONY: dev dev-agent dev-simulation dev-frontend install install-frozen \
-	check check-agent check-frontend check-simulation \
+.PHONY: dev dev-agent dev-simulation dev-frontend dev-ml install install-frozen \
+	check check-agent check-frontend check-simulation check-ml \
 	check-fix check-agent-fix check-frontend-fix check-simulation-fix \
 	codegen check-codegen
 
@@ -9,12 +9,15 @@ dev-simulation:
 dev-agent:
 	@cd agent && uv run uvicorn src.main:app --reload --port 9090
 
+dev-ml:
+	@cd ml && uv run uvicorn serve:app --reload --port 8090
+
 dev-frontend:
 	@cd frontend && pnpm dev --port 5173
 
 dev:
 	@trap 'kill 0' INT TERM; \
-	make dev-agent & make dev-simulation & make dev-frontend & wait
+	make dev-agent & make dev-simulation & make dev-ml & make dev-frontend & wait
 
 install:
 	@cd agent && uv sync
@@ -37,7 +40,10 @@ check-frontend:
 check-simulation:
 	@cd simulation && uv run ruff check src main.py && uv run ruff format --check src main.py && uv run pyright src main.py
 
-check: check-agent check-frontend check-simulation
+check-ml:
+	@cd ml && uv run ruff check serve.py && uv run ruff format --check serve.py && uv run pyright serve.py
+
+check: check-agent check-frontend check-simulation check-ml
 
 check-agent-fix:
 	@cd agent && uv run ruff check --fix src && uv run ruff format src
