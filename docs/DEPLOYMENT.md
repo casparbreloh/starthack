@@ -2,19 +2,20 @@
 
 AWS account `961812672853`, region `us-west-2`.
 
-## Local Dev (Docker Compose)
+## Local Dev
 
-Runs simulation + agent locally. The agent needs AWS credentials for Bedrock LLM access.
+Starts simulation, ML sidecar, frontend, and agent (waits for simulation health check before starting agent).
 
 ```bash
-docker compose up --build
+make dev
 ```
 
 - Simulation: `http://localhost:8080`
 - WebSocket: `ws://localhost:8080/ws`
-- Agent connects to simulation automatically via internal Docker networking
+- Frontend: `http://localhost:5173`
+- ML sidecar: `http://localhost:8090`
 
-AWS credentials are passed through from your shell environment (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`).
+AWS credentials are needed in your shell for the agent's Bedrock LLM access (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`).
 
 ## Fargate / AgentCore
 

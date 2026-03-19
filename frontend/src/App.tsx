@@ -1,15 +1,15 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { BrowserRouter, Route, Routes } from "react-router-dom"
 
-const queryClient = new QueryClient();
+import { Toaster as Sonner } from "@/components/ui/sonner"
+import { Toaster } from "@/components/ui/toaster"
+import { TooltipProvider } from "@/components/ui/tooltip"
+import { GameDataProvider } from "@/hooks/useGameData"
+
+import Index from "./pages/Index.tsx"
+import NotFound from "./pages/NotFound.tsx"
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <GameDataProvider>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -20,7 +20,7 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
-);
+  </GameDataProvider>
+)
 
-export default App;
+export default App

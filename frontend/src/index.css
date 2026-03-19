@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -64,28 +64,28 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   .font-mono {
-    font-family: 'Geist Mono', 'SF Mono', 'Fira Code', monospace;
-    font-feature-settings: 'tnum';
+    font-family: "Geist Mono", "SF Mono", "Fira Code", monospace;
+    font-feature-settings: "tnum";
   }
 }
 
 @layer utilities {
   .label-aerospace {
-    @apply text-[10px] font-mono uppercase tracking-[0.15em] text-muted-foreground;
+    @apply font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground;
   }
 
   .value-readout {
-    @apply text-2xl font-mono tabular-nums text-foreground;
+    @apply font-mono text-2xl tabular-nums text-foreground;
   }
 
   .surface-card {
-    @apply bg-card border border-border rounded-sm;
+    @apply rounded-sm border border-border bg-card;
   }
 
   .glow-plant {

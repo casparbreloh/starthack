@@ -1,8 +1,13 @@
-import type { Config } from "tailwindcss";
+import type { Config } from "tailwindcss"
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -14,8 +19,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        mono: ['"Geist Mono"', '"SF Mono"', '"Fira Code"', 'monospace'],
-        body: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+        mono: ['"Geist Mono"', '"SF Mono"', '"Fira Code"', "monospace"],
+        body: ['"IBM Plex Sans"', "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -98,4 +103,4 @@ export default {
     },
   },
   plugins: [require("tailwindcss-animate")],
-} satisfies Config;
+} satisfies Config

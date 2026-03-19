@@ -17,7 +17,14 @@ dev-frontend:
 
 dev:
 	@trap 'kill 0' INT TERM; \
-	make dev-agent & make dev-simulation & make dev-ml & make dev-frontend & wait
+	make dev-simulation & \
+	make dev-ml & \
+	make dev-frontend & \
+	echo "[dev] waiting for simulation on :8080…"; \
+	until curl -sf http://localhost:8080/health > /dev/null 2>&1; do sleep 0.5; done; \
+	echo "[dev] simulation ready — starting agent"; \
+	make dev-agent & \
+	wait
 
 install:
 	@cd agent && uv sync
