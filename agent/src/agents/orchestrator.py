@@ -36,6 +36,11 @@ from ..config import (
     MODEL_ID,
     memory_enabled,
 )
+from ..crisis_tracker import (
+    CrisisOutcomeTracker,
+    MemoryContext,
+    retrieve_crisis_learnings,
+)
 from ..energy_projection import project_energy_budget, summarize_energy_projection
 from ..journal import CrossSessionLearning, DecisionJournal, compact_state_summary
 from ..mcp_client import create_mcp_client, discover_kb_tools
@@ -150,6 +155,8 @@ def run_sol(
     weather_forecaster: WeatherForecaster,
     journal: DecisionJournal,
     prev_score: float | None = None,
+    tracker: CrisisOutcomeTracker | None = None,
+    memory_context: MemoryContext | None = None,
 ) -> dict:
     """Run one sol of the mission — the core agent loop.
 
@@ -183,6 +190,11 @@ def run_sol(
     pre_advance_crises = state["active_crises"]  # [R7-H1]
 
     logger.info("=== Sol %d ===", sol)
+
+    # Capture observation windows for any tracked crises due this sol
+    if tracker is not None:
+        updated = tracker.check_observation_windows(sol, state)
+        logger.debug("Sol %d: %d observation windows captured", sol, len(updated))
     actions_list: list[str] = []
     crises_handled: list[str] = []
 
@@ -314,6 +326,17 @@ def run_sol(
             "Sol %d: %d new crisis(es) detected post-advance", sol, len(new_crises)
         )
         # [R7-M2] Dust storms detected pre-advance from weather; crises post-advance
+        # Retrieve past crisis learnings for context injection (single combined query)
+        if memory_context is not None:
+            crisis_history = retrieve_crisis_learnings(
+                memory_context["memory_client"],
+                memory_context["memory_id"],
+                memory_context["actor_id"],
+                [c.get("type", "") for c in new_crises],
+            )
+        else:
+            crisis_history = ""
+
         # Build minimal prompt for post-advance crisis react [R7-M3]
         crisis_prompt = (
             f"Sol {sol} post-advance: New crises detected.\n"
@@ -321,6 +344,8 @@ def run_sol(
             f"Pre-advance state: {compact_state_summary(state)}\n"
             "Please call the appropriate specialist agent(s) to handle these crises."
         )
+        if crisis_history:
+            crisis_prompt += f"\n\n{crisis_history}\nUse these past learnings to inform your crisis response."
         try:
             # Crisis orchestrator is always FRESH (stateless) — no session_manager
             crisis_orchestrator, _ = create_orchestrator(client)
@@ -329,8 +354,8 @@ def run_sol(
             crises_handled = [c.get("type", "unknown") for c in new_crises]
             # Extract additional actions
             try:
-                content = crisis_result.message.get("content", [])
-                for block in content:
+                crisis_content = crisis_result.message.get("content", [])
+                for block in crisis_content:
                     if isinstance(block, dict) and block.get("type") == "tool_use":
                         actions_list.append(
                             f"[crisis]{block['name']}({json.dumps(block.get('input', {}))})"  # type: ignore[typeddict-item]
@@ -343,8 +368,28 @@ def run_sol(
                 crises_handled,
                 compact_state_summary(state),
             )
+            # Record each new crisis for outcome tracking [R8-H4]
+            if tracker is not None:
+                for c in new_crises:
+                    tracker.record_crisis(
+                        crisis_id=c["id"],
+                        crisis_type=c.get("type", "unknown"),
+                        severity=c.get("severity", "unknown"),
+                        sol=sol,
+                        pre_crisis_snapshot=compact_state_summary(state),
+                        pre_crisis_score=float(current_score),
+                        pre_crisis_ids=pre_ids,
+                        response_actions=[
+                            a for a in actions_list if a.startswith("[crisis]")
+                        ],
+                        specialist_output=str(crisis_result.message)[:500],
+                    )
         except Exception as exc:
             logger.warning("Sol %d: crisis response failed (%s)", sol, exc)
+
+    # Synthesize pending crisis learnings (rate-limited to 2/sol)
+    if tracker is not None:
+        tracker.process_synthesis_batch(memory_context=memory_context, max_per_sol=2)
 
     return {
         "sol": sol,
@@ -477,6 +522,9 @@ def run_mission(
         # Step 7: Initialize DecisionJournal [ARCH-4]
         journal = DecisionJournal()
 
+        # Initialize CrisisOutcomeTracker for long-term crisis outcome tracking
+        tracker = CrisisOutcomeTracker()
+
         run_id = datetime.utcnow().strftime("%Y%m%d_%H%M%S")  # [R5-IR3]
         prev_score: float | None = None
         last_advance_response: dict = {}
@@ -550,6 +598,13 @@ def run_mission(
                         weather_forecaster,
                         journal,
                         prev_score,
+                        tracker=tracker,
+                        memory_context={
+                            "memory_client": memory_client,
+                            "memory_id": MEMORY_ID,
+                            "actor_id": ACTOR_ID,
+                            "session_id": run_id,
+                        },
                     )
                     prev_score = sol_result["score"]
                     last_advance_response = sol_result["advance_response"]
@@ -558,6 +613,21 @@ def run_mission(
                     if sol_result["mission_phase"] == "complete":
                         logger.info("Mission completed at sol %d", sol_result["sol"])
                         break
+
+            # Force-close any pending crisis trackers at mission end
+            final_state = client.read_all_telemetry()
+            tracker.force_close_pending(
+                current_sol=mission_sols, current_state=final_state
+            )
+            tracker.process_synthesis_batch(
+                memory_context={
+                    "memory_client": memory_client,
+                    "memory_id": MEMORY_ID,
+                    "actor_id": ACTOR_ID,
+                    "session_id": run_id,
+                },
+                max_per_sol=10,  # No rate limit at mission end — flush all
+            )
 
             # Record mission summary in AgentCore Memory
             _record_mission_summary_to_memory(
@@ -597,6 +667,8 @@ def run_mission(
                     weather_forecaster,
                     journal,
                     prev_score,
+                    tracker=tracker,
+                    memory_context=None,
                 )
                 prev_score = sol_result["score"]
                 last_advance_response = sol_result["advance_response"]
@@ -605,6 +677,13 @@ def run_mission(
                 if sol_result["mission_phase"] == "complete":
                     logger.info("Mission completed at sol %d", sol_result["sol"])
                     break
+
+            # Force-close any pending crisis trackers at mission end (legacy path)
+            final_state = client.read_all_telemetry()
+            tracker.force_close_pending(
+                current_sol=mission_sols, current_state=final_state
+            )
+            tracker.process_synthesis_batch()  # In-memory only, no memory_context
 
             # Step 11 (legacy): generate and save cross-session summary
             last_phase = last_advance_response.get("mission_phase", "active")
