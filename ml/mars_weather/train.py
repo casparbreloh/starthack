@@ -82,8 +82,8 @@ def train_lstm(train_df, val_df, feature_cols, horizon=1):
         if (epoch + 1) % 10 == 0 or epoch == 0:
             print(f"  Epoch {epoch+1:3d} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
 
-        # Early stopping
-        if val_loss < best_val_loss:
+        # Early stopping (treat NaN as non-improvement)
+        if not np.isnan(val_loss) and val_loss < best_val_loss:
             best_val_loss = val_loss
             patience_counter = 0
             best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
@@ -92,6 +92,9 @@ def train_lstm(train_df, val_df, feature_cols, horizon=1):
             if patience_counter >= PATIENCE:
                 print(f"  Early stopping at epoch {epoch+1}")
                 break
+
+    if best_state is None:
+        raise RuntimeError("Training failed: no valid checkpoint (all val losses were NaN)")
 
     model.load_state_dict(best_state)
     return model, best_val_loss

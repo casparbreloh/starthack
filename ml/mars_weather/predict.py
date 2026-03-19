@@ -42,20 +42,20 @@ def load_model_and_scalers(horizon=1, model_dir=MODEL_DIR):
     return model, meta, feature_scaler, target_scaler, device
 
 
-def predict_next(n_sols=7, horizon=1, model_dir=MODEL_DIR):
-    """Predict the next n_sols of Mars weather.
+def predict_next(n_sols=7, model_dir=MODEL_DIR):
+    """Predict the next n_sols of Mars weather using the h=1 model autoregressively.
 
-    Uses the most recent data as context and autoregressively predicts forward.
+    Always uses the horizon=1 model and steps forward one sol at a time,
+    updating features from each prediction for the next step.
 
     Args:
         n_sols: Number of sols to forecast
-        horizon: Which trained model horizon to use (1, 7, or 30)
         model_dir: Path to saved models
 
     Returns:
         DataFrame with columns: sol, min_temp, max_temp, pressure, min_gts_temp, max_gts_temp
     """
-    model, meta, feature_scaler, target_scaler, device = load_model_and_scalers(horizon, model_dir)
+    model, meta, feature_scaler, target_scaler, device = load_model_and_scalers(1, model_dir)
     feature_cols = meta["feature_cols"]
     seq_len = meta["seq_len"]
 
@@ -134,12 +134,56 @@ def predict_next(n_sols=7, horizon=1, model_dir=MODEL_DIR):
     return pd.DataFrame(predictions)
 
 
+def predict_at_horizon(horizon=7, model_dir=MODEL_DIR):
+    """Single-shot prediction at a specific horizon using the matching model.
+
+    Uses the h=7 or h=30 model to predict exactly t+horizon from current data.
+    No autoregressive stepping — just one prediction at the trained offset.
+
+    Args:
+        horizon: How many sols ahead to predict (1, 7, or 30)
+        model_dir: Path to saved models
+
+    Returns:
+        dict with sol and predicted targets
+    """
+    model, meta, feature_scaler, target_scaler, device = load_model_and_scalers(horizon, model_dir)
+    feature_cols = meta["feature_cols"]
+    seq_len = meta["seq_len"]
+
+    df = load_raw()
+    df = engineer_features(df)
+    df = df.dropna(subset=TARGETS).reset_index(drop=True)
+
+    df_scaled = df.copy()
+    df_scaled[feature_cols] = feature_scaler.transform(df[feature_cols])
+
+    context = df_scaled[feature_cols].values[-seq_len:].astype(np.float32)
+    x = torch.tensor(context, device=device).unsqueeze(0)
+
+    with torch.no_grad():
+        pred_scaled = model(x).detach().cpu().numpy()[0]
+
+    pred = target_scaler.inverse_transform(pred_scaled.reshape(1, -1))[0]
+    last_sol = int(df["sol"].iloc[-1])
+
+    result = {"sol": last_sol + horizon}
+    for i, target in enumerate(TARGETS):
+        result[target] = round(float(pred[i]), 1)
+    return result
+
+
 if __name__ == "__main__":
-    print("Mars Weather Forecast — Next 7 sols")
+    print("Mars Weather Forecast — Next 7 sols (autoregressive, h=1)")
     print("=" * 60)
-    forecast = predict_next(n_sols=7, horizon=1)
+    forecast = predict_next(n_sols=7)
     print(forecast.to_string(index=False))
-    print("\nMars Weather Forecast — Next 30 sols")
+
+    print("\nSingle-shot predictions at specific horizons:")
     print("=" * 60)
-    forecast30 = predict_next(n_sols=30, horizon=30)
-    print(forecast30.to_string(index=False))
+    for h in [1, 7, 30]:
+        p = predict_at_horizon(horizon=h)
+        print(f"  t+{h:2d} (sol {p['sol']}): "
+              f"temp=[{p['min_temp']}, {p['max_temp']}]°C  "
+              f"P={p['pressure']} Pa  "
+              f"ground=[{p['min_gts_temp']}, {p['max_gts_temp']}]°C")
