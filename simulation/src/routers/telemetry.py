@@ -299,7 +299,8 @@ def crew_nutrition():
                 "kcal_remaining": round(kg * FOOD_KCAL_PER_KG[food_type]),
                 "protein_g_remaining": round(kg * FOOD_PROTEIN_G_PER_KG[food_type]),
                 "pct_remaining": round(kg / INITIAL_FOOD_KG[food_type] * 100.0, 1)
-                if INITIAL_FOOD_KG[food_type] > 0 else 0.0,
+                if INITIAL_FOOD_KG[food_type] > 0
+                else 0.0,
             }
             for food_type, kg in s.stored_food_kg.items()
         },
@@ -367,6 +368,13 @@ def crew_health():
             "level": h.micronutrient_level.value,
             "consecutive_deficit_sols": h.consecutive_micronutrient_deficit_sols,
             "health_penalty_pct": h.micronutrient_health_penalty,
+        },
+        "illness": {
+            "active": h.illness.active,
+            "sick_member_name": h.illness.sick_member_name,
+            "duration_remaining_sols": h.illness.duration_remaining_sols,
+            "kcal_multiplier": h.illness.kcal_multiplier,
+            "protein_multiplier": h.illness.protein_multiplier,
         },
     }
 

@@ -115,15 +115,17 @@ class SimulationEngine:
         self.water.integrate()
         self.nutrients.integrate()
         dead_crops = self.crops.integrate()
-        self.crew.integrate()
+        self.crew.integrate(current_sol=sol)
 
         # ── Event generation ─────────────────────────────────────────
         tick_events: list[dict[str, Any]] = []
 
         # Starvation level-change events (emitted by CrewModel)
         for category, message, sev_str in self.crew.pending_events:
-            severity = Severity.INFO if sev_str == "info" else (
-                Severity.WARNING if sev_str == "warning" else Severity.CRITICAL
+            severity = (
+                Severity.INFO
+                if sev_str == "info"
+                else (Severity.WARNING if sev_str == "warning" else Severity.CRITICAL)
             )
             ev = self.events.log(sol, "alert", category, message, severity)
             tick_events.append(_event_to_dict(ev))
@@ -205,7 +207,7 @@ class SimulationEngine:
 
     def reset(
         self,
-        _seed: int = 0,
+        seed: int = 0,
         difficulty: Difficulty = Difficulty.NORMAL,
         starting_reserves: dict[str, float] | None = None,
     ) -> None:

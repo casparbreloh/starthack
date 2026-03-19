@@ -53,9 +53,9 @@ class MicronutrientLevel(StrEnum):
     Source: NASA-STD-3001 Vol.2 Rev.B §6.2.4; IOM Dietary Reference Intakes 2006.
     """
 
-    ADEQUATE = "adequate"    # < 7 sols: no deficit
+    ADEQUATE = "adequate"  # < 7 sols: no deficit
     DEFICIENT = "deficient"  # 7–20 sols: subclinical — fatigue, immune decline
-    DEPLETED = "depleted"    # ≥ 21 sols: clinical — scurvy, bone loss, organ stress
+    DEPLETED = "depleted"  # ≥ 21 sols: clinical — scurvy, bone loss, organ stress
 
 
 class Severity(StrEnum):
@@ -90,7 +90,9 @@ class CrisisType(StrEnum):
     CREW_DEHYDRATION = "crew_dehydration"  # crew hydration below safe threshold
     CREW_STARVATION = "crew_starvation"  # consecutive caloric deficit accumulating
     RADIATION_EXPOSURE = "radiation_exposure"  # cumulative dose exceeds NASA limit
-    CREW_MICRONUTRIENT_DEFICIENCY = "crew_micronutrient_deficiency"  # no fresh crop intake
+    CREW_MICRONUTRIENT_DEFICIENCY = (
+        "crew_micronutrient_deficiency"  # no fresh crop intake
+    )
 
 
 class CrewCauseOfDeath(StrEnum):

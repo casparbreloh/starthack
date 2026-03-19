@@ -76,7 +76,9 @@ class NutrientAdjustRequest(BaseModel):
     target_ec_ms_cm: float | None = Field(default=None, ge=0.1, le=5.0)
     nitrogen_boost: bool = False
     potassium_boost: bool = False
-    flush_solution: bool = False  # dilute solution to remove accumulated salts (costs 10 L water)
+    flush_solution: bool = (
+        False  # dilute solution to remove accumulated salts (costs 10 L water)
+    )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -269,7 +271,7 @@ def nutrients_adjust(req: NutrientAdjustRequest):
     if req.zone_id not in engine.nutrients.state:
         raise HTTPException(404, f"Zone '{req.zone_id}' not found")
 
-    result = engine.nutrients.adjust(
+    engine.nutrients.adjust(
         zone_id=req.zone_id,
         target_ph=req.target_ph,
         target_ec_ms_cm=req.target_ec_ms_cm,
@@ -283,7 +285,7 @@ def nutrients_adjust(req: NutrientAdjustRequest):
             0.0, engine.water.state.reservoir_liters - 10.0
         )
     z = engine.nutrients.state[req.zone_id]
-    response = {
+    return {
         "status": "ok",
         "zone_id": req.zone_id,
         "solution_ph": z.solution_ph,

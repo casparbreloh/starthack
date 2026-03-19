@@ -148,7 +148,8 @@ class NutrientModel:
             )
             # EC = total dissolved solids (nutrients + accumulated mineral salts)
             z.solution_ec_ms_cm = round(
-                max(0.1, (z.nitrogen_ppm + z.potassium_ppm + z.base_salt_ppm) / 200.0), 2
+                max(0.1, (z.nitrogen_ppm + z.potassium_ppm + z.base_salt_ppm) / 200.0),
+                2,
             )
             # pH drift: crop nutrient uptake acidifies solution (cation > anion uptake);
             # zones without crops drift alkaline (Mars water tendency)

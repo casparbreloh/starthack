@@ -17,6 +17,7 @@ Health constants are sourced from:
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass, field
 
 from src.constants import (
@@ -38,6 +39,11 @@ from src.constants import (
     HYDRATION_MODERATE_PCT,
     HYDRATION_RECOVERY_RATE_PCT_PER_SOL,
     HYDRATION_SEVERE_PCT,
+    ILLNESS_KCAL_MULTIPLIER,
+    ILLNESS_MAX_DURATION_SOLS,
+    ILLNESS_MIN_DURATION_SOLS,
+    ILLNESS_PROBABILITY_PER_SOL,
+    ILLNESS_PROTEIN_MULTIPLIER,
     INITIAL_FOOD_KG,
     INITIAL_STORED_KCAL,
     INITIAL_STORED_PROTEIN_G,
@@ -57,7 +63,13 @@ from src.constants import (
     STARVATION_PENALTY_UNDERFED_PER_SOL,
     STARVATION_SEVERE_DEFICIT_SOLS,
 )
-from src.enums import CrewCauseOfDeath, CrewStatus, DehydrationLevel, MicronutrientLevel, StarvationLevel
+from src.enums import (
+    CrewCauseOfDeath,
+    CrewStatus,
+    DehydrationLevel,
+    MicronutrientLevel,
+    StarvationLevel,
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Individual crew member
@@ -118,6 +130,18 @@ class CrewNutritionState:
 
 
 @dataclass
+class IllnessState:
+    """Tracks a single active crew illness event."""
+
+    active: bool = False
+    sick_member_id: str | None = None
+    sick_member_name: str | None = None
+    duration_remaining_sols: int = 0
+    kcal_multiplier: float = 1.0
+    protein_multiplier: float = 1.0
+
+
+@dataclass
 class CrewHealthState:
     # ── Hydration ────────────────────────────────────────────────────────────
     hydration_pct: float = 100.0
@@ -153,6 +177,9 @@ class CrewHealthState:
     micronutrient_level: MicronutrientLevel = MicronutrientLevel.ADEQUATE
     consecutive_micronutrient_deficit_sols: int = 0
     micronutrient_health_penalty: float = 0.0
+
+    # ── Illness ──────────────────────────────────────────────────────────────
+    illness: IllnessState = field(default_factory=IllnessState)
 
     # ── Overall health ───────────────────────────────────────────────────────
     overall_health_pct: float = 100.0
@@ -238,10 +265,11 @@ class CrewModel:
         self.health.ambient_temp_c = avg_temp_c
         self.health.ambient_co2_ppm = avg_co2_ppm
 
-    def integrate(self) -> None:
+    def integrate(self, current_sol: int = 0) -> None:
         """Apply rates and update all health sub-systems."""
         self.pending_events.clear()
         self._integrate_nutrition()
+        self._integrate_illness(current_sol)
         self._integrate_hydration()
         self._integrate_starvation()
         self._integrate_micronutrients()
@@ -387,12 +415,83 @@ class CrewModel:
             self.health.alive = False
             self.health.cause_of_death = CrewCauseOfDeath.DEHYDRATION.value
 
+    def _integrate_illness(self, current_sol: int) -> None:
+        """
+        Random crew illness events (~2 per 450-sol mission).
+
+        While ill, the daily caloric and protein targets are elevated so the
+        existing starvation counter rises faster if the agent fails to provide
+        sufficient food.  A random alive crew member is named in the event log.
+        """
+        illness = self.health.illness
+
+        if illness.active:
+            illness.duration_remaining_sols -= 1
+            if illness.duration_remaining_sols <= 0:
+                # Recovery
+                illness.active = False
+                illness.kcal_multiplier = 1.0
+                illness.protein_multiplier = 1.0
+                self.state.today_kcal_target = float(CREW_DAILY_KCAL)
+                self.state.today_protein_target_g = float(CREW_DAILY_PROTEIN_G)
+                msg = (
+                    f"SUCCESS: {illness.sick_member_name} has recovered from illness. "
+                    f"Nutritional requirements return to normal."
+                )
+                self.pending_events.append(("crew_illness", msg, "info"))
+                illness.sick_member_id = None
+                illness.sick_member_name = None
+            else:
+                # Keep elevated targets for today
+                self.state.today_kcal_target = round(
+                    CREW_DAILY_KCAL * illness.kcal_multiplier, 1
+                )
+                self.state.today_protein_target_g = round(
+                    CREW_DAILY_PROTEIN_G * illness.protein_multiplier, 1
+                )
+        else:
+            # Reset targets to baseline (guards against stale values)
+            self.state.today_kcal_target = float(CREW_DAILY_KCAL)
+            self.state.today_protein_target_g = float(CREW_DAILY_PROTEIN_G)
+
+            # Only trigger new illness after sol 10 and when at least one alive
+            alive_members = [m for m in self.health.members if m.alive]
+            if (
+                current_sol >= 10
+                and alive_members
+                and random.random() < ILLNESS_PROBABILITY_PER_SOL
+            ):
+                sick = random.choice(alive_members)
+                duration = random.randint(
+                    ILLNESS_MIN_DURATION_SOLS, ILLNESS_MAX_DURATION_SOLS
+                )
+                illness.active = True
+                illness.sick_member_id = sick.member_id
+                illness.sick_member_name = sick.name
+                illness.duration_remaining_sols = duration
+                illness.kcal_multiplier = ILLNESS_KCAL_MULTIPLIER
+                illness.protein_multiplier = ILLNESS_PROTEIN_MULTIPLIER
+                self.state.today_kcal_target = round(
+                    CREW_DAILY_KCAL * ILLNESS_KCAL_MULTIPLIER, 1
+                )
+                self.state.today_protein_target_g = round(
+                    CREW_DAILY_PROTEIN_G * ILLNESS_PROTEIN_MULTIPLIER, 1
+                )
+                kcal_extra = round((ILLNESS_KCAL_MULTIPLIER - 1) * 100)
+                protein_extra = round((ILLNESS_PROTEIN_MULTIPLIER - 1) * 100)
+                msg = (
+                    f"WARNING: {sick.name} has fallen ill (sol {current_sol}). "
+                    f"Crew requires +{kcal_extra}% calories and +{protein_extra}% protein "
+                    f"for recovery over the next {duration} sols."
+                )
+                self.pending_events.append(("crew_illness", msg, "warning"))
+
     def _integrate_starvation(self) -> None:
         previous_level = self.health.starvation_level
 
         kcal_fraction = (
-            self.state.today_kcal_consumed / CREW_DAILY_KCAL
-            if CREW_DAILY_KCAL > 0
+            self.state.today_kcal_consumed / self.state.today_kcal_target
+            if self.state.today_kcal_target > 0
             else 1.0
         )
 
@@ -416,10 +515,18 @@ class CrewModel:
         #        11+ STARVING (+10/sol) → death ~18 consecutive deficit sols.
         deficit_sols = self.health.consecutive_caloric_deficit_sols
 
-        _underfed_span = STARVATION_SEVERE_DEFICIT_SOLS - STARVATION_ONSET_DEFICIT_SOLS  # 4
-        _malnourished_span = STARVATION_CRITICAL_DEFICIT_SOLS - STARVATION_SEVERE_DEFICIT_SOLS  # 4
-        _max_underfed_penalty = _underfed_span * STARVATION_PENALTY_UNDERFED_PER_SOL  # 8
-        _max_malnourished_penalty = _malnourished_span * STARVATION_PENALTY_MALNOURISHED_PER_SOL  # 20
+        _underfed_span = (
+            STARVATION_SEVERE_DEFICIT_SOLS - STARVATION_ONSET_DEFICIT_SOLS
+        )  # 4
+        _malnourished_span = (
+            STARVATION_CRITICAL_DEFICIT_SOLS - STARVATION_SEVERE_DEFICIT_SOLS
+        )  # 4
+        _max_underfed_penalty = (
+            _underfed_span * STARVATION_PENALTY_UNDERFED_PER_SOL
+        )  # 8
+        _max_malnourished_penalty = (
+            _malnourished_span * STARVATION_PENALTY_MALNOURISHED_PER_SOL
+        )  # 20
 
         if deficit_sols < STARVATION_ONSET_DEFICIT_SOLS:
             self.health.starvation_level = StarvationLevel.FED
@@ -452,7 +559,9 @@ class CrewModel:
         # ── 3. Early-warning events on level transition ───────────────
         current_level = self.health.starvation_level
         if current_level != previous_level:
-            self._emit_starvation_transition(previous_level, current_level, kcal_fraction)
+            self._emit_starvation_transition(
+                previous_level, current_level, kcal_fraction
+            )
 
     def _emit_starvation_transition(
         self,
@@ -520,8 +629,12 @@ class CrewModel:
             self.health.consecutive_micronutrient_deficit_sols += 1
 
         deficit_sols = self.health.consecutive_micronutrient_deficit_sols
-        _deficient_span = MICRONUTRIENT_SEVERE_DEFICIT_SOLS - MICRONUTRIENT_ONSET_DEFICIT_SOLS  # 14
-        _max_deficient_penalty = _deficient_span * MICRONUTRIENT_PENALTY_DEFICIENT_PER_SOL  # 14.0
+        _deficient_span = (
+            MICRONUTRIENT_SEVERE_DEFICIT_SOLS - MICRONUTRIENT_ONSET_DEFICIT_SOLS
+        )  # 14
+        _max_deficient_penalty = (
+            _deficient_span * MICRONUTRIENT_PENALTY_DEFICIENT_PER_SOL
+        )  # 14.0
 
         if deficit_sols < MICRONUTRIENT_ONSET_DEFICIT_SOLS:
             self.health.micronutrient_level = MicronutrientLevel.ADEQUATE
