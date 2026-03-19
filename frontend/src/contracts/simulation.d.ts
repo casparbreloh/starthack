@@ -4,2316 +4,2316 @@
  */
 
 export type paths = {
-    "/sim/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Sim Status */
-        get: operations["sim_status_sim_status_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/weather/current": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Weather Current */
-        get: operations["weather_current_weather_current_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/weather/history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Weather History */
-        get: operations["weather_history_weather_history_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/weather/forecast": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Weather Forecast */
-        get: operations["weather_forecast_weather_forecast_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/energy/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Energy Status */
-        get: operations["energy_status_energy_status_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/greenhouse/environment": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Greenhouse Environment */
-        get: operations["greenhouse_environment_greenhouse_environment_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/water/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Water Status */
-        get: operations["water_status_water_status_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crops/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Crops Status */
-        get: operations["crops_status_crops_status_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/nutrients/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Nutrients Status */
-        get: operations["nutrients_status_nutrients_status_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crew/nutrition": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Crew Nutrition */
-        get: operations["crew_nutrition_crew_nutrition_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crew/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Crew Health
-         * @description Detailed crew health vitals.
-         *
-         *     Tracks hydration (WHO StatPearls NBK555956), radiation dose
-         *     (Hassler et al. 2014 / NASA-STD-3001), CO2 effects (OSHA 1910.1000),
-         *     temperature stress (NASA-STD-3001 Vol.2 §6.2.1), and starvation
-         *     (WHO TRS 724).
-         */
-        get: operations["crew_health_crew_health_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crew/members": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Crew Members
-         * @description Individual health card for each of the 4 crew members.
-         */
-        get: operations["crew_members_crew_members_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sensors/readings": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Sensors Readings */
-        get: operations["sensors_readings_sensors_readings_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/events/log": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Events Log */
-        get: operations["events_log_events_log_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/events/active_crises": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Events Active Crises */
-        get: operations["events_active_crises_events_active_crises_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/score/current": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Score Current */
-        get: operations["score_current_score_current_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/score/final": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Score Final */
-        get: operations["score_final_score_final_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crops/catalog": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Catalog Crops */
-        get: operations["catalog_crops_crops_catalog_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sim/state": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Sim State
-         * @description Full telemetry snapshot — convenience endpoint for the frontend.
-         */
-        get: operations["sim_state_sim_state_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/energy/allocate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Energy Allocate */
-        post: operations["energy_allocate_energy_allocate_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/greenhouse/set_environment": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Greenhouse Set Environment */
-        post: operations["greenhouse_set_environment_greenhouse_set_environment_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/water/set_irrigation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Water Set Irrigation */
-        post: operations["water_set_irrigation_water_set_irrigation_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/water/maintenance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Water Maintenance */
-        post: operations["water_maintenance_water_maintenance_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crops/plant": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Crops Plant */
-        post: operations["crops_plant_crops_plant_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crops/harvest": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Crops Harvest */
-        post: operations["crops_harvest_crops_harvest_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/crops/remove": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Crops Remove */
-        post: operations["crops_remove_crops_remove_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/nutrients/adjust": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Nutrients Adjust */
-        post: operations["nutrients_adjust_nutrients_adjust_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sim/advance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Sim Advance */
-        post: operations["sim_advance_sim_advance_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/sim/reset": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Sim Reset */
-        post: operations["sim_reset_sim_reset_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/scenario/water_leak": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Scenario Water Leak */
-        post: operations["scenario_water_leak_admin_scenario_water_leak_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/scenario/hvac_failure": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Scenario Hvac Failure */
-        post: operations["scenario_hvac_failure_admin_scenario_hvac_failure_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/scenario/pathogen": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Scenario Pathogen */
-        post: operations["scenario_pathogen_admin_scenario_pathogen_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/scenario/dust_storm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Scenario Dust Storm */
-        post: operations["scenario_dust_storm_admin_scenario_dust_storm_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/scenario/energy_disruption": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Scenario Energy Disruption */
-        post: operations["scenario_energy_disruption_admin_scenario_energy_disruption_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/agent/log_decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Agent Log Decision */
-        post: operations["agent_log_decision_agent_log_decision_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-};
-export type webhooks = Record<string, never>;
+  "/sim/status": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Sim Status */
+    get: operations["sim_status_sim_status_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/weather/current": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Weather Current */
+    get: operations["weather_current_weather_current_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/weather/history": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Weather History */
+    get: operations["weather_history_weather_history_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/weather/forecast": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Weather Forecast */
+    get: operations["weather_forecast_weather_forecast_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/energy/status": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Energy Status */
+    get: operations["energy_status_energy_status_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/greenhouse/environment": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Greenhouse Environment */
+    get: operations["greenhouse_environment_greenhouse_environment_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/water/status": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Water Status */
+    get: operations["water_status_water_status_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/crops/status": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Crops Status */
+    get: operations["crops_status_crops_status_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/nutrients/status": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Nutrients Status */
+    get: operations["nutrients_status_nutrients_status_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/crew/nutrition": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Crew Nutrition */
+    get: operations["crew_nutrition_crew_nutrition_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/crew/health": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Crew Health
+     * @description Detailed crew health vitals.
+     *
+     *     Tracks hydration (WHO StatPearls NBK555956), radiation dose
+     *     (Hassler et al. 2014 / NASA-STD-3001), CO2 effects (OSHA 1910.1000),
+     *     temperature stress (NASA-STD-3001 Vol.2 §6.2.1), and starvation
+     *     (WHO TRS 724).
+     */
+    get: operations["crew_health_crew_health_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/crew/members": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Crew Members
+     * @description Individual health card for each of the 4 crew members.
+     */
+    get: operations["crew_members_crew_members_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/sensors/readings": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Sensors Readings */
+    get: operations["sensors_readings_sensors_readings_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/events/log": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Events Log */
+    get: operations["events_log_events_log_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/events/active_crises": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Events Active Crises */
+    get: operations["events_active_crises_events_active_crises_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/score/current": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Score Current */
+    get: operations["score_current_score_current_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/score/final": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Score Final */
+    get: operations["score_final_score_final_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/crops/catalog": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Catalog Crops */
+    get: operations["catalog_crops_crops_catalog_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/sim/state": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Sim State
+     * @description Full telemetry snapshot — convenience endpoint for the frontend.
+     */
+    get: operations["sim_state_sim_state_get"]
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/energy/allocate": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Energy Allocate */
+    post: operations["energy_allocate_energy_allocate_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/greenhouse/set_environment": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Greenhouse Set Environment */
+    post: operations["greenhouse_set_environment_greenhouse_set_environment_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/water/set_irrigation": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Water Set Irrigation */
+    post: operations["water_set_irrigation_water_set_irrigation_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/water/maintenance": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Water Maintenance */
+    post: operations["water_maintenance_water_maintenance_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/crops/plant": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Crops Plant */
+    post: operations["crops_plant_crops_plant_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/crops/harvest": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Crops Harvest */
+    post: operations["crops_harvest_crops_harvest_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/crops/remove": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Crops Remove */
+    post: operations["crops_remove_crops_remove_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/nutrients/adjust": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Nutrients Adjust */
+    post: operations["nutrients_adjust_nutrients_adjust_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/sim/advance": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Sim Advance */
+    post: operations["sim_advance_sim_advance_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/sim/reset": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Sim Reset */
+    post: operations["sim_reset_sim_reset_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/admin/scenario/water_leak": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Scenario Water Leak */
+    post: operations["scenario_water_leak_admin_scenario_water_leak_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/admin/scenario/hvac_failure": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Scenario Hvac Failure */
+    post: operations["scenario_hvac_failure_admin_scenario_hvac_failure_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/admin/scenario/pathogen": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Scenario Pathogen */
+    post: operations["scenario_pathogen_admin_scenario_pathogen_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/admin/scenario/dust_storm": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Scenario Dust Storm */
+    post: operations["scenario_dust_storm_admin_scenario_dust_storm_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/admin/scenario/energy_disruption": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Scenario Energy Disruption */
+    post: operations["scenario_energy_disruption_admin_scenario_energy_disruption_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  "/agent/log_decision": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Agent Log Decision */
+    post: operations["agent_log_decision_agent_log_decision_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+}
+export type webhooks = Record<string, never>
 export type components = {
-    schemas: {
-        /** ActiveCrisesResponse */
-        ActiveCrisesResponse: {
-            /** Crises */
-            crises: components["schemas"]["CrisisResponse"][];
-        };
-        /** AdvanceRequest */
-        AdvanceRequest: {
-            /**
-             * Sols
-             * @default 1
-             */
-            sols: number;
-        };
-        /** AgentDecisionRequest */
-        AgentDecisionRequest: {
-            /** Sol */
-            sol: number;
-            /** Decisions */
-            decisions: {
-                [key: string]: unknown;
-            }[];
-            /** Weather Forecast Used */
-            weather_forecast_used?: {
-                [key: string]: unknown;
-            } | null;
-            /**
-             * Risk Assessment
-             * @default nominal
-             */
-            risk_assessment: string;
-        };
-        /** Co2HealthResponse */
-        Co2HealthResponse: {
-            /** Ambient Co2 Ppm */
-            ambient_co2_ppm: number;
-            /** Health Impaired */
-            health_impaired: boolean;
-            /** Health Penalty Pct */
-            health_penalty_pct: number;
-            /** Osha 8H Limit Ppm */
-            osha_8h_limit_ppm: number;
-        };
-        /** CrewHealthResponse */
-        CrewHealthResponse: {
-            /** Current Sol */
-            current_sol: number;
-            /** Alive */
-            alive: boolean;
-            /** Cause Of Death */
-            cause_of_death: string | null;
-            /** Overall Health Pct */
-            overall_health_pct: number;
-            hydration: components["schemas"]["HydrationResponse"];
-            radiation: components["schemas"]["RadiationResponse"];
-            temperature: components["schemas"]["TemperatureHealthResponse"];
-            co2: components["schemas"]["Co2HealthResponse"];
-            starvation: components["schemas"]["StarvationResponse"];
-            illness: components["schemas"]["IllnessResponse"];
-        };
-        /** CrewMemberResponse */
-        CrewMemberResponse: {
-            /** Member Id */
-            member_id: string;
-            /** Name */
-            name: string;
-            /** Alive */
-            alive: boolean;
-            /** Status */
-            status: string;
-            /** Health Pct */
-            health_pct: number;
-            /** Hydration Pct */
-            hydration_pct: number;
-            /** Cumulative Radiation Msv */
-            cumulative_radiation_msv: number;
-        };
-        /** CrewMembersResponse */
-        CrewMembersResponse: {
-            /** Current Sol */
-            current_sol: number;
-            /** Crew Size */
-            crew_size: number;
-            /** Members */
-            members: components["schemas"]["CrewMemberResponse"][];
-        };
-        /** CrewNutritionResponse */
-        CrewNutritionResponse: {
-            /** Current Sol */
-            current_sol: number;
-            today: components["schemas"]["CrewNutritionTodayResponse"];
-            stored_food: components["schemas"]["StoredFoodResponse"];
-            food_buffer: components["schemas"]["FoodBufferResponse"];
-            cumulative: components["schemas"]["CumulativeNutritionResponse"];
-            /** Crew Status */
-            crew_status: string;
-            micronutrients: components["schemas"]["MicronutrientsResponse"];
-            /** Food Inventory */
-            food_inventory: {
-                [key: string]: components["schemas"]["FoodItemResponse"];
-            };
-            /** Days Of Food Remaining */
-            days_of_food_remaining: number;
-            /** Days Of Protein Remaining */
-            days_of_protein_remaining: number;
-        };
-        /** CrewNutritionTodayResponse */
-        CrewNutritionTodayResponse: {
-            /** Calories Consumed Kcal */
-            calories_consumed_kcal: number;
-            /** Calories Target Kcal */
-            calories_target_kcal: number;
-            /** Protein Consumed G */
-            protein_consumed_g: number;
-            /** Protein Target G */
-            protein_target_g: number;
-            /** From Greenhouse Pct */
-            from_greenhouse_pct: number;
-            /** From Stored Food Pct */
-            from_stored_food_pct: number;
-        };
-        /** CrisisManagementScoreResponse */
-        CrisisManagementScoreResponse: {
-            /** Crises Encountered */
-            crises_encountered: number;
-            /** Crises Resolved */
-            crises_resolved: number;
-            /** Preventive Actions Taken */
-            preventive_actions_taken: number;
-            /** Score */
-            score: number;
-        };
-        /** CrisisResponse */
-        CrisisResponse: {
-            /** Id */
-            id: string;
-            /** Type */
-            type: string;
-            /** Started Sol */
-            started_sol: number;
-            /** Severity */
-            severity: string;
-            /** Message */
-            message: string;
-            /** Current Value */
-            current_value: number;
-            /** Threshold */
-            threshold: number;
-            /** Resolved */
-            resolved: boolean;
-            /** Resolved Sol */
-            resolved_sol: number | null;
-        };
-        /** CropBatchResponse */
-        CropBatchResponse: {
-            /** Crop Id */
-            crop_id: string;
-            /** Type */
-            type: string;
-            /** Zone Id */
-            zone_id: string;
-            /** Planted Sol */
-            planted_sol: number;
-            /** Current Sol */
-            current_sol: number;
-            /** Days In Cycle */
-            days_in_cycle: number;
-            /** Expected Harvest Sol */
-            expected_harvest_sol: number;
-            /** Growth Pct */
-            growth_pct: number;
-            /** Health */
-            health: number;
-            /** Is Ready */
-            is_ready: boolean;
-            /** Stress Indicators */
-            stress_indicators: components["schemas"]["StressIndicatorResponse"][];
-            /** Area M2 */
-            area_m2: number;
-            /** Soil Moisture Pct */
-            soil_moisture_pct: number;
-            /** Estimated Yield Kg */
-            estimated_yield_kg: number;
-            /** Estimated Calories Kcal */
-            estimated_calories_kcal: number;
-        };
-        /**
-         * CropType
-         * @enum {string}
-         */
-        CropType: "lettuce" | "potato" | "radish" | "beans" | "herbs";
-        /** CropsStatusResponse */
-        CropsStatusResponse: {
-            /** Crops */
-            crops: components["schemas"]["CropBatchResponse"][];
-            /** Total Planted Area M2 */
-            total_planted_area_m2: number;
-            /** Available Area Per Zone */
-            available_area_per_zone: {
-                [key: string]: number;
-            };
-            /** Seeds Remaining */
-            seeds_remaining: {
-                [key: string]: number;
-            };
-        };
-        /** CumulativeNutritionResponse */
-        CumulativeNutritionResponse: {
-            /** Avg Daily Kcal */
-            avg_daily_kcal: number;
-            /** Avg Daily Protein G */
-            avg_daily_protein_g: number;
-            /** Deficit Sols */
-            deficit_sols: number;
-            /** Surplus Sols */
-            surplus_sols: number;
-        };
-        /**
-         * Difficulty
-         * @enum {string}
-         */
-        Difficulty: "easy" | "normal" | "hard";
-        /** EnergyAllocateRequest */
-        EnergyAllocateRequest: {
-            /**
-             * Heating Pct
-             * @default 47
-             */
-            heating_pct: number;
-            /**
-             * Lighting Pct
-             * @default 30
-             */
-            lighting_pct: number;
-            /**
-             * Water Recycling Pct
-             * @default 12
-             */
-            water_recycling_pct: number;
-            /**
-             * Nutrient Pumps Pct
-             * @default 5
-             */
-            nutrient_pumps_pct: number;
-            /**
-             * Reserve Pct
-             * @default 6
-             */
-            reserve_pct: number;
-        };
-        /** EnergyAllocationResponse */
-        EnergyAllocationResponse: {
-            /** Heating Pct */
-            heating_pct: number;
-            /** Lighting Pct */
-            lighting_pct: number;
-            /** Water Recycling Pct */
-            water_recycling_pct: number;
-            /** Nutrient Pumps Pct */
-            nutrient_pumps_pct: number;
-            /** Reserve Pct */
-            reserve_pct: number;
-        };
-        /** EnergyBreakdownResponse */
-        EnergyBreakdownResponse: {
-            /** Heating Wh */
-            heating_wh: number;
-            /** Lighting Wh */
-            lighting_wh: number;
-            /** Water Recycling Wh */
-            water_recycling_wh: number;
-            /** Nutrient Pumps Wh */
-            nutrient_pumps_wh: number;
-            /** Sensors Control Wh */
-            sensors_control_wh: number;
-        };
-        /** EnergyStatusResponse */
-        EnergyStatusResponse: {
-            /** Solar Generation Wh */
-            solar_generation_wh: number;
-            /** Battery Level Wh */
-            battery_level_wh: number;
-            /** Battery Capacity Wh */
-            battery_capacity_wh: number;
-            /** Battery Pct */
-            battery_pct: number;
-            /** Total Consumption Wh */
-            total_consumption_wh: number;
-            breakdown: components["schemas"]["EnergyBreakdownResponse"];
-            /** Surplus Wh */
-            surplus_wh: number;
-            /** Deficit */
-            deficit: boolean;
-            allocation: components["schemas"]["EnergyAllocationResponse"];
-        };
-        /** EventResponse */
-        EventResponse: {
-            /** Sol */
-            sol: number;
-            /** Type */
-            type: string;
-            /** Category */
-            category: string;
-            /** Message */
-            message: string;
-            /** Severity */
-            severity: string;
-            /** Zone */
-            zone: string | null;
-            /** Data */
-            data: {
-                [key: string]: unknown;
-            } | null;
-        };
-        /** EventsLogResponse */
-        EventsLogResponse: {
-            /** Events */
-            events: components["schemas"]["EventResponse"][];
-        };
-        /** FoodBufferResponse */
-        FoodBufferResponse: {
-            /** Fresh Harvest Kcal */
-            fresh_harvest_kcal: number;
-            /** Fresh Harvest Protein G */
-            fresh_harvest_protein_g: number;
-            /** Days Of Buffer */
-            days_of_buffer: number;
-        };
-        /** FoodItemResponse */
-        FoodItemResponse: {
-            /** Kg Remaining */
-            kg_remaining: number;
-            /** Kcal Remaining */
-            kcal_remaining: number;
-            /** Protein G Remaining */
-            protein_g_remaining: number;
-            /** Pct Remaining */
-            pct_remaining: number;
-        };
-        /** GreenhouseEnvironmentResponse */
-        GreenhouseEnvironmentResponse: {
-            /** Zones */
-            zones: components["schemas"]["ZoneEnvironmentResponse"][];
-            /** Total Area M2 */
-            total_area_m2: number;
-            /** External Temp C */
-            external_temp_c: number | null;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
-        };
-        /** HarvestRequest */
-        HarvestRequest: {
-            /** Crop Id */
-            crop_id: string;
-        };
-        /** HydrationResponse */
-        HydrationResponse: {
-            /** Hydration Pct */
-            hydration_pct: number;
-            /** Level */
-            level: string;
-            /** Daily Water Received L */
-            daily_water_received_l: number;
-            /** Daily Water Required L */
-            daily_water_required_l: number;
-            /** Water Fraction Met */
-            water_fraction_met: number;
-            /** Consecutive Deficit Sols */
-            consecutive_deficit_sols: number;
-        };
-        /** IllnessResponse */
-        IllnessResponse: {
-            /** Active */
-            active: boolean;
-            /** Sick Member Name */
-            sick_member_name: string | null;
-            /** Duration Remaining Sols */
-            duration_remaining_sols: number;
-            /** Kcal Multiplier */
-            kcal_multiplier: number;
-            /** Protein Multiplier */
-            protein_multiplier: number;
-        };
-        /** MicronutrientsResponse */
-        MicronutrientsResponse: {
-            /** Sufficient Today */
-            sufficient_today: boolean;
-            /** Level */
-            level: string;
-            /** Consecutive Deficit Sols */
-            consecutive_deficit_sols: number;
-            /** Health Penalty Pct */
-            health_penalty_pct: number;
-        };
-        /** NutrientAdjustRequest */
-        NutrientAdjustRequest: {
-            /** Zone Id */
-            zone_id: string;
-            /** Target Ph */
-            target_ph?: number | null;
-            /**
-             * Nitrogen Boost
-             * @default false
-             */
-            nitrogen_boost: boolean;
-            /**
-             * Potassium Boost
-             * @default false
-             */
-            potassium_boost: boolean;
-            /**
-             * Flush Solution
-             * @default false
-             */
-            flush_solution: boolean;
-        };
-        /** NutrientsStatusResponse */
-        NutrientsStatusResponse: {
-            /** Zones */
-            zones: components["schemas"]["ZoneNutrientsResponse"][];
-            /** Nutrient Stock Remaining Pct */
-            nutrient_stock_remaining_pct: number;
-            /** Days Of Stock Remaining */
-            days_of_stock_remaining: number;
-        };
-        /** NutritionScoreResponse */
-        NutritionScoreResponse: {
-            /** Current Daily Kcal */
-            current_daily_kcal: number;
-            /** Target Kcal */
-            target_kcal: number;
-            /** Kcal Achievement Pct */
-            kcal_achievement_pct: number;
-            /** Avg Daily Protein G */
-            avg_daily_protein_g: number;
-            /** Protein Achievement Pct */
-            protein_achievement_pct: number;
-            /** Micronutrient Diversity Score */
-            micronutrient_diversity_score: number;
-            /** Score */
-            score: number;
-        };
-        /** PathogenRequest */
-        PathogenRequest: {
-            /** Crop Id */
-            crop_id: string;
-        };
-        /** PlantRequest */
-        PlantRequest: {
-            type: components["schemas"]["CropType"];
-            /** Zone Id */
-            zone_id: string;
-            /** Area M2 */
-            area_m2: number;
-            /** Batch Name */
-            batch_name?: string | null;
-        };
-        /** RadiationResponse */
-        RadiationResponse: {
-            /** Cumulative Msv */
-            cumulative_msv: number;
-            /** Daily Dose Msv */
-            daily_dose_msv: number;
-            /** Warning Active */
-            warning_active: boolean;
-            /** Critical Active */
-            critical_active: boolean;
-            /** Nasa Career Limit Msv */
-            nasa_career_limit_msv: number;
-            /** Pct Of Career Limit */
-            pct_of_career_limit: number;
-        };
-        /** RemoveRequest */
-        RemoveRequest: {
-            /** Crop Id */
-            crop_id: string;
-            /**
-             * Reason
-             * @default
-             */
-            reason: string;
-        };
-        /** ResetRequest */
-        ResetRequest: {
-            /** @default normal */
-            difficulty: components["schemas"]["Difficulty"];
-            /** Starting Reserves */
-            starting_reserves?: {
-                [key: string]: number;
-            } | null;
-        };
-        /** ResourceEfficiencyScoreResponse */
-        ResourceEfficiencyScoreResponse: {
-            /** Water Efficiency Pct */
-            water_efficiency_pct: number;
-            /** Energy Efficiency Pct */
-            energy_efficiency_pct: number;
-            /** Crop Waste Pct */
-            crop_waste_pct: number;
-            /** Score */
-            score: number;
-        };
-        /** ScoreBreakdownResponse */
-        ScoreBreakdownResponse: {
-            survival: components["schemas"]["SurvivalScoreResponse"];
-            nutrition: components["schemas"]["NutritionScoreResponse"];
-            resource_efficiency: components["schemas"]["ResourceEfficiencyScoreResponse"];
-            crisis_management: components["schemas"]["CrisisManagementScoreResponse"];
-            /** Overall Score */
-            overall_score: number;
-        };
-        /** ScoreCurrentResponse */
-        ScoreCurrentResponse: {
-            /** Current Sol */
-            current_sol: number;
-            scores: components["schemas"]["ScoreBreakdownResponse"];
-        };
-        /** ScoreFinalResponse */
-        ScoreFinalResponse: {
-            /** Final Sol */
-            final_sol: number;
-            /** Mission Phase */
-            mission_phase: string;
-            final_scores: components["schemas"]["ScoreBreakdownResponse"];
-            /** Agent Decisions Logged */
-            agent_decisions_logged: number;
-        };
-        /** SensorReadingResponse */
-        SensorReadingResponse: {
-            /** Sensor Id */
-            sensor_id: string;
-            /** Zone */
-            zone: string;
-            /** Type */
-            type: string;
-            /** Value */
-            value: number;
-            /** Unit */
-            unit: string;
-            /** Status */
-            status: string;
-        };
-        /** SensorsReadingsResponse */
-        SensorsReadingsResponse: {
-            /** Timestamp Sol */
-            timestamp_sol: number;
-            /** Readings */
-            readings: components["schemas"]["SensorReadingResponse"][];
-        };
-        /** SetEnvironmentRequest */
-        SetEnvironmentRequest: {
-            /** Zone Id */
-            zone_id: string;
-            /** Target Temp C */
-            target_temp_c?: number | null;
-            /** Target Humidity Pct */
-            target_humidity_pct?: number | null;
-            /** Target Co2 Ppm */
-            target_co2_ppm?: number | null;
-            /** Par Umol M2S */
-            par_umol_m2s?: number | null;
-            /** Photoperiod Hours */
-            photoperiod_hours?: number | null;
-        };
-        /** SetIrrigationRequest */
-        SetIrrigationRequest: {
-            /** Zone Id */
-            zone_id: string;
-            /** Irrigation Liters Per Sol */
-            irrigation_liters_per_sol: number;
-        };
-        /** SimAdvanceResponse */
-        SimAdvanceResponse: {
-            /** New Sol */
-            new_sol: number;
-            /** Mission Phase */
-            mission_phase: string;
-            /** Events */
-            events: {
-                [key: string]: unknown;
-            }[];
-        };
-        /** SimStatusResponse */
-        SimStatusResponse: {
-            /** Current Sol */
-            current_sol: number;
-            /** Total Sols */
-            total_sols: number;
-            /** Mission Phase */
-            mission_phase: string;
-            /** Paused */
-            paused: boolean;
-        };
-        /** StarvationResponse */
-        StarvationResponse: {
-            /** Level */
-            level: string;
-            /** Consecutive Deficit Sols */
-            consecutive_deficit_sols: number;
-            /** Health Penalty Pct */
-            health_penalty_pct: number;
-        };
-        /** StoredFoodResponse */
-        StoredFoodResponse: {
-            /** Remaining Kcal */
-            remaining_kcal: number;
-            /** Remaining Days At Current Rate */
-            remaining_days_at_current_rate: number;
-            /** Protein Remaining G */
-            protein_remaining_g: number;
-        };
-        /** StressIndicatorResponse */
-        StressIndicatorResponse: {
-            /** Type */
-            type: string;
-            /** Since Sol */
-            since_sol: number;
-            /** Severity */
-            severity: number;
-        };
-        /** SurvivalScoreResponse */
-        SurvivalScoreResponse: {
-            /** Crew Alive */
-            crew_alive: boolean;
-            /** Days Without Critical Deficit */
-            days_without_critical_deficit: number;
-            /** Score */
-            score: number;
-        };
-        /** TemperatureHealthResponse */
-        TemperatureHealthResponse: {
-            /** Ambient Temp C */
-            ambient_temp_c: number;
-            /** Hypothermia Risk */
-            hypothermia_risk: boolean;
-            /** Hyperthermia Risk */
-            hyperthermia_risk: boolean;
-            /** Health Penalty Pct */
-            health_penalty_pct: number;
-            /** Nasa Comfort Range C */
-            nasa_comfort_range_c: number[];
-        };
-        /** ValidationError */
-        ValidationError: {
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
-        };
-        /** WaterMaintenanceRequest */
-        WaterMaintenanceRequest: {
-            /**
-             * Action
-             * @default clean_filters
-             */
-            action: string;
-        };
-        /** WaterStatusResponse */
-        WaterStatusResponse: {
-            /** Reservoir Liters */
-            reservoir_liters: number;
-            /** Reservoir Capacity Liters */
-            reservoir_capacity_liters: number;
-            /** Recycling Efficiency Pct */
-            recycling_efficiency_pct: number;
-            /** Daily Crew Consumption Liters */
-            daily_crew_consumption_liters: number;
-            /** Daily Crop Consumption Liters */
-            daily_crop_consumption_liters: number;
-            /** Daily Recycled Liters */
-            daily_recycled_liters: number;
-            /** Daily Net Change Liters */
-            daily_net_change_liters: number;
-            /** Days Until Critical */
-            days_until_critical: number;
-            /** Filter Health Pct */
-            filter_health_pct: number;
-            /** Irrigation Settings */
-            irrigation_settings: {
-                [key: string]: number;
-            };
-        };
-        /** WeatherForecastResponse */
-        WeatherForecastResponse: {
-            /** Sol */
-            sol: number;
-            /** Min Temp C */
-            min_temp_c: number;
-            /** Max Temp C */
-            max_temp_c: number;
-            /** Avg Temp C */
-            avg_temp_c: number;
-            /** Pressure Pa */
-            pressure_pa: number;
-            /** Solar Irradiance Wm2 */
-            solar_irradiance_wm2: number;
-            /** Dust Opacity */
-            dust_opacity: number;
-            /** Season */
-            season: string;
-            /** Ls */
-            ls: number;
-            /** Sol In Year */
-            sol_in_year: number;
-            /** Confidence */
-            confidence: number;
-        };
-        /** WeatherResponse */
-        WeatherResponse: {
-            /** Sol */
-            sol: number;
-            /** Min Temp C */
-            min_temp_c: number;
-            /** Max Temp C */
-            max_temp_c: number;
-            /** Avg Temp C */
-            avg_temp_c: number;
-            /** Pressure Pa */
-            pressure_pa: number;
-            /** Solar Irradiance Wm2 */
-            solar_irradiance_wm2: number;
-            /** Dust Opacity */
-            dust_opacity: number;
-            /** Season */
-            season: string;
-            /** Ls */
-            ls: number;
-            /** Sol In Year */
-            sol_in_year: number;
-        };
-        /** ZoneEnvironmentResponse */
-        ZoneEnvironmentResponse: {
-            /** Zone Id */
-            zone_id: string;
-            /** Temp C */
-            temp_c: number;
-            /** Humidity Pct */
-            humidity_pct: number;
-            /** Co2 Ppm */
-            co2_ppm: number;
-            /** Par Umol M2S */
-            par_umol_m2s: number;
-            /** Light On */
-            light_on: boolean;
-            /** Photoperiod Hours */
-            photoperiod_hours: number;
-            /** Area M2 */
-            area_m2: number;
-            /** Target Temp C */
-            target_temp_c: number;
-            /** Target Humidity Pct */
-            target_humidity_pct: number;
-            /** Target Co2 Ppm */
-            target_co2_ppm: number;
-            /** Target Par */
-            target_par: number;
-            /** Target Photoperiod Hours */
-            target_photoperiod_hours: number;
-        };
-        /** ZoneNutrientsResponse */
-        ZoneNutrientsResponse: {
-            /** Zone Id */
-            zone_id: string;
-            /** Solution Ph */
-            solution_ph: number;
-            /** Solution Ec Ms Cm */
-            solution_ec_ms_cm: number;
-            /** Solution Temp C */
-            solution_temp_c: number;
-            /** Dissolved O2 Ppm */
-            dissolved_o2_ppm: number;
-            /** Nitrogen Ppm */
-            nitrogen_ppm: number;
-            /** Phosphorus Ppm */
-            phosphorus_ppm: number;
-            /** Potassium Ppm */
-            potassium_ppm: number;
-            /** Calcium Ppm */
-            calcium_ppm: number;
-            /** Magnesium Ppm */
-            magnesium_ppm: number;
-        };
-    };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
-};
-export type $defs = Record<string, never>;
+  schemas: {
+    /** ActiveCrisesResponse */
+    ActiveCrisesResponse: {
+      /** Crises */
+      crises: components["schemas"]["CrisisResponse"][]
+    }
+    /** AdvanceRequest */
+    AdvanceRequest: {
+      /**
+       * Sols
+       * @default 1
+       */
+      sols: number
+    }
+    /** AgentDecisionRequest */
+    AgentDecisionRequest: {
+      /** Sol */
+      sol: number
+      /** Decisions */
+      decisions: {
+        [key: string]: unknown
+      }[]
+      /** Weather Forecast Used */
+      weather_forecast_used?: {
+        [key: string]: unknown
+      } | null
+      /**
+       * Risk Assessment
+       * @default nominal
+       */
+      risk_assessment: string
+    }
+    /** Co2HealthResponse */
+    Co2HealthResponse: {
+      /** Ambient Co2 Ppm */
+      ambient_co2_ppm: number
+      /** Health Impaired */
+      health_impaired: boolean
+      /** Health Penalty Pct */
+      health_penalty_pct: number
+      /** Osha 8H Limit Ppm */
+      osha_8h_limit_ppm: number
+    }
+    /** CrewHealthResponse */
+    CrewHealthResponse: {
+      /** Current Sol */
+      current_sol: number
+      /** Alive */
+      alive: boolean
+      /** Cause Of Death */
+      cause_of_death: string | null
+      /** Overall Health Pct */
+      overall_health_pct: number
+      hydration: components["schemas"]["HydrationResponse"]
+      radiation: components["schemas"]["RadiationResponse"]
+      temperature: components["schemas"]["TemperatureHealthResponse"]
+      co2: components["schemas"]["Co2HealthResponse"]
+      starvation: components["schemas"]["StarvationResponse"]
+      illness: components["schemas"]["IllnessResponse"]
+    }
+    /** CrewMemberResponse */
+    CrewMemberResponse: {
+      /** Member Id */
+      member_id: string
+      /** Name */
+      name: string
+      /** Alive */
+      alive: boolean
+      /** Status */
+      status: string
+      /** Health Pct */
+      health_pct: number
+      /** Hydration Pct */
+      hydration_pct: number
+      /** Cumulative Radiation Msv */
+      cumulative_radiation_msv: number
+    }
+    /** CrewMembersResponse */
+    CrewMembersResponse: {
+      /** Current Sol */
+      current_sol: number
+      /** Crew Size */
+      crew_size: number
+      /** Members */
+      members: components["schemas"]["CrewMemberResponse"][]
+    }
+    /** CrewNutritionResponse */
+    CrewNutritionResponse: {
+      /** Current Sol */
+      current_sol: number
+      today: components["schemas"]["CrewNutritionTodayResponse"]
+      stored_food: components["schemas"]["StoredFoodResponse"]
+      food_buffer: components["schemas"]["FoodBufferResponse"]
+      cumulative: components["schemas"]["CumulativeNutritionResponse"]
+      /** Crew Status */
+      crew_status: string
+      micronutrients: components["schemas"]["MicronutrientsResponse"]
+      /** Food Inventory */
+      food_inventory: {
+        [key: string]: components["schemas"]["FoodItemResponse"]
+      }
+      /** Days Of Food Remaining */
+      days_of_food_remaining: number
+      /** Days Of Protein Remaining */
+      days_of_protein_remaining: number
+    }
+    /** CrewNutritionTodayResponse */
+    CrewNutritionTodayResponse: {
+      /** Calories Consumed Kcal */
+      calories_consumed_kcal: number
+      /** Calories Target Kcal */
+      calories_target_kcal: number
+      /** Protein Consumed G */
+      protein_consumed_g: number
+      /** Protein Target G */
+      protein_target_g: number
+      /** From Greenhouse Pct */
+      from_greenhouse_pct: number
+      /** From Stored Food Pct */
+      from_stored_food_pct: number
+    }
+    /** CrisisManagementScoreResponse */
+    CrisisManagementScoreResponse: {
+      /** Crises Encountered */
+      crises_encountered: number
+      /** Crises Resolved */
+      crises_resolved: number
+      /** Preventive Actions Taken */
+      preventive_actions_taken: number
+      /** Score */
+      score: number
+    }
+    /** CrisisResponse */
+    CrisisResponse: {
+      /** Id */
+      id: string
+      /** Type */
+      type: string
+      /** Started Sol */
+      started_sol: number
+      /** Severity */
+      severity: string
+      /** Message */
+      message: string
+      /** Current Value */
+      current_value: number
+      /** Threshold */
+      threshold: number
+      /** Resolved */
+      resolved: boolean
+      /** Resolved Sol */
+      resolved_sol: number | null
+    }
+    /** CropBatchResponse */
+    CropBatchResponse: {
+      /** Crop Id */
+      crop_id: string
+      /** Type */
+      type: string
+      /** Zone Id */
+      zone_id: string
+      /** Planted Sol */
+      planted_sol: number
+      /** Current Sol */
+      current_sol: number
+      /** Days In Cycle */
+      days_in_cycle: number
+      /** Expected Harvest Sol */
+      expected_harvest_sol: number
+      /** Growth Pct */
+      growth_pct: number
+      /** Health */
+      health: number
+      /** Is Ready */
+      is_ready: boolean
+      /** Stress Indicators */
+      stress_indicators: components["schemas"]["StressIndicatorResponse"][]
+      /** Area M2 */
+      area_m2: number
+      /** Soil Moisture Pct */
+      soil_moisture_pct: number
+      /** Estimated Yield Kg */
+      estimated_yield_kg: number
+      /** Estimated Calories Kcal */
+      estimated_calories_kcal: number
+    }
+    /**
+     * CropType
+     * @enum {string}
+     */
+    CropType: "lettuce" | "potato" | "radish" | "beans" | "herbs"
+    /** CropsStatusResponse */
+    CropsStatusResponse: {
+      /** Crops */
+      crops: components["schemas"]["CropBatchResponse"][]
+      /** Total Planted Area M2 */
+      total_planted_area_m2: number
+      /** Available Area Per Zone */
+      available_area_per_zone: {
+        [key: string]: number
+      }
+      /** Seeds Remaining */
+      seeds_remaining: {
+        [key: string]: number
+      }
+    }
+    /** CumulativeNutritionResponse */
+    CumulativeNutritionResponse: {
+      /** Avg Daily Kcal */
+      avg_daily_kcal: number
+      /** Avg Daily Protein G */
+      avg_daily_protein_g: number
+      /** Deficit Sols */
+      deficit_sols: number
+      /** Surplus Sols */
+      surplus_sols: number
+    }
+    /**
+     * Difficulty
+     * @enum {string}
+     */
+    Difficulty: "easy" | "normal" | "hard"
+    /** EnergyAllocateRequest */
+    EnergyAllocateRequest: {
+      /**
+       * Heating Pct
+       * @default 47
+       */
+      heating_pct: number
+      /**
+       * Lighting Pct
+       * @default 30
+       */
+      lighting_pct: number
+      /**
+       * Water Recycling Pct
+       * @default 12
+       */
+      water_recycling_pct: number
+      /**
+       * Nutrient Pumps Pct
+       * @default 5
+       */
+      nutrient_pumps_pct: number
+      /**
+       * Reserve Pct
+       * @default 6
+       */
+      reserve_pct: number
+    }
+    /** EnergyAllocationResponse */
+    EnergyAllocationResponse: {
+      /** Heating Pct */
+      heating_pct: number
+      /** Lighting Pct */
+      lighting_pct: number
+      /** Water Recycling Pct */
+      water_recycling_pct: number
+      /** Nutrient Pumps Pct */
+      nutrient_pumps_pct: number
+      /** Reserve Pct */
+      reserve_pct: number
+    }
+    /** EnergyBreakdownResponse */
+    EnergyBreakdownResponse: {
+      /** Heating Wh */
+      heating_wh: number
+      /** Lighting Wh */
+      lighting_wh: number
+      /** Water Recycling Wh */
+      water_recycling_wh: number
+      /** Nutrient Pumps Wh */
+      nutrient_pumps_wh: number
+      /** Sensors Control Wh */
+      sensors_control_wh: number
+    }
+    /** EnergyStatusResponse */
+    EnergyStatusResponse: {
+      /** Solar Generation Wh */
+      solar_generation_wh: number
+      /** Battery Level Wh */
+      battery_level_wh: number
+      /** Battery Capacity Wh */
+      battery_capacity_wh: number
+      /** Battery Pct */
+      battery_pct: number
+      /** Total Consumption Wh */
+      total_consumption_wh: number
+      breakdown: components["schemas"]["EnergyBreakdownResponse"]
+      /** Surplus Wh */
+      surplus_wh: number
+      /** Deficit */
+      deficit: boolean
+      allocation: components["schemas"]["EnergyAllocationResponse"]
+    }
+    /** EventResponse */
+    EventResponse: {
+      /** Sol */
+      sol: number
+      /** Type */
+      type: string
+      /** Category */
+      category: string
+      /** Message */
+      message: string
+      /** Severity */
+      severity: string
+      /** Zone */
+      zone: string | null
+      /** Data */
+      data: {
+        [key: string]: unknown
+      } | null
+    }
+    /** EventsLogResponse */
+    EventsLogResponse: {
+      /** Events */
+      events: components["schemas"]["EventResponse"][]
+    }
+    /** FoodBufferResponse */
+    FoodBufferResponse: {
+      /** Fresh Harvest Kcal */
+      fresh_harvest_kcal: number
+      /** Fresh Harvest Protein G */
+      fresh_harvest_protein_g: number
+      /** Days Of Buffer */
+      days_of_buffer: number
+    }
+    /** FoodItemResponse */
+    FoodItemResponse: {
+      /** Kg Remaining */
+      kg_remaining: number
+      /** Kcal Remaining */
+      kcal_remaining: number
+      /** Protein G Remaining */
+      protein_g_remaining: number
+      /** Pct Remaining */
+      pct_remaining: number
+    }
+    /** GreenhouseEnvironmentResponse */
+    GreenhouseEnvironmentResponse: {
+      /** Zones */
+      zones: components["schemas"]["ZoneEnvironmentResponse"][]
+      /** Total Area M2 */
+      total_area_m2: number
+      /** External Temp C */
+      external_temp_c: number | null
+    }
+    /** HTTPValidationError */
+    HTTPValidationError: {
+      /** Detail */
+      detail?: components["schemas"]["ValidationError"][]
+    }
+    /** HarvestRequest */
+    HarvestRequest: {
+      /** Crop Id */
+      crop_id: string
+    }
+    /** HydrationResponse */
+    HydrationResponse: {
+      /** Hydration Pct */
+      hydration_pct: number
+      /** Level */
+      level: string
+      /** Daily Water Received L */
+      daily_water_received_l: number
+      /** Daily Water Required L */
+      daily_water_required_l: number
+      /** Water Fraction Met */
+      water_fraction_met: number
+      /** Consecutive Deficit Sols */
+      consecutive_deficit_sols: number
+    }
+    /** IllnessResponse */
+    IllnessResponse: {
+      /** Active */
+      active: boolean
+      /** Sick Member Name */
+      sick_member_name: string | null
+      /** Duration Remaining Sols */
+      duration_remaining_sols: number
+      /** Kcal Multiplier */
+      kcal_multiplier: number
+      /** Protein Multiplier */
+      protein_multiplier: number
+    }
+    /** MicronutrientsResponse */
+    MicronutrientsResponse: {
+      /** Sufficient Today */
+      sufficient_today: boolean
+      /** Level */
+      level: string
+      /** Consecutive Deficit Sols */
+      consecutive_deficit_sols: number
+      /** Health Penalty Pct */
+      health_penalty_pct: number
+    }
+    /** NutrientAdjustRequest */
+    NutrientAdjustRequest: {
+      /** Zone Id */
+      zone_id: string
+      /** Target Ph */
+      target_ph?: number | null
+      /**
+       * Nitrogen Boost
+       * @default false
+       */
+      nitrogen_boost: boolean
+      /**
+       * Potassium Boost
+       * @default false
+       */
+      potassium_boost: boolean
+      /**
+       * Flush Solution
+       * @default false
+       */
+      flush_solution: boolean
+    }
+    /** NutrientsStatusResponse */
+    NutrientsStatusResponse: {
+      /** Zones */
+      zones: components["schemas"]["ZoneNutrientsResponse"][]
+      /** Nutrient Stock Remaining Pct */
+      nutrient_stock_remaining_pct: number
+      /** Days Of Stock Remaining */
+      days_of_stock_remaining: number
+    }
+    /** NutritionScoreResponse */
+    NutritionScoreResponse: {
+      /** Current Daily Kcal */
+      current_daily_kcal: number
+      /** Target Kcal */
+      target_kcal: number
+      /** Kcal Achievement Pct */
+      kcal_achievement_pct: number
+      /** Avg Daily Protein G */
+      avg_daily_protein_g: number
+      /** Protein Achievement Pct */
+      protein_achievement_pct: number
+      /** Micronutrient Diversity Score */
+      micronutrient_diversity_score: number
+      /** Score */
+      score: number
+    }
+    /** PathogenRequest */
+    PathogenRequest: {
+      /** Crop Id */
+      crop_id: string
+    }
+    /** PlantRequest */
+    PlantRequest: {
+      type: components["schemas"]["CropType"]
+      /** Zone Id */
+      zone_id: string
+      /** Area M2 */
+      area_m2: number
+      /** Batch Name */
+      batch_name?: string | null
+    }
+    /** RadiationResponse */
+    RadiationResponse: {
+      /** Cumulative Msv */
+      cumulative_msv: number
+      /** Daily Dose Msv */
+      daily_dose_msv: number
+      /** Warning Active */
+      warning_active: boolean
+      /** Critical Active */
+      critical_active: boolean
+      /** Nasa Career Limit Msv */
+      nasa_career_limit_msv: number
+      /** Pct Of Career Limit */
+      pct_of_career_limit: number
+    }
+    /** RemoveRequest */
+    RemoveRequest: {
+      /** Crop Id */
+      crop_id: string
+      /**
+       * Reason
+       * @default
+       */
+      reason: string
+    }
+    /** ResetRequest */
+    ResetRequest: {
+      /** @default normal */
+      difficulty: components["schemas"]["Difficulty"]
+      /** Starting Reserves */
+      starting_reserves?: {
+        [key: string]: number
+      } | null
+    }
+    /** ResourceEfficiencyScoreResponse */
+    ResourceEfficiencyScoreResponse: {
+      /** Water Efficiency Pct */
+      water_efficiency_pct: number
+      /** Energy Efficiency Pct */
+      energy_efficiency_pct: number
+      /** Crop Waste Pct */
+      crop_waste_pct: number
+      /** Score */
+      score: number
+    }
+    /** ScoreBreakdownResponse */
+    ScoreBreakdownResponse: {
+      survival: components["schemas"]["SurvivalScoreResponse"]
+      nutrition: components["schemas"]["NutritionScoreResponse"]
+      resource_efficiency: components["schemas"]["ResourceEfficiencyScoreResponse"]
+      crisis_management: components["schemas"]["CrisisManagementScoreResponse"]
+      /** Overall Score */
+      overall_score: number
+    }
+    /** ScoreCurrentResponse */
+    ScoreCurrentResponse: {
+      /** Current Sol */
+      current_sol: number
+      scores: components["schemas"]["ScoreBreakdownResponse"]
+    }
+    /** ScoreFinalResponse */
+    ScoreFinalResponse: {
+      /** Final Sol */
+      final_sol: number
+      /** Mission Phase */
+      mission_phase: string
+      final_scores: components["schemas"]["ScoreBreakdownResponse"]
+      /** Agent Decisions Logged */
+      agent_decisions_logged: number
+    }
+    /** SensorReadingResponse */
+    SensorReadingResponse: {
+      /** Sensor Id */
+      sensor_id: string
+      /** Zone */
+      zone: string
+      /** Type */
+      type: string
+      /** Value */
+      value: number
+      /** Unit */
+      unit: string
+      /** Status */
+      status: string
+    }
+    /** SensorsReadingsResponse */
+    SensorsReadingsResponse: {
+      /** Timestamp Sol */
+      timestamp_sol: number
+      /** Readings */
+      readings: components["schemas"]["SensorReadingResponse"][]
+    }
+    /** SetEnvironmentRequest */
+    SetEnvironmentRequest: {
+      /** Zone Id */
+      zone_id: string
+      /** Target Temp C */
+      target_temp_c?: number | null
+      /** Target Humidity Pct */
+      target_humidity_pct?: number | null
+      /** Target Co2 Ppm */
+      target_co2_ppm?: number | null
+      /** Par Umol M2S */
+      par_umol_m2s?: number | null
+      /** Photoperiod Hours */
+      photoperiod_hours?: number | null
+    }
+    /** SetIrrigationRequest */
+    SetIrrigationRequest: {
+      /** Zone Id */
+      zone_id: string
+      /** Irrigation Liters Per Sol */
+      irrigation_liters_per_sol: number
+    }
+    /** SimAdvanceResponse */
+    SimAdvanceResponse: {
+      /** New Sol */
+      new_sol: number
+      /** Mission Phase */
+      mission_phase: string
+      /** Events */
+      events: {
+        [key: string]: unknown
+      }[]
+    }
+    /** SimStatusResponse */
+    SimStatusResponse: {
+      /** Current Sol */
+      current_sol: number
+      /** Total Sols */
+      total_sols: number
+      /** Mission Phase */
+      mission_phase: string
+      /** Paused */
+      paused: boolean
+    }
+    /** StarvationResponse */
+    StarvationResponse: {
+      /** Level */
+      level: string
+      /** Consecutive Deficit Sols */
+      consecutive_deficit_sols: number
+      /** Health Penalty Pct */
+      health_penalty_pct: number
+    }
+    /** StoredFoodResponse */
+    StoredFoodResponse: {
+      /** Remaining Kcal */
+      remaining_kcal: number
+      /** Remaining Days At Current Rate */
+      remaining_days_at_current_rate: number
+      /** Protein Remaining G */
+      protein_remaining_g: number
+    }
+    /** StressIndicatorResponse */
+    StressIndicatorResponse: {
+      /** Type */
+      type: string
+      /** Since Sol */
+      since_sol: number
+      /** Severity */
+      severity: number
+    }
+    /** SurvivalScoreResponse */
+    SurvivalScoreResponse: {
+      /** Crew Alive */
+      crew_alive: boolean
+      /** Days Without Critical Deficit */
+      days_without_critical_deficit: number
+      /** Score */
+      score: number
+    }
+    /** TemperatureHealthResponse */
+    TemperatureHealthResponse: {
+      /** Ambient Temp C */
+      ambient_temp_c: number
+      /** Hypothermia Risk */
+      hypothermia_risk: boolean
+      /** Hyperthermia Risk */
+      hyperthermia_risk: boolean
+      /** Health Penalty Pct */
+      health_penalty_pct: number
+      /** Nasa Comfort Range C */
+      nasa_comfort_range_c: number[]
+    }
+    /** ValidationError */
+    ValidationError: {
+      /** Location */
+      loc: (string | number)[]
+      /** Message */
+      msg: string
+      /** Error Type */
+      type: string
+      /** Input */
+      input?: unknown
+      /** Context */
+      ctx?: Record<string, never>
+    }
+    /** WaterMaintenanceRequest */
+    WaterMaintenanceRequest: {
+      /**
+       * Action
+       * @default clean_filters
+       */
+      action: string
+    }
+    /** WaterStatusResponse */
+    WaterStatusResponse: {
+      /** Reservoir Liters */
+      reservoir_liters: number
+      /** Reservoir Capacity Liters */
+      reservoir_capacity_liters: number
+      /** Recycling Efficiency Pct */
+      recycling_efficiency_pct: number
+      /** Daily Crew Consumption Liters */
+      daily_crew_consumption_liters: number
+      /** Daily Crop Consumption Liters */
+      daily_crop_consumption_liters: number
+      /** Daily Recycled Liters */
+      daily_recycled_liters: number
+      /** Daily Net Change Liters */
+      daily_net_change_liters: number
+      /** Days Until Critical */
+      days_until_critical: number
+      /** Filter Health Pct */
+      filter_health_pct: number
+      /** Irrigation Settings */
+      irrigation_settings: {
+        [key: string]: number
+      }
+    }
+    /** WeatherForecastResponse */
+    WeatherForecastResponse: {
+      /** Sol */
+      sol: number
+      /** Min Temp C */
+      min_temp_c: number
+      /** Max Temp C */
+      max_temp_c: number
+      /** Avg Temp C */
+      avg_temp_c: number
+      /** Pressure Pa */
+      pressure_pa: number
+      /** Solar Irradiance Wm2 */
+      solar_irradiance_wm2: number
+      /** Dust Opacity */
+      dust_opacity: number
+      /** Season */
+      season: string
+      /** Ls */
+      ls: number
+      /** Sol In Year */
+      sol_in_year: number
+      /** Confidence */
+      confidence: number
+    }
+    /** WeatherResponse */
+    WeatherResponse: {
+      /** Sol */
+      sol: number
+      /** Min Temp C */
+      min_temp_c: number
+      /** Max Temp C */
+      max_temp_c: number
+      /** Avg Temp C */
+      avg_temp_c: number
+      /** Pressure Pa */
+      pressure_pa: number
+      /** Solar Irradiance Wm2 */
+      solar_irradiance_wm2: number
+      /** Dust Opacity */
+      dust_opacity: number
+      /** Season */
+      season: string
+      /** Ls */
+      ls: number
+      /** Sol In Year */
+      sol_in_year: number
+    }
+    /** ZoneEnvironmentResponse */
+    ZoneEnvironmentResponse: {
+      /** Zone Id */
+      zone_id: string
+      /** Temp C */
+      temp_c: number
+      /** Humidity Pct */
+      humidity_pct: number
+      /** Co2 Ppm */
+      co2_ppm: number
+      /** Par Umol M2S */
+      par_umol_m2s: number
+      /** Light On */
+      light_on: boolean
+      /** Photoperiod Hours */
+      photoperiod_hours: number
+      /** Area M2 */
+      area_m2: number
+      /** Target Temp C */
+      target_temp_c: number
+      /** Target Humidity Pct */
+      target_humidity_pct: number
+      /** Target Co2 Ppm */
+      target_co2_ppm: number
+      /** Target Par */
+      target_par: number
+      /** Target Photoperiod Hours */
+      target_photoperiod_hours: number
+    }
+    /** ZoneNutrientsResponse */
+    ZoneNutrientsResponse: {
+      /** Zone Id */
+      zone_id: string
+      /** Solution Ph */
+      solution_ph: number
+      /** Solution Ec Ms Cm */
+      solution_ec_ms_cm: number
+      /** Solution Temp C */
+      solution_temp_c: number
+      /** Dissolved O2 Ppm */
+      dissolved_o2_ppm: number
+      /** Nitrogen Ppm */
+      nitrogen_ppm: number
+      /** Phosphorus Ppm */
+      phosphorus_ppm: number
+      /** Potassium Ppm */
+      potassium_ppm: number
+      /** Calcium Ppm */
+      calcium_ppm: number
+      /** Magnesium Ppm */
+      magnesium_ppm: number
+    }
+  }
+  responses: never
+  parameters: never
+  requestBodies: never
+  headers: never
+  pathItems: never
+}
+export type $defs = Record<string, never>
 export interface operations {
-    sim_status_sim_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SimStatusResponse"];
-                };
-            };
-        };
-    };
-    weather_current_weather_current_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WeatherResponse"];
-                };
-            };
-        };
-    };
-    weather_history_weather_history_get: {
-        parameters: {
-            query?: {
-                last_n_sols?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WeatherResponse"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    weather_forecast_weather_forecast_get: {
-        parameters: {
-            query?: {
-                horizon?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WeatherForecastResponse"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    energy_status_energy_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EnergyStatusResponse"];
-                };
-            };
-        };
-    };
-    greenhouse_environment_greenhouse_environment_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GreenhouseEnvironmentResponse"];
-                };
-            };
-        };
-    };
-    water_status_water_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WaterStatusResponse"];
-                };
-            };
-        };
-    };
-    crops_status_crops_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CropsStatusResponse"];
-                };
-            };
-        };
-    };
-    nutrients_status_nutrients_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NutrientsStatusResponse"];
-                };
-            };
-        };
-    };
-    crew_nutrition_crew_nutrition_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrewNutritionResponse"];
-                };
-            };
-        };
-    };
-    crew_health_crew_health_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrewHealthResponse"];
-                };
-            };
-        };
-    };
-    crew_members_crew_members_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CrewMembersResponse"];
-                };
-            };
-        };
-    };
-    sensors_readings_sensors_readings_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SensorsReadingsResponse"];
-                };
-            };
-        };
-    };
-    events_log_events_log_get: {
-        parameters: {
-            query?: {
-                since_sol?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["EventsLogResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    events_active_crises_events_active_crises_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ActiveCrisesResponse"];
-                };
-            };
-        };
-    };
-    score_current_score_current_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ScoreCurrentResponse"];
-                };
-            };
-        };
-    };
-    score_final_score_final_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ScoreFinalResponse"];
-                };
-            };
-        };
-    };
-    catalog_crops_crops_catalog_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    sim_state_sim_state_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    energy_allocate_energy_allocate_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EnergyAllocateRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    greenhouse_set_environment_greenhouse_set_environment_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetEnvironmentRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    water_set_irrigation_water_set_irrigation_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetIrrigationRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    water_maintenance_water_maintenance_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WaterMaintenanceRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    crops_plant_crops_plant_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PlantRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    crops_harvest_crops_harvest_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["HarvestRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    crops_remove_crops_remove_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RemoveRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    nutrients_adjust_nutrients_adjust_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NutrientAdjustRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    sim_advance_sim_advance_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AdvanceRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SimAdvanceResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    sim_reset_sim_reset_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ResetRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    scenario_water_leak_admin_scenario_water_leak_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    scenario_hvac_failure_admin_scenario_hvac_failure_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    scenario_pathogen_admin_scenario_pathogen_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PathogenRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    scenario_dust_storm_admin_scenario_dust_storm_post: {
-        parameters: {
-            query?: {
-                duration_sols?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    scenario_energy_disruption_admin_scenario_energy_disruption_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-        };
-    };
-    agent_log_decision_agent_log_decision_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AgentDecisionRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
+  sim_status_sim_status_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["SimStatusResponse"]
+        }
+      }
+    }
+  }
+  weather_current_weather_current_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WeatherResponse"]
+        }
+      }
+    }
+  }
+  weather_history_weather_history_get: {
+    parameters: {
+      query?: {
+        last_n_sols?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WeatherResponse"][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  weather_forecast_weather_forecast_get: {
+    parameters: {
+      query?: {
+        horizon?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WeatherForecastResponse"][]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  energy_status_energy_status_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["EnergyStatusResponse"]
+        }
+      }
+    }
+  }
+  greenhouse_environment_greenhouse_environment_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["GreenhouseEnvironmentResponse"]
+        }
+      }
+    }
+  }
+  water_status_water_status_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["WaterStatusResponse"]
+        }
+      }
+    }
+  }
+  crops_status_crops_status_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CropsStatusResponse"]
+        }
+      }
+    }
+  }
+  nutrients_status_nutrients_status_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["NutrientsStatusResponse"]
+        }
+      }
+    }
+  }
+  crew_nutrition_crew_nutrition_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CrewNutritionResponse"]
+        }
+      }
+    }
+  }
+  crew_health_crew_health_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CrewHealthResponse"]
+        }
+      }
+    }
+  }
+  crew_members_crew_members_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["CrewMembersResponse"]
+        }
+      }
+    }
+  }
+  sensors_readings_sensors_readings_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["SensorsReadingsResponse"]
+        }
+      }
+    }
+  }
+  events_log_events_log_get: {
+    parameters: {
+      query?: {
+        since_sol?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["EventsLogResponse"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  events_active_crises_events_active_crises_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ActiveCrisesResponse"]
+        }
+      }
+    }
+  }
+  score_current_score_current_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ScoreCurrentResponse"]
+        }
+      }
+    }
+  }
+  score_final_score_final_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["ScoreFinalResponse"]
+        }
+      }
+    }
+  }
+  catalog_crops_crops_catalog_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+    }
+  }
+  sim_state_sim_state_get: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+    }
+  }
+  energy_allocate_energy_allocate_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EnergyAllocateRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  greenhouse_set_environment_greenhouse_set_environment_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetEnvironmentRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  water_set_irrigation_water_set_irrigation_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetIrrigationRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  water_maintenance_water_maintenance_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WaterMaintenanceRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  crops_plant_crops_plant_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PlantRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  crops_harvest_crops_harvest_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["HarvestRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  crops_remove_crops_remove_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RemoveRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  nutrients_adjust_nutrients_adjust_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NutrientAdjustRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  sim_advance_sim_advance_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AdvanceRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["SimAdvanceResponse"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  sim_reset_sim_reset_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResetRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  scenario_water_leak_admin_scenario_water_leak_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+    }
+  }
+  scenario_hvac_failure_admin_scenario_hvac_failure_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+    }
+  }
+  scenario_pathogen_admin_scenario_pathogen_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PathogenRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  scenario_dust_storm_admin_scenario_dust_storm_post: {
+    parameters: {
+      query?: {
+        duration_sols?: number
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  scenario_energy_disruption_admin_scenario_energy_disruption_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+    }
+  }
+  agent_log_decision_agent_log_decision_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AgentDecisionRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
 }
