@@ -16,6 +16,7 @@ from src.constants import (
     FILTER_HEALTH_MAINTENANCE_RESTORE,
     FILTER_HEALTH_MIN_EFFICIENCY_FACTOR,
     INITIAL_WATER_RESERVOIR_L,
+    PLANT_TRANSPIRATION_RECOVERY_PCT,
     WATER_RECYCLING_NOMINAL_PCT,
     WATER_RESERVOIR_CAPACITY_L,
     ZONE_AREAS_M2,
@@ -62,21 +63,36 @@ class WaterModel:
     # ------------------------------------------------------------------
 
     def calc_rates(self, crop_model: CropModel) -> None:
-        """Compute net water change this sol."""
-        # Crop water demand: sum of (zone irrigation setting) L/sol
+        """Compute net water change this sol.
+
+        Two recycling loops (NASA ECLSS):
+          1. Crew metabolic water (urine, sweat, respiration): WATER_RECYCLING_NOMINAL_PCT
+          2. Plant transpiration captured by condensing heat exchanger: PLANT_TRANSPIRATION_RECOVERY_PCT
+        """
+        # Crop water demand: sum of zone irrigation settings (L/sol)
         total_irrigation = sum(self.state.irrigation_settings.values())
         self.state.daily_crop_consumption_liters = round(total_irrigation, 2)
 
-        # Crew water: consumed directly from reservoir; fraction recycled back
+        # Loop 1 — Crew metabolic water recovery
         recycled_from_crew = (
             CREW_DAILY_WATER_L * self.state.recycling_efficiency_pct / 100.0
         )
-        self.state.daily_recycled_liters = round(recycled_from_crew, 2)
 
-        net_crew = CREW_DAILY_WATER_L - recycled_from_crew
+        # Loop 2 — Plant transpiration recovery (filter health degrades this too)
+        health_factor = (
+            FILTER_HEALTH_MIN_EFFICIENCY_FACTOR
+            + (1.0 - FILTER_HEALTH_MIN_EFFICIENCY_FACTOR)
+            * self.state.filter_health_pct
+            / 100.0
+        )
+        effective_transpiration_pct = PLANT_TRANSPIRATION_RECOVERY_PCT * health_factor
+        recycled_from_plants = total_irrigation * effective_transpiration_pct / 100.0
 
-        # Net change
-        net = -(net_crew + total_irrigation)
+        total_recycled = recycled_from_crew + recycled_from_plants
+        self.state.daily_recycled_liters = round(total_recycled, 2)
+
+        # Net change = outflows - inflows
+        net = -(CREW_DAILY_WATER_L + total_irrigation - total_recycled)
         self.rates.d_reservoir = net
         self.state.daily_net_change_liters = round(net, 2)
 
