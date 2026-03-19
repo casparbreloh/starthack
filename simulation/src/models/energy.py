@@ -63,6 +63,10 @@ class EnergyState:
 @dataclass
 class EnergyRates:
     d_battery_wh: float = 0.0  # net change this sol
+    # Delivery ratios: actual/requested (1.0 = fully supplied, <1.0 = capped)
+    lighting_delivery_ratio: float = 1.0
+    heating_delivery_ratio: float = 1.0
+    water_pumps_delivery_ratio: float = 1.0
 
 
 class EnergyModel:
@@ -92,20 +96,47 @@ class EnergyModel:
         )
         self.state.solar_generation_wh = round(solar, 1)
 
-        # Heating: proportional to temperature delta (outside avg)
+        # ── Requested consumption (what subsystems need) ──────────────
         outside_avg = weather.avg_temp_c
-        heating = HEATING_BASE_WH + HEATING_PER_DEGREE_WH * max(0.0, -outside_avg)
-
-        # Lighting: depends on zone photoperiod settings
-        lighting = sum(
+        requested_heating = HEATING_BASE_WH + HEATING_PER_DEGREE_WH * max(
+            0.0, -outside_avg
+        )
+        requested_lighting = sum(
             z.photoperiod_hours / 16.0 * LIGHTING_WH_PER_ZONE_PER_16H
             for z in climate.state.values()
             if z.light_on
         )
-
-        recycling = RECYCLING_WH
-        pumps = NUTRIENT_PUMPS_WH
+        requested_recycling = RECYCLING_WH
+        requested_pumps = NUTRIENT_PUMPS_WH
         sensors = SENSORS_CONTROL_WH
+
+        # ── Allocation caps ───────────────────────────────────────────
+        # Total available = this sol's solar + current battery reserve
+        total_available = solar + self.state.battery_level_wh
+
+        alloc = self.state.allocation
+        heating_cap = total_available * alloc.get("heating_pct", 47) / 100.0
+        lighting_cap = total_available * alloc.get("lighting_pct", 30) / 100.0
+        recycling_cap = total_available * alloc.get("water_recycling_pct", 12) / 100.0
+        pumps_cap = total_available * alloc.get("nutrient_pumps_pct", 5) / 100.0
+        # Sensors/control always get full power (critical infrastructure)
+
+        # Actual consumption = min(requested, cap)
+        heating = min(requested_heating, heating_cap)
+        lighting = min(requested_lighting, lighting_cap)
+        recycling = min(requested_recycling, recycling_cap)
+        pumps = min(requested_pumps, pumps_cap)
+
+        # ── Delivery ratios (actual / requested) ─────────────────────
+        self.rates.heating_delivery_ratio = (
+            heating / requested_heating if requested_heating > 0 else 1.0
+        )
+        self.rates.lighting_delivery_ratio = (
+            lighting / requested_lighting if requested_lighting > 0 else 1.0
+        )
+        self.rates.water_pumps_delivery_ratio = (
+            recycling / requested_recycling if requested_recycling > 0 else 1.0
+        )
 
         total = heating + lighting + recycling + pumps + sensors
         self.state.breakdown = {

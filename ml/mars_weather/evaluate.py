@@ -10,10 +10,10 @@ import torch
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from torch.utils.data import DataLoader
 
+from . import MODEL_DIR
 from .data import prepare_dataset, TARGETS
 from .model import LSTMPredictor, MarsWeatherDataset, SeasonalBaseline
 
-MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 SEQ_LEN = 30
 
 

@@ -20,6 +20,18 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from src.catalog import CROP_CATALOG
+from src.constants import (
+    STRESS_EC_MODERATE,
+    STRESS_EC_SEVERE,
+    STRESS_K_DEFICIENCY_PPM,
+    STRESS_PAR_CRITICAL_LOW,
+    STRESS_PAR_HIGH,
+    STRESS_PAR_LOW,
+    STRESS_PH_CRITICAL_HIGH,
+    STRESS_PH_CRITICAL_LOW,
+    STRESS_PH_OPTIMAL_HIGH,
+    STRESS_PH_OPTIMAL_LOW,
+)
 from src.enums import CropType
 
 if TYPE_CHECKING:
@@ -56,6 +68,7 @@ class CropBatch:
     age_days: int = 0  # sols since planting
     soil_moisture_pct: float = 60.0
     stress_indicators: list[StressIndicator] = field(default_factory=list)
+    is_bolting: bool = False  # True once bolting triggered (permanent, lettuce only)
     # Internal water tracking
     _soil_water_L: float = field(default=0.0, repr=False)
 
@@ -94,6 +107,11 @@ class CropBatch:
 class CropRates:
     age_increment: dict[str, int] = field(default_factory=dict)
     d_health: dict[str, float] = field(default_factory=dict)
+    new_soil_water_L: dict[str, float] = field(default_factory=dict)
+    new_soil_moisture_pct: dict[str, float] = field(default_factory=dict)
+    new_stress_indicators: dict[str, list[StressIndicator]] = field(
+        default_factory=dict
+    )
 
 
 class CropModel:
@@ -106,7 +124,6 @@ class CropModel:
         self.batches: dict[str, CropBatch] = {}
         self.rates = CropRates()
         self.seeds_remaining: dict[CropType, int] = dict(_DEFAULT_SEEDS)
-        self._total_area_used: dict[str, float] = {}  # zone_id → m²
 
     # ------------------------------------------------------------------
     # PCSE lifecycle
@@ -176,6 +193,7 @@ class CropModel:
                     label = "heat_stress"
                     if batch.crop_type == CropType.LETTUCE and temp > 25.0:
                         label = "bolting_risk"
+                        batch.is_bolting = True  # permanent: bolted lettuce is inedible
                     stressors.append(StressIndicator(label, current_sol, 0.4))
 
                 # CO₂ imbalance
@@ -187,22 +205,68 @@ class CropModel:
                     d_health -= 0.05
                     stressors.append(StressIndicator("fungal_risk", current_sol, 0.4))
 
+                # PAR / light stress
+                par = zone.par_umol_m2s
+                if par < STRESS_PAR_CRITICAL_LOW:
+                    d_health -= 0.10
+                    stressors.append(
+                        StressIndicator("light_deficiency", current_sol, 1.0)
+                    )
+                elif par < STRESS_PAR_LOW:
+                    d_health -= 0.05
+                    stressors.append(
+                        StressIndicator("light_deficiency", current_sol, 0.5)
+                    )
+                elif par > STRESS_PAR_HIGH:
+                    d_health -= 0.06
+                    stressors.append(StressIndicator("light_excess", current_sol, 0.4))
+
             # N-deficiency
             if n_state and n_state.nitrogen_ppm < 50.0:
                 d_health -= 0.10
                 stressors.append(StressIndicator("n_deficiency", current_sol, 0.6))
 
-            # Age increment: slowed when CO₂ is very low (< 500 ppm)
+            # K-deficiency
+            if n_state and n_state.potassium_ppm < STRESS_K_DEFICIENCY_PPM:
+                d_health -= 0.08
+                stressors.append(StressIndicator("k_deficiency", current_sol, 0.5))
+
+            # Salinity / EC stress
+            if n_state:
+                ec = n_state.solution_ec_ms_cm
+                if ec > STRESS_EC_SEVERE:
+                    d_health -= 0.15
+                    stressors.append(
+                        StressIndicator("salinity_stress", current_sol, 1.0)
+                    )
+                elif ec > STRESS_EC_MODERATE:
+                    d_health -= 0.07
+                    stressors.append(
+                        StressIndicator("salinity_stress", current_sol, 0.5)
+                    )
+
+            # pH imbalance
+            if n_state:
+                ph = n_state.solution_ph
+                if ph < STRESS_PH_CRITICAL_LOW or ph > STRESS_PH_CRITICAL_HIGH:
+                    d_health -= 0.08
+                    stressors.append(StressIndicator("ph_imbalance", current_sol, 0.6))
+                elif ph < STRESS_PH_OPTIMAL_LOW or ph > STRESS_PH_OPTIMAL_HIGH:
+                    d_health -= 0.03
+                    stressors.append(StressIndicator("ph_imbalance", current_sol, 0.2))
+
+            # Age increment: stalls on CO₂ < 500 ppm or near-darkness (PAR < critical)
             age_inc = 1
-            if zone and zone.co2_ppm < 500.0:
+            if zone and (
+                zone.co2_ppm < 500.0 or zone.par_umol_m2s < STRESS_PAR_CRITICAL_LOW
+            ):
                 age_inc = 0  # growth stalled
 
             self.rates.age_increment[batch_id] = age_inc
             self.rates.d_health[batch_id] = d_health
-            # Store computed values for integrate phase
-            batch._soil_water_L = new_water_L
-            batch.soil_moisture_pct = round(new_moisture_pct, 1)
-            batch.stress_indicators = stressors  # type: ignore[assignment]
+            self.rates.new_soil_water_L[batch_id] = new_water_L
+            self.rates.new_soil_moisture_pct[batch_id] = round(new_moisture_pct, 1)
+            self.rates.new_stress_indicators[batch_id] = stressors
 
     def integrate(self) -> list[str]:
         """Phase 2 — apply rates. Returns list of crop_ids that died this sol."""
@@ -212,9 +276,15 @@ class CropModel:
             new_health = batch.health + self.rates.d_health.get(batch_id, 0.0)
             batch.health = round(max(0.0, min(1.0, new_health)), 3)
 
+            if batch_id in self.rates.new_soil_water_L:
+                batch._soil_water_L = self.rates.new_soil_water_L[batch_id]
+            if batch_id in self.rates.new_soil_moisture_pct:
+                batch.soil_moisture_pct = self.rates.new_soil_moisture_pct[batch_id]
+            if batch_id in self.rates.new_stress_indicators:
+                batch.stress_indicators = self.rates.new_stress_indicators[batch_id]
+
             if batch.health <= 0.0:
                 dead.append(batch_id)
-                self._release_area(batch)
                 del self.batches[batch_id]
 
         return dead
@@ -245,9 +315,6 @@ class CropModel:
         )
         self.batches[crop_id] = batch
         self.seeds_remaining[crop_type] = max(0, self.seeds_remaining[crop_type] - 1)
-        self._total_area_used[zone_id] = (
-            self._total_area_used.get(zone_id, 0.0) + area_m2
-        )
         return batch
 
     def harvest(self, crop_id: str) -> dict:
@@ -260,12 +327,16 @@ class CropModel:
 
         batch = self.batches.pop(crop_id)
         catalog = CROP_CATALOG[batch.crop_type]
-        self._release_area(batch)
 
         base_yield_kg = catalog["yield_kg_per_m2"] * batch.area_m2
         actual_yield_kg = round(
             base_yield_kg * batch.health * min(1.0, batch.growth_pct / 100.0), 3
         )
+
+        # Bolting: lettuce enters reproductive phase — leaves become bitter/inedible
+        if batch.is_bolting:
+            actual_yield_kg = round(actual_yield_kg * 0.1, 3)
+
         kcal = round(actual_yield_kg * catalog["kcal_per_100g"] * 10.0, 0)
         protein_g = round(actual_yield_kg * catalog["protein_per_100g_g"] * 10.0, 0)
         vitamin_c_mg = round(actual_yield_kg * 20.0, 0)  # approximate
@@ -284,6 +355,7 @@ class CropModel:
             "provides_micronutrients": catalog["provides_micronutrients"],
             "age_days": batch.age_days,
             "growth_pct": batch.growth_pct,
+            "was_bolting": batch.is_bolting,
         }
 
     def remove(self, crop_id: str, reason: str = "") -> dict:
@@ -292,7 +364,6 @@ class CropModel:
             raise KeyError(f"Crop {crop_id!r} not found")
 
         batch = self.batches.pop(crop_id)
-        self._release_area(batch)
         catalog = CROP_CATALOG[batch.crop_type]
         waste_kg = round(
             catalog["yield_kg_per_m2"] * batch.area_m2 * batch.health * 0.3, 3
@@ -325,9 +396,3 @@ class CropModel:
 
     def total_planted_area(self) -> float:
         return sum(b.area_m2 for b in self.batches.values())
-
-    def _release_area(self, batch: CropBatch) -> None:
-        self._total_area_used[batch.zone_id] = max(
-            0.0,
-            self._total_area_used.get(batch.zone_id, 0.0) - batch.area_m2,
-        )

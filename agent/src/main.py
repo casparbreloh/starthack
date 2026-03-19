@@ -8,7 +8,6 @@ Supports two modes: [R5-M6, R7-M1]
 from __future__ import annotations
 
 import json
-import logging
 from typing import Any
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp, RequestContext

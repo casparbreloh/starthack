@@ -47,7 +47,6 @@ class SetEnvironmentRequest(BaseModel):
 class SetIrrigationRequest(BaseModel):
     zone_id: str
     irrigation_liters_per_sol: float = Field(ge=0)
-    irrigation_frequency: str | None = "continuous"
 
 
 class WaterMaintenanceRequest(BaseModel):
@@ -73,9 +72,11 @@ class RemoveRequest(BaseModel):
 class NutrientAdjustRequest(BaseModel):
     zone_id: str
     target_ph: float | None = Field(default=None, ge=4.0, le=8.0)
-    target_ec_ms_cm: float | None = Field(default=None, ge=0.1, le=5.0)
     nitrogen_boost: bool = False
     potassium_boost: bool = False
+    flush_solution: bool = (
+        False  # dilute solution to remove accumulated salts (costs 10 L water)
+    )
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -86,7 +87,6 @@ class NutrientAdjustRequest(BaseModel):
 @router.post("/energy/allocate")
 def energy_allocate(req: EnergyAllocateRequest):
     engine.energy.allocate(req.model_dump())
-    engine.scoring.record_preventive_action()
     return {"status": "ok", "allocation": engine.energy.state.allocation}
 
 
@@ -271,15 +271,22 @@ def nutrients_adjust(req: NutrientAdjustRequest):
     engine.nutrients.adjust(
         zone_id=req.zone_id,
         target_ph=req.target_ph,
-        target_ec_ms_cm=req.target_ec_ms_cm,
         nitrogen_boost=req.nitrogen_boost,
         potassium_boost=req.potassium_boost,
+        flush_solution=req.flush_solution,
     )
+    # Flush costs 10 L of water from the reservoir
+    if req.flush_solution:
+        engine.water.state.reservoir_liters = max(
+            0.0, engine.water.state.reservoir_liters - 10.0
+        )
     z = engine.nutrients.state[req.zone_id]
     return {
         "status": "ok",
         "zone_id": req.zone_id,
         "solution_ph": z.solution_ph,
+        "solution_ec_ms_cm": z.solution_ec_ms_cm,
+        "base_salt_ppm": z.base_salt_ppm,
         "nitrogen_ppm": z.nitrogen_ppm,
         "potassium_ppm": z.potassium_ppm,
         "stock_remaining_pct": engine.nutrients.stock_remaining_pct,

@@ -1,4 +1,5 @@
 import type {
+  SimAdvanceResponse,
   SimStatus,
   WeatherCurrent,
   EnergyStatus,
@@ -7,6 +8,7 @@ import type {
   CropsStatus,
   NutrientsStatus,
   CrewNutrition,
+  CrewMembers,
   ActiveCrises,
   ScoreData,
 } from "../types/simulation"
@@ -30,7 +32,7 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
 }
 
 export const api = {
-  advance: (sols: number) => post<{ new_sol: number }>("/sim/advance", { sols }),
+  advance: (sols: number) => post<SimAdvanceResponse>("/sim/advance", { sols }),
   getStatus: () => get<SimStatus>("/sim/status"),
   getWeather: () => get<WeatherCurrent>("/weather/current"),
   getEnergy: () => get<EnergyStatus>("/energy/status"),
@@ -39,6 +41,7 @@ export const api = {
   getCrops: () => get<CropsStatus>("/crops/status"),
   getNutrients: () => get<NutrientsStatus>("/nutrients/status"),
   getCrew: () => get<CrewNutrition>("/crew/nutrition"),
+  getCrewMembers: () => get<CrewMembers>("/crew/members"),
   getCrises: () => get<ActiveCrises>("/events/active_crises"),
   getScore: () => get<ScoreData>("/score/current"),
 }

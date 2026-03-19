@@ -20,9 +20,12 @@ export type StoredFood = Schemas["StoredFoodResponse"]
 export type FoodBuffer = Schemas["FoodBufferResponse"]
 export type CumulativeNutrition = Schemas["CumulativeNutritionResponse"]
 export type CrewNutrition = Schemas["CrewNutritionResponse"]
+export type CrewMember = Schemas["CrewMemberResponse"]
+export type CrewMembers = Schemas["CrewMembersResponse"]
 export type Crisis = Schemas["CrisisResponse"]
 export type ActiveCrises = Schemas["ActiveCrisesResponse"]
 export type ScoreData = Schemas["ScoreCurrentResponse"]
+export type SimAdvanceResponse = Schemas["SimAdvanceResponse"]
 
 // ── Frontend-only state (not an API response) ─────────────────────────
 export interface SimulationData {
@@ -34,6 +37,7 @@ export interface SimulationData {
   crops: CropsStatus | null
   nutrients: NutrientsStatus | null
   crew: CrewNutrition | null
+  crewMembers: CrewMembers | null
   crises: ActiveCrises | null
   score: ScoreData | null
   loading: boolean

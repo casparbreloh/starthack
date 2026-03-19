@@ -8,10 +8,9 @@ import numpy as np
 import pandas as pd
 import torch
 
+from . import MODEL_DIR
 from .data import load_raw, engineer_features, TARGETS
 from .model import LSTMPredictor
-
-MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 
 
 def load_model_and_scalers(horizon=1, model_dir=MODEL_DIR):
