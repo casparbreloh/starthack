@@ -1,6 +1,7 @@
 .PHONY: dev dev-agent dev-simulation dev-frontend install install-frozen \
 	check check-agent check-frontend check-simulation \
-	check-fix check-agent-fix check-frontend-fix check-simulation-fix
+	check-fix check-agent-fix check-frontend-fix check-simulation-fix \
+	codegen check-codegen
 
 dev-simulation:
 	@cd simulation && uv run uvicorn main:app --reload --port 8080
@@ -48,3 +49,12 @@ check-simulation-fix:
 	@cd simulation && uv run ruff check --fix src main.py && uv run ruff format src main.py
 
 check-fix: check-agent-fix check-frontend-fix check-simulation-fix
+
+codegen:
+	@cd simulation && uv run python -m scripts.export_openapi > /tmp/mars-openapi.json
+	@cd frontend && pnpm exec openapi-typescript /tmp/mars-openapi.json -o src/contracts/simulation.d.ts --export-type
+	@cd frontend && pnpm exec oxfmt src/contracts/simulation.d.ts
+
+check-codegen:
+	@make codegen
+	@git diff --exit-code frontend/src/contracts/simulation.d.ts

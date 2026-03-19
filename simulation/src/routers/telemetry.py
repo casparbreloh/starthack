@@ -26,6 +26,24 @@ from src.constants import (
     MISSION_DURATION_SOLS,
     ZONE_AREAS_M2,
 )
+from src.models.responses import (
+    ActiveCrisesResponse,
+    CrewHealthResponse,
+    CrewMembersResponse,
+    CrewNutritionResponse,
+    CropsStatusResponse,
+    EnergyStatusResponse,
+    EventsLogResponse,
+    GreenhouseEnvironmentResponse,
+    NutrientsStatusResponse,
+    ScoreCurrentResponse,
+    ScoreFinalResponse,
+    SensorsReadingsResponse,
+    SimStatusResponse,
+    WaterStatusResponse,
+    WeatherForecastResponse,
+    WeatherResponse,
+)
 from src.state import engine
 
 router = APIRouter()
@@ -36,7 +54,7 @@ router = APIRouter()
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/sim/status")
+@router.get("/sim/status", response_model=SimStatusResponse)
 def sim_status():
     return {
         "current_sol": engine.current_sol,
@@ -51,7 +69,7 @@ def sim_status():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/weather/current")
+@router.get("/weather/current", response_model=WeatherResponse)
 def weather_current():
     w = engine.weather.current()
     if w is None:
@@ -59,12 +77,12 @@ def weather_current():
     return _weather_to_dict(w)
 
 
-@router.get("/weather/history")
+@router.get("/weather/history", response_model=list[WeatherResponse])
 def weather_history(last_n_sols: int = Query(default=30, ge=1, le=450)):
     return [_weather_to_dict(w) for w in engine.weather.history(last_n_sols)]
 
 
-@router.get("/weather/forecast")
+@router.get("/weather/forecast", response_model=list[WeatherForecastResponse])
 def weather_forecast(horizon: int = Query(default=7, ge=1, le=30)):
     return [
         {**_weather_to_dict(w), "confidence": round(max(0.5, 1.0 - i * 0.05), 2)}
@@ -77,7 +95,7 @@ def weather_forecast(horizon: int = Query(default=7, ge=1, le=30)):
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/energy/status")
+@router.get("/energy/status", response_model=EnergyStatusResponse)
 def energy_status():
     s = engine.energy.state
     return {
@@ -98,7 +116,7 @@ def energy_status():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/greenhouse/environment")
+@router.get("/greenhouse/environment", response_model=GreenhouseEnvironmentResponse)
 def greenhouse_environment():
     zones = [
         {
@@ -132,7 +150,7 @@ def greenhouse_environment():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/water/status")
+@router.get("/water/status", response_model=WaterStatusResponse)
 def water_status():
     s = engine.water.state
     return {
@@ -154,7 +172,7 @@ def water_status():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/crops/status")
+@router.get("/crops/status", response_model=CropsStatusResponse)
 def crops_status():
     crops = []
     for batch in engine.crops.batches.values():
@@ -201,7 +219,7 @@ def crops_status():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/nutrients/status")
+@router.get("/nutrients/status", response_model=NutrientsStatusResponse)
 def nutrients_status():
     zones = [
         {
@@ -230,7 +248,7 @@ def nutrients_status():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/crew/nutrition")
+@router.get("/crew/nutrition", response_model=CrewNutritionResponse)
 def crew_nutrition():
     s = engine.crew.state
     total_stored_kcal = s.stored_kcal + s.fresh_buffer_kcal
@@ -275,7 +293,7 @@ def crew_nutrition():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/crew/health")
+@router.get("/crew/health", response_model=CrewHealthResponse)
 def crew_health():
     """
     Detailed crew health vitals.
@@ -328,7 +346,7 @@ def crew_health():
     }
 
 
-@router.get("/crew/members")
+@router.get("/crew/members", response_model=CrewMembersResponse)
 def crew_members():
     """Individual health card for each of the 4 crew members."""
     return {
@@ -354,7 +372,7 @@ def crew_members():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/sensors/readings")
+@router.get("/sensors/readings", response_model=SensorsReadingsResponse)
 def sensors_readings():
     return {
         "timestamp_sol": engine.current_sol + 0.5,
@@ -367,7 +385,7 @@ def sensors_readings():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/events/log")
+@router.get("/events/log", response_model=EventsLogResponse)
 def events_log(since_sol: int = Query(default=0, ge=0)):
     events = engine.events.since(since_sol)
     return {
@@ -386,7 +404,7 @@ def events_log(since_sol: int = Query(default=0, ge=0)):
     }
 
 
-@router.get("/events/active_crises")
+@router.get("/events/active_crises", response_model=ActiveCrisesResponse)
 def events_active_crises():
     return {
         "crises": [
@@ -411,7 +429,7 @@ def events_active_crises():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/score/current")
+@router.get("/score/current", response_model=ScoreCurrentResponse)
 def score_current():
     snap = engine.scoring.snapshot
     return {
@@ -426,7 +444,7 @@ def score_current():
     }
 
 
-@router.get("/score/final")
+@router.get("/score/final", response_model=ScoreFinalResponse)
 def score_final():
     from src.enums import MissionPhase
 
