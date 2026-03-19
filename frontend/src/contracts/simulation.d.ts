@@ -712,8 +712,11 @@ export type components = {
       cumulative: components["schemas"]["CumulativeNutritionResponse"]
       /** Crew Status */
       crew_status: string
-      /** Micronutrients Sufficient */
-      micronutrients_sufficient: boolean
+      micronutrients: components["schemas"]["MicronutrientsResponse"]
+      /** Food Inventory */
+      food_inventory: {
+        [key: string]: components["schemas"]["FoodItemResponse"]
+      }
       /** Days Of Food Remaining */
       days_of_food_remaining: number
       /** Days Of Protein Remaining */
@@ -888,8 +891,6 @@ export type components = {
       nutrient_pumps_wh: number
       /** Sensors Control Wh */
       sensors_control_wh: number
-      /** Other Wh */
-      other_wh: number
     }
     /** EnergyStatusResponse */
     EnergyStatusResponse: {
@@ -943,6 +944,17 @@ export type components = {
       /** Days Of Buffer */
       days_of_buffer: number
     }
+    /** FoodItemResponse */
+    FoodItemResponse: {
+      /** Kg Remaining */
+      kg_remaining: number
+      /** Kcal Remaining */
+      kcal_remaining: number
+      /** Protein G Remaining */
+      protein_g_remaining: number
+      /** Pct Remaining */
+      pct_remaining: number
+    }
     /** GreenhouseEnvironmentResponse */
     GreenhouseEnvironmentResponse: {
       /** Zones */
@@ -989,6 +1001,17 @@ export type components = {
       kcal_multiplier: number
       /** Protein Multiplier */
       protein_multiplier: number
+    }
+    /** MicronutrientsResponse */
+    MicronutrientsResponse: {
+      /** Sufficient Today */
+      sufficient_today: boolean
+      /** Level */
+      level: string
+      /** Consecutive Deficit Sols */
+      consecutive_deficit_sols: number
+      /** Health Penalty Pct */
+      health_penalty_pct: number
     }
     /** NutrientAdjustRequest */
     NutrientAdjustRequest: {

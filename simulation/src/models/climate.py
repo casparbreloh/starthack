@@ -17,6 +17,7 @@ from src.constants import (
     TARGET_PAR,
     TARGET_PHOTOPERIOD_H,
     TARGET_TEMP_C,
+    TOTAL_GREENHOUSE_AREA_M2,
     ZONE_AREAS_M2,
 )
 
@@ -157,13 +158,17 @@ class ClimateModel:
 
     def avg_temp(self) -> float:
         """Area-weighted average temperature across all zones."""
-        total_area = sum(z.area_m2 for z in self.state.values())
-        if total_area == 0:
+        if TOTAL_GREENHOUSE_AREA_M2 == 0:
             return TARGET_TEMP_C
-        return sum(z.temp_c * z.area_m2 for z in self.state.values()) / total_area
+        return (
+            sum(z.temp_c * z.area_m2 for z in self.state.values())
+            / TOTAL_GREENHOUSE_AREA_M2
+        )
 
     def avg_co2(self) -> float:
-        total_area = sum(z.area_m2 for z in self.state.values())
-        if total_area == 0:
+        if TOTAL_GREENHOUSE_AREA_M2 == 0:
             return TARGET_CO2_PPM
-        return sum(z.co2_ppm * z.area_m2 for z in self.state.values()) / total_area
+        return (
+            sum(z.co2_ppm * z.area_m2 for z in self.state.values())
+            / TOTAL_GREENHOUSE_AREA_M2
+        )

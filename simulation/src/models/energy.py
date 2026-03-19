@@ -45,7 +45,6 @@ class EnergyState:
             "water_recycling_wh": RECYCLING_WH,
             "nutrient_pumps_wh": NUTRIENT_PUMPS_WH,
             "sensors_control_wh": SENSORS_CONTROL_WH,
-            "other_wh": 0.0,
         }
     )
     # Agent-set allocation percentages (must sum to ~100)
@@ -145,7 +144,6 @@ class EnergyModel:
             "water_recycling_wh": round(recycling, 1),
             "nutrient_pumps_wh": round(pumps, 1),
             "sensors_control_wh": round(sensors, 1),
-            "other_wh": 0.0,
         }
         self.state.total_consumption_wh = round(total, 1)
         self.rates.d_battery_wh = solar - total

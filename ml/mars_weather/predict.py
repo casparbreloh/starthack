@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import torch
 
-from . import MODEL_DIR
-from .data import load_raw, engineer_features, TARGETS
+from . import MODEL_DIR, get_device
+from .data import load_prepared, TARGETS
 from .model import LSTMPredictor
 
 
@@ -18,7 +18,7 @@ def load_model_and_scalers(horizon=1, model_dir=MODEL_DIR):
     with open(os.path.join(model_dir, f"lstm_h{horizon}_meta.json")) as f:
         meta = json.load(f)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
     model = LSTMPredictor(
         input_size=meta["input_size"],
         hidden_size=meta["hidden_size"],
@@ -59,9 +59,7 @@ def predict_next(n_sols=7, model_dir=MODEL_DIR):
     seq_len = meta["seq_len"]
 
     # Load and prepare all available data (unscaled)
-    df = load_raw()
-    df = engineer_features(df)
-    df = df.dropna(subset=TARGETS).reset_index(drop=True)
+    df = load_prepared()
 
     # Keep unscaled copy for building future feature rows
     df_raw = df.copy()
@@ -150,9 +148,7 @@ def predict_at_horizon(horizon=7, model_dir=MODEL_DIR):
     feature_cols = meta["feature_cols"]
     seq_len = meta["seq_len"]
 
-    df = load_raw()
-    df = engineer_features(df)
-    df = df.dropna(subset=TARGETS).reset_index(drop=True)
+    df = load_prepared()
 
     df_scaled = df.copy()
     df_scaled[feature_cols] = feature_scaler.transform(df[feature_cols])
