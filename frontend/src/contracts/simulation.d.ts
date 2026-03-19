@@ -740,8 +740,6 @@ export type components = {
       crises_encountered: number
       /** Crises Resolved */
       crises_resolved: number
-      /** Avg Resolution Sols */
-      avg_resolution_sols: number
       /** Preventive Actions Taken */
       preventive_actions_taken: number
       /** Score */
@@ -998,8 +996,6 @@ export type components = {
       zone_id: string
       /** Target Ph */
       target_ph?: number | null
-      /** Target Ec Ms Cm */
-      target_ec_ms_cm?: number | null
       /**
        * Nitrogen Boost
        * @default false
@@ -1027,8 +1023,8 @@ export type components = {
     }
     /** NutritionScoreResponse */
     NutritionScoreResponse: {
-      /** Avg Daily Kcal */
-      avg_daily_kcal: number
+      /** Current Daily Kcal */
+      current_daily_kcal: number
       /** Target Kcal */
       target_kcal: number
       /** Kcal Achievement Pct */
@@ -1084,11 +1080,6 @@ export type components = {
     }
     /** ResetRequest */
     ResetRequest: {
-      /**
-       * Seed
-       * @default 0
-       */
-      seed: number
       /** @default normal */
       difficulty: components["schemas"]["Difficulty"]
       /** Starting Reserves */
@@ -1175,11 +1166,6 @@ export type components = {
       zone_id: string
       /** Irrigation Liters Per Sol */
       irrigation_liters_per_sol: number
-      /**
-       * Irrigation Frequency
-       * @default continuous
-       */
-      irrigation_frequency: string | null
     }
     /** SimAdvanceResponse */
     SimAdvanceResponse: {

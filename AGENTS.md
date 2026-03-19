@@ -21,7 +21,7 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 ## Docs
 
 - `docs/ARCHITECTURE.md` — infrastructure and deployment
-- `docs/CHALLENGE.MD` — Syngenta START Hack challenge brief
+- `docs/CHALLENGE.md` — Syngenta START Hack challenge brief
 - `docs/mcp-data/` — domain knowledge: Mars environment, crop profiles, nutrition, plant stress, greenhouse scenarios
 
 ## Commands
@@ -42,7 +42,7 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 ## Where to Look
 
 - Weather prediction logic → `ml/mars_weather/`
-- Challenge requirements → `docs/CHALLENGE.MD`
+- Challenge requirements → `docs/CHALLENGE.md`
 - Crop/nutrition/stress data → `docs/mcp-data/`
 - Trained model artifacts → `ml/models/`
 - API response models (Pydantic) → `simulation/src/models/responses.py`
@@ -60,6 +60,10 @@ Frontend TypeScript types are auto-generated from the simulation's OpenAPI schem
 4. `frontend/src/types/simulation.ts` re-exports generated types under stable names
 
 When changing an API response shape: update the Pydantic model in `responses.py`, run `make codegen`, and the frontend types update automatically. CI runs `make check-codegen` to enforce types stay in sync.
+
+## Pre-Commit Checks
+
+Before committing and pushing, always run `make check` to catch lint, format, and type errors. If it fails, run `make check-fix` to auto-fix what it can, then re-run `make check`. If changing API response shapes, also run `make check-codegen` to verify generated types are in sync. Do not commit or push until all checks pass.
 
 ## Conventions
 

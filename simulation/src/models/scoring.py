@@ -31,7 +31,7 @@ class ScoreSnapshot:
     )
     nutrition: dict[str, Any] = field(
         default_factory=lambda: {
-            "avg_daily_kcal": 0.0,
+            "current_daily_kcal": 0.0,
             "target_kcal": CREW_DAILY_KCAL,
             "kcal_achievement_pct": 100.0,
             "avg_daily_protein_g": 0.0,
@@ -52,7 +52,6 @@ class ScoreSnapshot:
         default_factory=lambda: {
             "crises_encountered": 0,
             "crises_resolved": 0,
-            "avg_resolution_sols": 0.0,
             "preventive_actions_taken": 0,
             "score": 100,
         }
@@ -70,9 +69,6 @@ class ScoringModel:
         self._consecutive_ok_sols: int = 0
         self._total_kcal_score: float = 0.0
         self._total_protein_score: float = 0.0
-        self._water_waste_total_L: float = 0.0
-        self._crises_encountered: list[Crisis] = []
-        self._crises_resolved: list[Crisis] = []
         self._preventive_actions: int = 0
         self._crop_waste_kg: float = 0.0
         self._total_harvest_kg: float = 0.0
@@ -124,7 +120,7 @@ class ScoringModel:
         )
         self.snapshot.nutrition.update(
             {
-                "avg_daily_kcal": round(crew_kcal, 1),
+                "current_daily_kcal": round(crew_kcal, 1),
                 "kcal_achievement_pct": round(kcal_ach, 1),
                 "avg_daily_protein_g": round(crew_protein_g, 1),
                 "protein_achievement_pct": round(prot_ach, 1),

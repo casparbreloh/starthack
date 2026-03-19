@@ -65,6 +65,7 @@ class ClimateModel:
             for zone_id, area in ZONE_AREAS_M2.items()
         }
         self.rates = ClimateRates()
+        self._lighting_ratio: float = 1.0  # set by calc_rates from energy model
 
     # ------------------------------------------------------------------
     # PCSE lifecycle
@@ -73,15 +74,22 @@ class ClimateModel:
     def calc_rates(self, weather: WeatherState, energy: EnergyModel) -> None:
         """
         Compute how far each zone moves toward its setpoints.
-        Energy factor scales how well HVAC/LED can maintain setpoints.
+
+        Uses per-subsystem delivery ratios from the energy model so that
+        allocation caps have physical consequences:
+          - heating_delivery_ratio  → temperature control effectiveness
+          - lighting_delivery_ratio → PAR output scaling
+          - energy_factor           → CO₂ scrubbing / humidity (general power)
         """
         ef = energy.energy_factor  # 0 = no energy, 1 = full energy
+        heating_ratio = energy.rates.heating_delivery_ratio
+        self._lighting_ratio = energy.rates.lighting_delivery_ratio
         outside_temp = weather.avg_temp_c
 
         for z in self.state.values():
-            # Temperature: energy-weighted blend between setpoint and outside
-            temp_drift = (outside_temp - z.temp_c) * (1.0 - ef)
-            temp_control = (z.target_temp_c - z.temp_c) * ef * 0.8
+            # Temperature: heating delivery ratio controls HVAC effectiveness
+            temp_drift = (outside_temp - z.temp_c) * (1.0 - heating_ratio)
+            temp_control = (z.target_temp_c - z.temp_c) * heating_ratio * 0.8
             self.rates.d_temp[z.zone_id] = temp_drift + temp_control
 
             # CO₂: maintained at setpoint when energy > 50%, else drifts down slowly
@@ -112,8 +120,8 @@ class ClimateModel:
                 ),
                 1,
             )
-            # PAR and photoperiod are set directly by agent; no drift model needed
-            z.par_umol_m2s = z.target_par
+            # PAR scales with lighting delivery ratio; photoperiod is a schedule
+            z.par_umol_m2s = round(z.target_par * self._lighting_ratio, 1)
             z.photoperiod_hours = z.target_photoperiod_hours
 
     # ------------------------------------------------------------------
@@ -159,6 +167,3 @@ class ClimateModel:
         if total_area == 0:
             return TARGET_CO2_PPM
         return sum(z.co2_ppm * z.area_m2 for z in self.state.values()) / total_area
-
-    def available_area(self, zone_id: str, used_area: float) -> float:
-        return max(0.0, self.state[zone_id].area_m2 - used_area)

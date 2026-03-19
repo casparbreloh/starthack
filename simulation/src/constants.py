@@ -101,10 +101,10 @@ HYDRATION_CRITICAL_PCT = 40.0  # >60% deficit: organ failure risk, life-threaten
 
 # ── Crew radiation model ──────────────────────────────────────────────────────
 # Source: Hassler et al. 2014, Science 343:1244797 (Curiosity RAD instrument)
-MARS_SURFACE_RADIATION_MSIV_PER_SOL = 0.67  # mSv/sol on unshielded Mars surface
+MARS_SURFACE_RADIATION_MSV_PER_SOL = 0.67  # mSv/sol on unshielded Mars surface
 HABITAT_RADIATION_SHIELDING_FACTOR = 0.45  # ~45% dose reduction inside habitat
 # Inside dose: 0.67 × 0.55 ≈ 0.37 mSv/sol → ~166 mSv over 450-sol mission
-CREW_RADIATION_DOSE_PER_SOL = MARS_SURFACE_RADIATION_MSIV_PER_SOL * (
+CREW_RADIATION_DOSE_PER_SOL = MARS_SURFACE_RADIATION_MSV_PER_SOL * (
     1.0 - HABITAT_RADIATION_SHIELDING_FACTOR
 )
 RADIATION_WARNING_MSV = 100.0  # NASA occupational concern (NASA-STD-3001 Vol.1 Rev.B)
@@ -163,6 +163,14 @@ MICRONUTRIENT_PENALTY_DEPLETED_PER_SOL = 3.0  # 3 pts/sol → death ~50 DEPLETED
 # ── Nutrient system ───────────────────────────────────────────────────────────
 NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL = 0.08  # stock depletion rate
 NUTRIENT_RESTOCK_AMOUNT_PCT = 10.0  # per /nutrients/adjust call
+
+# ── Mars dust / atmosphere ────────────────────────────────────────────────────
+# Beer-Lambert effective extinction coefficient for broadband solar through
+# Martian dust (Tomasko et al. 1999, JGR 104:E8; Lemmon et al. 2015, Icarus 251)
+MARS_DUST_EXTINCTION_COEFF = 0.9
+# Regional dust storm optical depth in tau (Zurek & Martin 1993, JGR 98:E2;
+# Smith 2004, Icarus 167:148–165; typical heavy regional storm ≈ 4 tau)
+DUST_STORM_OPACITY_TAU = 4.0
 
 # ── Mars orbital / climate ────────────────────────────────────────────────────
 MARS_SOLS_PER_YEAR = 668

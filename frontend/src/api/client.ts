@@ -1,4 +1,5 @@
 import type {
+  SimAdvanceResponse,
   SimStatus,
   WeatherCurrent,
   EnergyStatus,
@@ -31,7 +32,7 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
 }
 
 export const api = {
-  advance: (sols: number) => post<{ new_sol: number }>("/sim/advance", { sols }),
+  advance: (sols: number) => post<SimAdvanceResponse>("/sim/advance", { sols }),
   getStatus: () => get<SimStatus>("/sim/status"),
   getWeather: () => get<WeatherCurrent>("/weather/current"),
   getEnergy: () => get<EnergyStatus>("/energy/status"),

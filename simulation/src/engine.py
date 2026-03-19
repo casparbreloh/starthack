@@ -14,13 +14,16 @@ unit-tested in isolation.
 
 from __future__ import annotations
 
-import random
+import math
+from collections import deque
 from dataclasses import dataclass
 from typing import Any
 
 from src.constants import (
     BATTERY_CAPACITY_WH,
     CREW_DAILY_KCAL,
+    DUST_STORM_OPACITY_TAU,
+    MARS_DUST_EXTINCTION_COEFF,
     MISSION_DURATION_SOLS,
 )
 from src.enums import CrisisType, Difficulty, MissionPhase, Severity
@@ -69,7 +72,11 @@ class SimulationEngine:
         self.autonomous_events = AutonomousEventSystem(random.Random(42))
 
         # Agent decision log
-        self.agent_decisions: list[AgentDecision] = []
+        self.agent_decisions: deque[AgentDecision] = deque(maxlen=500)
+
+        # Dust storm scenario state
+        self._dust_storm_remaining_sols: int = 0
+        self._dust_storm_opacity: float = 0.0
 
         # Compute initial weather for sol 0
         self.weather.advance(0)
@@ -101,9 +108,40 @@ class SimulationEngine:
 
         # ── Phase 1: calc_rates ──────────────────────────────────────
         weather = self.weather.advance(sol)
+
+        # Override dust opacity during active dust storm scenario
+        if self._dust_storm_remaining_sols > 0:
+            # Reverse original Beer-Lambert to recover top-of-atmosphere irradiance
+            original_opacity = weather.dust_opacity
+            irradiance_top = weather.solar_irradiance_wm2 / math.exp(
+                -MARS_DUST_EXTINCTION_COEFF * original_opacity
+            )
+            # Apply storm opacity
+            weather.dust_opacity = self._dust_storm_opacity
+            weather.solar_irradiance_wm2 = round(
+                irradiance_top
+                * math.exp(-MARS_DUST_EXTINCTION_COEFF * self._dust_storm_opacity),
+                1,
+            )
+            # Update the cached weather state
+            self.weather._store[sol] = weather
+            self._dust_storm_remaining_sols -= 1
+            if self._dust_storm_remaining_sols == 0:
+                self.events.resolve_crisis(CrisisType.DUST_STORM, sol)
+                self.events.log(
+                    sol,
+                    "info",
+                    "energy",
+                    "Dust storm has cleared — solar irradiance returning to normal",
+                    Severity.INFO,
+                )
+
         self.energy.calc_rates(weather, self.climate)
         self.climate.calc_rates(weather, self.energy)
-        self.water.calc_rates(self.crops)
+        self.water.calc_rates(
+            self.crops,
+            water_pumps_delivery_ratio=self.energy.rates.water_pumps_delivery_ratio,
+        )
         self.nutrients.calc_rates(self.crops)
         self.crops.calc_rates(sol, self.climate, self.water, self.nutrients)
         self.crew.calc_rates(
@@ -221,7 +259,6 @@ class SimulationEngine:
 
     def reset(
         self,
-        seed: int = 0,
         difficulty: Difficulty = Difficulty.NORMAL,
         starting_reserves: dict[str, float] | None = None,
     ) -> None:
@@ -240,8 +277,9 @@ class SimulationEngine:
         self.crew = CrewModel()
         self.events = EventLog()
         self.scoring = ScoringModel()
-        self.autonomous_events.reset(random.Random(seed))
-        self.agent_decisions = []
+        self.agent_decisions = deque(maxlen=500)
+        self._dust_storm_remaining_sols = 0
+        self._dust_storm_opacity = 0.0
 
         # Apply difficulty modifiers
         _apply_difficulty(self, difficulty)
@@ -329,13 +367,24 @@ class SimulationEngine:
         )
 
     def scenario_dust_storm(self, duration_sols: int = 10) -> None:
-        """Simulates a dust storm by setting low solar irradiance for N sols (logged only)."""
+        """Simulates a dust storm by raising dust opacity for N sols."""
+        self._dust_storm_remaining_sols = duration_sols
+        self._dust_storm_opacity = DUST_STORM_OPACITY_TAU
+
         self.events.log(
             self.current_sol,
             "crisis",
             "energy",
             f"SCENARIO: Dust storm beginning — reduced solar for ~{duration_sols} sols",
-            Severity.WARNING,
+            Severity.CRITICAL,
+        )
+        self.events.open_crisis(
+            self.current_sol,
+            CrisisType.DUST_STORM,
+            Severity.CRITICAL,
+            f"Dust storm active for {duration_sols} sols — opacity {self._dust_storm_opacity} tau",
+            self._dust_storm_opacity,
+            0.5,
         )
 
     def scenario_energy_disruption(self) -> None:
@@ -363,8 +412,6 @@ class SimulationEngine:
 
     def log_agent_decision(self, decision: AgentDecision) -> None:
         self.agent_decisions.append(decision)
-        if len(self.agent_decisions) > 500:
-            self.agent_decisions.pop(0)
 
     # ------------------------------------------------------------------
     # Derived telemetry helpers

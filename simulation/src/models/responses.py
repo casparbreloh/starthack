@@ -386,7 +386,7 @@ class SurvivalScoreResponse(BaseModel):
 
 
 class NutritionScoreResponse(BaseModel):
-    avg_daily_kcal: float
+    current_daily_kcal: float
     target_kcal: int
     kcal_achievement_pct: float
     avg_daily_protein_g: float
@@ -405,7 +405,6 @@ class ResourceEfficiencyScoreResponse(BaseModel):
 class CrisisManagementScoreResponse(BaseModel):
     crises_encountered: int
     crises_resolved: int
-    avg_resolution_sols: float
     preventive_actions_taken: int
     score: int
 

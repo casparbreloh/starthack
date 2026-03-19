@@ -107,6 +107,11 @@ class CropBatch:
 class CropRates:
     age_increment: dict[str, int] = field(default_factory=dict)
     d_health: dict[str, float] = field(default_factory=dict)
+    new_soil_water_L: dict[str, float] = field(default_factory=dict)
+    new_soil_moisture_pct: dict[str, float] = field(default_factory=dict)
+    new_stress_indicators: dict[str, list[StressIndicator]] = field(
+        default_factory=dict
+    )
 
 
 class CropModel:
@@ -119,7 +124,6 @@ class CropModel:
         self.batches: dict[str, CropBatch] = {}
         self.rates = CropRates()
         self.seeds_remaining: dict[CropType, int] = dict(_DEFAULT_SEEDS)
-        self._total_area_used: dict[str, float] = {}  # zone_id → m²
 
     # ------------------------------------------------------------------
     # PCSE lifecycle
@@ -260,10 +264,9 @@ class CropModel:
 
             self.rates.age_increment[batch_id] = age_inc
             self.rates.d_health[batch_id] = d_health
-            # Store computed values for integrate phase
-            batch._soil_water_L = new_water_L
-            batch.soil_moisture_pct = round(new_moisture_pct, 1)
-            batch.stress_indicators = stressors  # type: ignore[assignment]
+            self.rates.new_soil_water_L[batch_id] = new_water_L
+            self.rates.new_soil_moisture_pct[batch_id] = round(new_moisture_pct, 1)
+            self.rates.new_stress_indicators[batch_id] = stressors
 
     def integrate(self) -> list[str]:
         """Phase 2 — apply rates. Returns list of crop_ids that died this sol."""
@@ -273,9 +276,15 @@ class CropModel:
             new_health = batch.health + self.rates.d_health.get(batch_id, 0.0)
             batch.health = round(max(0.0, min(1.0, new_health)), 3)
 
+            if batch_id in self.rates.new_soil_water_L:
+                batch._soil_water_L = self.rates.new_soil_water_L[batch_id]
+            if batch_id in self.rates.new_soil_moisture_pct:
+                batch.soil_moisture_pct = self.rates.new_soil_moisture_pct[batch_id]
+            if batch_id in self.rates.new_stress_indicators:
+                batch.stress_indicators = self.rates.new_stress_indicators[batch_id]
+
             if batch.health <= 0.0:
                 dead.append(batch_id)
-                self._release_area(batch)
                 del self.batches[batch_id]
 
         return dead
@@ -306,9 +315,6 @@ class CropModel:
         )
         self.batches[crop_id] = batch
         self.seeds_remaining[crop_type] = max(0, self.seeds_remaining[crop_type] - 1)
-        self._total_area_used[zone_id] = (
-            self._total_area_used.get(zone_id, 0.0) + area_m2
-        )
         return batch
 
     def harvest(self, crop_id: str) -> dict:
@@ -321,7 +327,6 @@ class CropModel:
 
         batch = self.batches.pop(crop_id)
         catalog = CROP_CATALOG[batch.crop_type]
-        self._release_area(batch)
 
         base_yield_kg = catalog["yield_kg_per_m2"] * batch.area_m2
         actual_yield_kg = round(
@@ -359,7 +364,6 @@ class CropModel:
             raise KeyError(f"Crop {crop_id!r} not found")
 
         batch = self.batches.pop(crop_id)
-        self._release_area(batch)
         catalog = CROP_CATALOG[batch.crop_type]
         waste_kg = round(
             catalog["yield_kg_per_m2"] * batch.area_m2 * batch.health * 0.3, 3
@@ -392,9 +396,3 @@ class CropModel:
 
     def total_planted_area(self) -> float:
         return sum(b.area_m2 for b in self.batches.values())
-
-    def _release_area(self, batch: CropBatch) -> None:
-        self._total_area_used[batch.zone_id] = max(
-            0.0,
-            self._total_area_used.get(batch.zone_id, 0.0) - batch.area_m2,
-        )
