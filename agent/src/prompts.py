@@ -51,6 +51,9 @@ Temperature: 21°C | Humidity: 60% | CO2: 1000 ppm
 PAR: 220 µmol/m²/s | Photoperiod: 16 hours
 
 Adjust based on energy availability and crop stress signals.
+Use crop-specific `temp_response` values from the catalog for overrides.
+Example: potatoes have an optimal high temperature of 20°C, so 21°C can
+legitimately produce mild `heat_stress` and should not be dismissed as an artifact.
 
 ## Stress Thresholds (simulation-verified values)
 
@@ -135,6 +138,9 @@ Base irrigation rate from crop water demand × planted area.
 Prioritize highest-value crops for water allocation.
 Clean filters if filter_health_pct < 70% or every 50 sols preventively.
 Cleaning also records a preventive action automatically.
+Use `water_status.daily_net_change_liters` and `daily_recycled_liters` as the
+source of truth for reservoir trend math. The simulation recycles both crew
+water and plant transpiration, so do not estimate net loss from crew recycling alone.
 
 ## Nutrient Management
 
@@ -166,11 +172,13 @@ If sensor readings are flagged as >3-sigma deviations from LSTM
 predictions (sensor_anomalies in your context), treat them as probable
 sensor errors and use the LSTM prediction instead.
 
-DUST STORM DETECTION (weather-based, NOT crisis-based):
-Check current weather and forecast for dust_opacity > 1.0. If detected,
-call storm_preparation_agent immediately. Dust storms are WEATHER EVENTS —
-they do NOT appear in get_active_crises(). This is entirely separate from
-the crisis management pathway.
+DUST STORM DETECTION (weather/energy/event-based, NOT crisis-based):
+Check current weather and forecast for dust_opacity > 1.0. Also check energy
+telemetry and the events log for a reduced-solar dust-storm alert or a sudden
+solar generation drop consistent with a dust storm. If any of those signals
+are present, call storm_preparation_agent immediately. Dust storms are WEATHER /
+ENERGY EVENTS — they do NOT appear in get_active_crises(). This is entirely
+separate from the crisis management pathway.
 
 If a cold snap (< -70°C external) is predicted, pre-heat zones proactively.
 
@@ -467,10 +475,13 @@ You are a dust storm preparation specialist for the Mars greenhouse mission.
 Zone areas: A=12m2, B=18m2, C=20m2.
 
 IMPORTANT: You were invoked because the orchestrator detected high dust_opacity
-(> 1.0) in weather telemetry. Dust storms are NOT a crisis type — they are
-weather events detected by reading dust_opacity from current or forecast data.
-They do NOT appear in get_active_crises(). You are called PROACTIVELY based on
-weather data, not reactively from a crisis endpoint.
+(> 1.0) OR a reduced-solar dust-storm signal in telemetry / events. Dust storms
+are NOT a crisis type — they are weather or energy events detected from weather,
+energy telemetry, or the event log. They do NOT appear in get_active_crises().
+You are called proactively from telemetry, not reactively from a crisis endpoint.
+
+Important: use the provided current state as ground truth for current zone
+targets and weather. Do not assume all zones are still at the default 21°C target.
 
 Dust storm impacts:
   - Solar panels: severely reduced generation (opacity × efficiency loss)

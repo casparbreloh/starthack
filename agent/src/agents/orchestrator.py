@@ -63,6 +63,26 @@ SPECIALIST_TOOLS = [
 ]
 
 
+def _collect_text_fragments(value: Any) -> list[str]:
+    """Recursively collect string fragments from a model result payload."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    if isinstance(value, dict):
+        fragments: list[str] = []
+        for item in value.values():
+            fragments.extend(_collect_text_fragments(item))
+        return fragments
+    if isinstance(value, list):
+        fragments: list[str] = []
+        for item in value:
+            fragments.extend(_collect_text_fragments(item))
+        return fragments
+    return []
+
+
 def create_orchestrator(
     snapshot: dict[str, Any],
     cross_session_context: str = "",
@@ -306,20 +326,38 @@ def run_consultation(
     next_checkin = 1
 
     if result is not None:
-        # Extract reasoning text from the final message
-        try:
-            content = result.message.get("content", [])
-            for block in content:
-                if isinstance(block, dict) and block.get("type") == "text":
-                    reasoning += block.get("text", "")
-        except (AttributeError, TypeError, KeyError):
-            reasoning = str(result.message) if result else ""
+        message = getattr(result, "message", result)
+        candidate_fragments = _collect_text_fragments(message)
 
-        # Extract next_checkin from LLM text
-        checkin_match = re.search(r"next_checkin:\s*(\d+)", reasoning)
+        # Keep string fallbacks too; some SDK responses stringify useful text
+        # even when the structured payload is sparse.
+        for fallback in (str(message), str(result)):
+            text = fallback.strip()
+            if text:
+                candidate_fragments.append(text)
+
+        deduped_fragments: list[str] = []
+        for fragment in candidate_fragments:
+            if fragment not in deduped_fragments:
+                deduped_fragments.append(fragment)
+
+        reasoning = "\n".join(deduped_fragments)
+
+        # Extract next_checkin from any recovered model text. Accept minor
+        # formatting variations like markdown emphasis or `next checkin`.
+        checkin_match = re.search(
+            r"next[_ ]?checkin\s*[:=]\s*\**\s*(\d+)",
+            reasoning,
+            re.IGNORECASE,
+        )
         if checkin_match:
             parsed_checkin = int(checkin_match.group(1))
             next_checkin = max(1, min(10, parsed_checkin))
+        else:
+            logger.warning(
+                "Sol %d: failed to parse next_checkin from model output; defaulting to 1",
+                sol,
+            )
 
     # Record in journal
     action_strs = [f"{a['endpoint']}({json.dumps(a['body'])})" for a in actions_list]

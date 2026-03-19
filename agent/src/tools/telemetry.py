@@ -37,7 +37,8 @@ def create_telemetry_tools(snapshot: dict) -> dict:
         Returns:
             JSON string with weather data including temperature, pressure,
             dust_opacity, and solar_irradiance_wm2. Check dust_opacity > 1.0
-            to detect potential dust storms.
+            for optical dust storms, and cross-check energy/events telemetry
+            for reduced-solar dust-storm alerts.
         """
         return json.dumps(snapshot.get("weather_current", {}), default=str)
 
@@ -147,7 +148,8 @@ def create_telemetry_tools(snapshot: dict) -> dict:
             since_sol: Only return events from this sol onwards (default 0)
 
         Returns:
-            JSON string with list of event dicts ordered by sol.
+            JSON string with list of event dicts ordered by sol. This can include
+            reduced-solar dust-storm alerts even when current dust_opacity is low.
         """
         events_log = snapshot.get("events_log", {})
         events = events_log.get("events", []) if isinstance(events_log, dict) else []
