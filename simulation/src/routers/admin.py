@@ -5,19 +5,30 @@ Admin / simulation control router.
   POST /sim/reset              — reset simulation (supports difficulty + overrides)
   POST /admin/scenario/*       — hackathon crisis injection
   POST /agent/log_decision     — agent reasoning log
+  POST /sessions               — create a new session
+  GET  /sessions               — list active sessions
 """
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from src.engine import AgentDecision
+from src.engine import AgentDecision, SimulationEngine
 from src.enums import Difficulty, MissionPhase
-from src.models.responses import SimAdvanceResponse
-from src.state import engine
+from src.models.responses import (
+    CreateSessionResponse,
+    ListSessionsResponse,
+    SimAdvanceResponse,
+)
+from src.session import SessionConfig
+from src.state import session_manager
 
 router = APIRouter()
+
+
+def _engine(session_id: str | None) -> SimulationEngine:
+    return session_manager.get_or_default(session_id).engine
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -45,13 +56,24 @@ class AgentDecisionRequest(BaseModel):
     risk_assessment: str = "nominal"
 
 
+class CreateSessionRequest(BaseModel):
+    seed: int | None = None
+    difficulty: str = "normal"
+    tick_delay_ms: int = 0
+    starting_reserves: dict[str, float] = Field(default_factory=dict)
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Core simulation control
 # ──────────────────────────────────────────────────────────────────────────────
 
 
 @router.post("/sim/advance", response_model=SimAdvanceResponse)
-def sim_advance(req: AdvanceRequest):
+def sim_advance(
+    req: AdvanceRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     if engine.mission_phase != MissionPhase.ACTIVE:
         raise HTTPException(
             400, f"Mission is {engine.mission_phase.value}, cannot advance"
@@ -66,7 +88,11 @@ def sim_advance(req: AdvanceRequest):
 
 
 @router.post("/sim/reset")
-def sim_reset(req: ResetRequest):
+def sim_reset(
+    req: ResetRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     engine.reset(
         difficulty=req.difficulty,
         starting_reserves=req.starting_reserves,
@@ -79,12 +105,53 @@ def sim_reset(req: ResetRequest):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Session management
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+@router.post("/sessions", response_model=CreateSessionResponse)
+def create_session(req: CreateSessionRequest):
+    config = SessionConfig(
+        seed=req.seed,
+        difficulty=req.difficulty,
+        tick_delay_ms=req.tick_delay_ms,
+        starting_reserves=req.starting_reserves,
+    )
+    session = session_manager.create(config)
+    return {
+        "session_id": session.id,
+        "config": {
+            "seed": config.seed,
+            "difficulty": config.difficulty,
+            "tick_delay_ms": config.tick_delay_ms,
+            "starting_reserves": config.starting_reserves,
+        },
+    }
+
+
+@router.get("/sessions", response_model=ListSessionsResponse)
+def list_sessions():
+    sessions = session_manager.list_sessions()
+    return {
+        "sessions": [
+            {
+                "id": s.id,
+                "created_at": s.created_at.isoformat(),
+                "current_sol": s.engine.current_sol,
+            }
+            for s in sessions
+        ]
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Scenario injection
 # ──────────────────────────────────────────────────────────────────────────────
 
 
 @router.post("/admin/scenario/water_leak")
-def scenario_water_leak():
+def scenario_water_leak(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     engine.scenario_water_leak()
     return {
         "status": "ok",
@@ -95,7 +162,8 @@ def scenario_water_leak():
 
 
 @router.post("/admin/scenario/hvac_failure")
-def scenario_hvac_failure():
+def scenario_hvac_failure(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     engine.scenario_hvac_failure()
     return {
         "status": "ok",
@@ -105,7 +173,11 @@ def scenario_hvac_failure():
 
 
 @router.post("/admin/scenario/pathogen")
-def scenario_pathogen(req: PathogenRequest):
+def scenario_pathogen(
+    req: PathogenRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     try:
         # Trigger the pathogen scenario for the given crop; this mutates engine state.
         engine.scenario_pathogen(req.crop_id)
@@ -122,13 +194,18 @@ def scenario_pathogen(req: PathogenRequest):
 
 
 @router.post("/admin/scenario/dust_storm")
-def scenario_dust_storm(duration_sols: int = 10):
+def scenario_dust_storm(
+    duration_sols: int = 10,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     engine.scenario_dust_storm(duration_sols)
     return {"status": "ok", "scenario": "dust_storm", "duration_sols": duration_sols}
 
 
 @router.post("/admin/scenario/energy_disruption")
-def scenario_energy_disruption():
+def scenario_energy_disruption(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     engine.scenario_energy_disruption()
     return {
         "status": "ok",
@@ -143,7 +220,11 @@ def scenario_energy_disruption():
 
 
 @router.post("/agent/log_decision")
-def agent_log_decision(req: AgentDecisionRequest):
+def agent_log_decision(
+    req: AgentDecisionRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     decision = AgentDecision(
         sol=req.sol,
         decisions=req.decisions,

@@ -1,5 +1,4 @@
 import type {
-  SimAdvanceResponse,
   SimStatus,
   WeatherCurrent,
   EnergyStatus,
@@ -11,6 +10,9 @@ import type {
   CrewMembers,
   ActiveCrises,
   ScoreData,
+  CreateSessionRequest,
+  CreateSessionResponse,
+  ListSessionsResponse,
 } from "../types/simulation"
 
 const BASE = "/simulation"
@@ -31,8 +33,15 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// ── API client ───────────────────────────────────────────────────────────────
+
 export const api = {
-  advance: (sols: number) => post<SimAdvanceResponse>("/sim/advance", { sols }),
+  // Session management
+  createSession: (config?: CreateSessionRequest) =>
+    post<CreateSessionResponse>("/sessions", config ?? {}),
+  listSessions: () => get<ListSessionsResponse>("/sessions"),
+
+  // Telemetry (read-only)
   getStatus: () => get<SimStatus>("/sim/status"),
   getWeather: () => get<WeatherCurrent>("/weather/current"),
   getEnergy: () => get<EnergyStatus>("/energy/status"),

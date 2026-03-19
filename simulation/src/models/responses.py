@@ -457,3 +457,30 @@ class SimAdvanceResponse(BaseModel):
     new_sol: int
     mission_phase: str
     events: list[dict[str, Any]]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# POST /sessions, GET /sessions
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class SessionConfigResponse(BaseModel):
+    seed: int | None
+    difficulty: str
+    tick_delay_ms: int
+    starting_reserves: dict[str, float]
+
+
+class CreateSessionResponse(BaseModel):
+    session_id: str
+    config: SessionConfigResponse
+
+
+class SessionSummaryResponse(BaseModel):
+    id: str
+    created_at: str
+    current_sol: int
+
+
+class ListSessionsResponse(BaseModel):
+    sessions: list[SessionSummaryResponse]

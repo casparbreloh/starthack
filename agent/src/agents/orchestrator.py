@@ -15,9 +15,10 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from bedrock_agentcore.memory.integrations.strands.session_manager import (
@@ -769,6 +770,421 @@ def run_mission(
                 "worst_decision": "N/A",
                 "best_decision": "N/A",
             },
+        }
+
+
+# ======================================================================
+# WebSocket-based mission loop
+# ======================================================================
+
+# Tool function name -> simulation action endpoint mapping
+_TOOL_TO_ENDPOINT: dict[str, str] = {
+    "allocate_energy": "energy/allocate",
+    "set_zone_environment": "greenhouse/set_environment",
+    "set_irrigation": "water/set_irrigation",
+    "clean_water_filters": "water/maintenance",
+    "plant_crop": "crops/plant",
+    "harvest_crop": "crops/harvest",
+    "remove_crop": "crops/remove",
+    "adjust_nutrients": "nutrients/adjust",
+}
+
+
+def _build_consultation_prompt(
+    consultation: dict[str, Any],
+    weather_context: dict,
+    energy_summary: str,
+    journal: DecisionJournal,
+) -> str:
+    """Build the LLM prompt from a WebSocket consultation payload.
+
+    The consultation payload contains: sol, interrupts, snapshot.
+    The snapshot has the same structure as read_all_telemetry().
+    """
+    sol = consultation.get("sol", 0)
+    snapshot = consultation.get("snapshot", {})
+    interrupts = consultation.get("interrupts", [])
+
+    prompt_parts = [
+        f"## Sol {sol} — Greenhouse Status (WebSocket Consultation)\n",
+        "### Current Telemetry\n",
+        f"Use `read_all_telemetry()` to get all current data. "
+        f"Or use the pre-fetched snapshot summary: {_extract_key_stats(snapshot)}\n",
+    ]
+
+    if interrupts:
+        prompt_parts.append(
+            f"\n### Interrupts Triggering This Consultation\n"
+            f"{json.dumps(interrupts, indent=2)}\n"
+        )
+
+    if weather_context.get("forecast_7sol"):
+        prompt_parts.append(
+            f"\n### LSTM Weather Forecast (7-sol)\n"
+            f"{json.dumps(weather_context['forecast_7sol'][:3], indent=2)}...\n"
+        )
+    else:
+        prompt_parts.append(
+            "\n### LSTM Weather Forecast\n"
+            "Unavailable (first ~30 sols — use simulation's /weather/forecast instead).\n"
+        )
+
+    if weather_context.get("sensor_anomalies"):
+        prompt_parts.append(
+            f"\n### Sensor Anomalies (treat as probable sensor errors)\n"
+            f"{json.dumps(weather_context['sensor_anomalies'], indent=2)}\n"
+        )
+
+    prompt_parts.append(f"\n### Energy Projection\n{energy_summary}\n")
+
+    journal_str = journal.format_for_prompt(30)
+    if journal_str:
+        prompt_parts.append(f"\n{journal_str}\n")
+
+    if sol == 0:
+        prompt_parts.append(
+            "\n### Sol 0 Initialization\n"
+            "FIRST: Call `get_crop_catalog()` to retrieve exact crop parameters "
+            "(growth days, yields, kcal/kg, protein/kg, water demand). "
+            "Memorize these for the entire mission.\n"
+        )
+
+    prompt_parts.append(
+        "\n### Your Tasks This Consultation\n"
+        "1. Call `read_all_telemetry()` to get full current state\n"
+        "2. Make ALL routine decisions: environment setpoints, irrigation, "
+        "energy allocation, planting (check free area), harvesting (check is_ready), "
+        "nutrient adjustments\n"
+        "3. Check weather for dust_opacity > 1.0 → call storm_preparation_agent if detected\n"
+        "4. After all decisions, provide reasoning summary for decision logging\n"
+        "5. After making decisions, specify how many sols to skip before next "
+        "check-in using next_checkin (1-10). Use 1 during active crises, 5-10 when stable. "
+        "State your choice as: next_checkin: N\n"
+    )
+
+    return "".join(prompt_parts)
+
+
+def run_consultation(
+    consultation: dict[str, Any],
+    client: SimClient,
+    weather_forecaster: WeatherForecaster,
+    journal: DecisionJournal,
+    cross_session_context: str = "",
+    kb_tools: list | None = None,
+) -> tuple[list[dict[str, Any]], int, str]:
+    """Process a single WebSocket consultation and return actions.
+
+    Creates a fresh orchestrator, builds a prompt from the consultation
+    payload, runs the LLM, and extracts actions + next_checkin.
+
+    Args:
+        consultation: Consultation payload from the server with keys:
+                      sol, interrupts, snapshot.
+        client: SimClient for telemetry reads during LLM tool calls.
+        weather_forecaster: WeatherForecaster for LSTM forecasts.
+        journal: DecisionJournal for feedback loop.
+        cross_session_context: Previous run summaries for prompt injection.
+        kb_tools: MCP KB tool objects.
+
+    Returns:
+        Tuple of (actions_list, next_checkin, reasoning) where:
+        - actions_list: list of ``{"endpoint": "...", "body": {...}}`` dicts
+        - next_checkin: number of sols until next consultation (1-10)
+        - reasoning: LLM reasoning text
+    """
+    sol = consultation.get("sol", 0)
+    snapshot = consultation.get("snapshot", {})
+
+    # Fetch weather history via REST (snapshot only has current weather)
+    try:
+        weather_history = client.get_weather_history(last_n_sols=30)
+    except Exception:
+        logger.warning("Sol %d: failed to fetch weather history via REST", sol)
+        weather_history = []
+
+    weather_context = weather_forecaster.get_full_context(
+        sol,
+        weather_history=weather_history,
+        current_weather=snapshot.get("weather_current"),
+    )
+    energy_projection = project_energy_budget(
+        weather_context["forecast_7sol"],
+        snapshot.get("energy_status", {}),
+        snapshot.get("weather_current", {}),
+    )
+    energy_summary = summarize_energy_projection(energy_projection)
+
+    # Build prompt
+    prompt = _build_consultation_prompt(
+        consultation, weather_context, energy_summary, journal
+    )
+
+    # Create fresh orchestrator
+    orchestrator, _ = create_orchestrator(client, cross_session_context, kb_tools)
+
+    # Run LLM with retry
+    result = None
+    try:
+        result = orchestrator(prompt)
+    except Exception as exc:
+        logger.warning(
+            "Sol %d: orchestrator call failed (%s), retrying in 5s...", sol, exc
+        )
+        time.sleep(5)
+        try:
+            result = orchestrator(prompt)
+        except Exception as exc2:
+            logger.warning(
+                "Sol %d: orchestrator retry also failed (%s). Skipping.",
+                sol,
+                exc2,
+            )
+
+    # Extract actions and reasoning from LLM response
+    actions_list: list[dict[str, Any]] = []
+    reasoning = ""
+    next_checkin = 1
+
+    if result is not None:
+        try:
+            content = result.message.get("content", [])
+            for block in content:
+                if isinstance(block, dict):
+                    if block.get("type") == "tool_use":
+                        tool_name = block["name"]  # type: ignore[typeddict-item]
+                        tool_input = block.get("input", {})
+                        endpoint = _TOOL_TO_ENDPOINT.get(tool_name)
+                        if endpoint is not None:
+                            actions_list.append(
+                                {"endpoint": endpoint, "body": tool_input}
+                            )
+                    elif block.get("type") == "text":
+                        reasoning += block.get("text", "")
+        except (AttributeError, TypeError, KeyError):
+            reasoning = str(result.message) if result else ""
+
+        # Extract next_checkin from LLM text
+        checkin_match = re.search(r"next_checkin:\s*(\d+)", reasoning)
+        if checkin_match:
+            parsed_checkin = int(checkin_match.group(1))
+            next_checkin = max(1, min(10, parsed_checkin))
+
+    # Record in journal
+    action_strs = [f"{a['endpoint']}({json.dumps(a['body'])})" for a in actions_list]
+    journal.record_decision(
+        sol, reasoning[:500], action_strs, compact_state_summary(snapshot)
+    )
+
+    return actions_list, next_checkin, reasoning
+
+
+async def run_mission_ws(
+    ws_url: str,
+    seed: int = 0,
+    difficulty: str = "normal",
+    mission_sols: int = MISSION_SOLS,
+) -> dict:
+    """Run the full Mars greenhouse mission over a WebSocket connection.
+
+    This is the async counterpart of ``run_mission()``. Instead of driving
+    the simulation via REST advance calls, it connects to the simulation's
+    ``/ws`` endpoint and responds to consultation requests.
+
+    Args:
+        ws_url: WebSocket URL, e.g. ``ws://localhost:8080/ws``
+        seed: Random seed for simulation
+        difficulty: Difficulty level ('easy', 'normal', 'hard')
+        mission_sols: Max number of sols (used for session config)
+
+    Returns:
+        Mission summary dict with final score and stats.
+    """
+    from ..config import SIM_BASE_URL
+    from ..ws_client import SimWebSocketClient
+
+    # Initialize cross-session learning
+    cross_session = CrossSessionLearning()
+    cross_session_context = cross_session.format_for_prompt()
+
+    # Create MCP client and discover KB tools
+    mcp_client = create_mcp_client()
+    with mcp_client:
+        kb_tools = discover_kb_tools(mcp_client)
+        logger.info("KB tools discovered: %d", len(kb_tools))
+
+        # Initialize components
+        weather_forecaster = WeatherForecaster()
+        journal = DecisionJournal()
+        run_id = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        total_crises_seen = 0
+
+        async with SimWebSocketClient() as ws_client:
+            # Connect and create session
+            await ws_client.connect(ws_url)
+
+            session_config: dict[str, Any] = {
+                "seed": seed,
+                "difficulty": difficulty,
+                "tick_delay_ms": 0,
+            }
+            session_id = await ws_client.create_session(session_config)
+            logger.info(
+                "WS session created: id=%s, seed=%d, difficulty=%s",
+                session_id,
+                seed,
+                difficulty,
+            )
+
+            # Create REST client for telemetry reads during LLM tool calls.
+            # The simulation is paused during consultation, so REST reads
+            # are safe. Pass session_id so reads target the right session.
+            import httpx
+
+            rest_client = SimClient(SIM_BASE_URL)
+            rest_client.client.close()
+            rest_client.client = httpx.Client(
+                base_url=SIM_BASE_URL,
+                timeout=30.0,
+                params={"session_id": session_id},
+            )
+
+            set_client(rest_client)
+
+            prev_score: float | None = None
+
+            # Main consultation loop
+            while True:
+                consultation = await ws_client.wait_for_consultation()
+                if consultation is None:
+                    logger.info("Mission ended (WS signal)")
+                    break
+
+                sol = consultation.get("sol", 0)
+                logger.info("=== Sol %d (WS consultation) ===", sol)
+
+                # Track score delta for journal
+                snapshot = consultation.get("snapshot", {})
+                current_score = (
+                    snapshot.get("score_current", {})
+                    .get("scores", {})
+                    .get("overall_score", 0.0)
+                )
+                if prev_score is not None:
+                    score_delta = current_score - prev_score
+                    journal.update_previous_outcome(
+                        {
+                            "score_delta": score_delta,
+                            "state_summary": compact_state_summary(snapshot),
+                        }
+                    )
+                prev_score = current_score
+
+                # Count crises from interrupts
+                interrupts = consultation.get("interrupts", [])
+                crisis_interrupts = [
+                    i for i in interrupts if i.get("type") == "new_crisis"
+                ]
+                total_crises_seen += len(crisis_interrupts)
+
+                # Run the consultation in a thread to avoid blocking
+                # the event loop (LLM calls and retries are synchronous)
+                import asyncio as _asyncio
+
+                actions, next_checkin, reasoning = await _asyncio.to_thread(
+                    run_consultation,
+                    consultation,
+                    rest_client,
+                    weather_forecaster,
+                    journal,
+                    cross_session_context,
+                    kb_tools,
+                )
+
+                # Send actions back
+                log_decision = {
+                    "reasoning": reasoning[:500] if reasoning else "nominal",
+                    "risk_assessment": reasoning[:200] if reasoning else "nominal",
+                }
+                await ws_client.send_actions(actions, next_checkin, log_decision)
+
+                logger.info(
+                    "Sol %d: sent %d actions, next_checkin=%d",
+                    sol,
+                    len(actions),
+                    next_checkin,
+                )
+
+            # Clean up REST client
+            rest_client.close()
+
+        # Fetch final score via REST (mission is complete at this point)
+        import httpx
+
+        final_client = SimClient(SIM_BASE_URL)
+        final_client.client.close()
+        final_client.client = httpx.Client(
+            base_url=SIM_BASE_URL,
+            timeout=30.0,
+            params={"session_id": session_id},
+        )
+        try:
+            final_score_data = final_client.get_score_final()
+        except Exception:
+            try:
+                final_score_data = final_client.get_score_current()
+            except Exception:
+                final_score_data = {"scores": {"overall_score": 0.0}}
+        final_score = final_score_data.get("scores", {}).get("overall_score", 0.0)
+        final_client.close()
+        logger.info("Final score: %.2f", final_score)
+
+        # Generate cross-session summary
+        summary_client = SimClient(SIM_BASE_URL)
+        summary_agent, _ = create_orchestrator(summary_client)
+        summary_prompt = (
+            "Generate a structured mission summary as JSON in a ```json code block.\n\n"
+            f"Run ID: {run_id}\n"
+            f"Final score: {final_score}\n"
+            f"Total crises handled: {total_crises_seen}\n\n"
+            f"Journal (last 50 sols):\n{journal.format_for_prompt(50)}\n\n"
+            "Return JSON with exactly these keys:\n"
+            '{"run_id": "...", "final_score": 0.0, "total_crises": 0, '
+            '"crises_resolved": 0, "avg_daily_kcal": 0.0, '
+            '"key_learnings": ["..."], "worst_decision": "...", "best_decision": "..."}\n'
+        )
+        try:
+            summary_result = summary_agent(summary_prompt)
+            summary_text = str(summary_result.message)
+            start = summary_text.find("```json")
+            end = summary_text.find("```", start + 7) if start != -1 else -1
+            if start != -1 and end != -1:
+                json_str = summary_text[start + 7 : end].strip()
+                summary = json.loads(json_str)
+            else:
+                raise ValueError("No JSON block found in summary response")
+        except Exception as exc:
+            logger.warning("Failed to parse LLM summary: %s", exc)
+            summary = {
+                "run_id": run_id,
+                "final_score": final_score,
+                "total_crises": total_crises_seen,
+                "crises_resolved": total_crises_seen,
+                "avg_daily_kcal": 0.0,
+                "key_learnings": ["Parse error — manual review needed"],
+                "worst_decision": "N/A",
+                "best_decision": "N/A",
+            }
+        summary_client.close()
+
+        cross_session.save_summary(summary)
+
+        return {
+            "run_id": run_id,
+            "final_score": final_score,
+            "mission_phase": "complete",
+            "total_crises": total_crises_seen,
+            "summary": summary,
         }
 
 

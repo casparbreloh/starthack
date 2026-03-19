@@ -1,12 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 
 import { api } from "../api/client"
-import type { SimulationData } from "../types/simulation"
-
-/** Real-time milliseconds between ticks */
-const TICK_INTERVAL_MS = 1000
-/** Simulation sols advanced per tick */
-const TICK_SOLS = 1
+import type { SimulationData, CrewMembers } from "../types/simulation"
+import { useWebSocket } from "./useWebSocket"
+import type { WebSocketState } from "./useWebSocket"
 
 const empty: SimulationData = {
   status: null,
@@ -27,12 +24,44 @@ const empty: SimulationData = {
 export interface SimulationControls extends SimulationData {
   running: boolean
   toggleRunning: () => void
+  ws: WebSocketState
+}
+
+/**
+ * Map a sol_tick state snapshot from the WebSocket into the SimulationData shape.
+ * The snapshot keys match the telemetry endpoint names.
+ */
+function mapSnapshotToData(
+  state: NonNullable<WebSocketState["lastState"]>,
+  prevCrewMembers: CrewMembers | null,
+): SimulationData {
+  return {
+    status: state.sim_status,
+    weather: state.weather_current,
+    energy: state.energy_status,
+    greenhouse: state.greenhouse_environment,
+    water: state.water_status,
+    crops: state.crops_status,
+    nutrients: state.nutrients_status,
+    crew: state.crew_nutrition,
+    crewMembers: prevCrewMembers,
+    crises: state.active_crises,
+    score: state.score_current,
+    loading: false,
+    error: null,
+  }
 }
 
 export function useSimulation(): SimulationControls {
   const [data, setData] = useState<SimulationData>(empty)
   const [running, setRunning] = useState(true)
-  const tickingRef = useRef(false)
+
+  const ws = useWebSocket()
+
+  // Initial REST fetch as fallback before WS connects
+  useEffect(() => {
+    void fetchAll()
+  }, [])
 
   const fetchAll = useCallback(async () => {
     try {
@@ -85,32 +114,24 @@ export function useSimulation(): SimulationControls {
     }
   }, [])
 
-  const tick = useCallback(async () => {
-    if (tickingRef.current) return
-    tickingRef.current = true
-    try {
-      await api.advance(TICK_SOLS)
-      await fetchAll()
-    } catch {
-      setData((prev) => ({ ...prev, error: "Simulation offline" }))
-    } finally {
-      tickingRef.current = false
+  // When WS receives a tick, map it to SimulationData
+  useEffect(() => {
+    if (ws.lastState) {
+      setData((prev) => mapSnapshotToData(ws.lastState!, prev.crewMembers))
     }
-  }, [fetchAll])
+  }, [ws.lastState])
 
-  // Initial fetch on mount (before first tick fires)
-  useEffect(() => {
-    void fetchAll()
-  }, [fetchAll])
+  const toggleRunning = useCallback(() => {
+    setRunning((prev) => {
+      const next = !prev
+      if (next) {
+        ws.resume()
+      } else {
+        ws.pause()
+      }
+      return next
+    })
+  }, [ws])
 
-  // Tick loop — advance + refresh on interval
-  useEffect(() => {
-    if (!running) return
-    const id = setInterval(() => void tick(), TICK_INTERVAL_MS)
-    return () => clearInterval(id)
-  }, [running, tick])
-
-  const toggleRunning = useCallback(() => setRunning((r) => !r), [])
-
-  return { ...data, running, toggleRunning }
+  return { ...data, running, toggleRunning, ws }
 }
