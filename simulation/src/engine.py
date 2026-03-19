@@ -136,7 +136,7 @@ class SimulationEngine:
         # Automatic crisis detection
         avg_temp = self.climate.avg_temp()
         avg_co2 = self.climate.avg_co2()
-        self.events.detect_and_update(
+        crisis_events = self.events.detect_and_update(
             sol=sol,
             water_reservoir_L=self.water.state.reservoir_liters,
             water_recycling_pct=self.water.state.recycling_efficiency_pct,
@@ -148,6 +148,9 @@ class SimulationEngine:
             crew_kcal=self.crew.total_kcal,
             crew_daily_kcal=CREW_DAILY_KCAL,
         )
+        if crisis_events:
+            for ev in crisis_events:
+                tick_events.append(_event_to_dict(ev))
 
         # Scoring update
         self.scoring.update(
@@ -166,7 +169,14 @@ class SimulationEngine:
         # Mission completion check
         if sol >= MISSION_DURATION_SOLS:
             self.mission_phase = MissionPhase.COMPLETE
-            self.events.log(sol, "info", "mission", "Mission complete after 450 sols.", Severity.INFO)
+            mission_event = self.events.log(
+                sol,
+                "info",
+                "mission",
+                "Mission complete after 450 sols.",
+                Severity.INFO,
+            )
+            tick_events.append(_event_to_dict(mission_event))
 
         return tick_events
 
