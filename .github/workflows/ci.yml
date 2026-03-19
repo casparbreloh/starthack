@@ -31,5 +31,5 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: make install
+      - run: make install-frozen
       - run: make check

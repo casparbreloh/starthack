@@ -168,11 +168,13 @@ class EventLog:
         nutrient_stock_pct: float,
         crew_kcal: float,
         crew_daily_kcal: float,
-    ) -> None:
+    ) -> list[Event]:
         from src.constants import (
             CRISIS_WATER_RESERVOIR_L,
             WARNING_KCAL_DAYS,
         )
+
+        events_before = len(self._events)
 
         # Water recycling decline
         if water_recycling_pct < 85.0:
@@ -283,3 +285,5 @@ class EventLog:
             )
         else:
             self.resolve_crisis(CrisisType.FOOD_SHORTAGE, sol)
+
+        return self._events[events_before:]

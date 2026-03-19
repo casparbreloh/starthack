@@ -129,7 +129,7 @@ class SimulationEngine:
         # Automatic crisis detection
         avg_temp = self.climate.avg_temp()
         avg_co2 = self.climate.avg_co2()
-        self.events.detect_and_update(
+        crisis_events = self.events.detect_and_update(
             sol=sol,
             water_reservoir_L=self.water.state.reservoir_liters,
             water_recycling_pct=self.water.state.recycling_efficiency_pct,
@@ -141,6 +141,7 @@ class SimulationEngine:
             crew_kcal=self.crew.total_kcal,
             crew_daily_kcal=CREW_DAILY_KCAL,
         )
+        tick_events.extend(_event_to_dict(ev) for ev in crisis_events)
 
         # Scoring update
         self.scoring.update(
