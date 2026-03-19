@@ -22,27 +22,29 @@ class CrewStatus(StrEnum):
     DEAD = "dead"
 
 
-class DehydrationLevel(str, Enum):
+class DehydrationLevel(StrEnum):
     """
     Dehydration severity levels based on hydration_pct.
     Source: WHO StatPearls NBK555956; IOM Dietary Reference Intakes 2004.
     """
-    HYDRATED = "hydrated"        # >= 95 %: no deficit
-    MILD = "mild"                # 80–95 %: thirst, dry mouth, reduced performance
-    MODERATE = "moderate"        # 60–80 %: headache, weakness, nausea
-    SEVERE = "severe"            # 40–60 %: confusion, tachycardia, muscle cramps
-    CRITICAL = "critical"        # < 40 %: organ failure risk, life-threatening
+
+    HYDRATED = "hydrated"  # >= 95 %: no deficit
+    MILD = "mild"  # 80–95 %: thirst, dry mouth, reduced performance
+    MODERATE = "moderate"  # 60–80 %: headache, weakness, nausea
+    SEVERE = "severe"  # 40–60 %: confusion, tachycardia, muscle cramps
+    CRITICAL = "critical"  # < 40 %: organ failure risk, life-threatening
 
 
-class StarvationLevel(str, Enum):
+class StarvationLevel(StrEnum):
     """
     Starvation severity based on consecutive caloric-deficit sols.
     Source: WHO TRS 724 (1985); Minnesota Starvation Study (Keys 1950).
     """
-    FED = "fed"                  # < 3 deficit sols: no health impact
-    UNDERFED = "underfed"        # 3–14 deficit sols: fatigue, immune decline
+
+    FED = "fed"  # < 3 deficit sols: no health impact
+    UNDERFED = "underfed"  # 3–14 deficit sols: fatigue, immune decline
     MALNOURISHED = "malnourished"  # 14–45 deficit sols: muscle wasting, organ stress
-    STARVING = "starving"        # > 45 deficit sols: critical, life-threatening
+    STARVING = "starving"  # > 45 deficit sols: critical, life-threatening
 
 
 class Severity(StrEnum):
@@ -74,12 +76,12 @@ class CrisisType(StrEnum):
     FOOD_SHORTAGE = "food_shortage"
     WATER_SHORTAGE = "water_shortage"
     # New health crises
-    CREW_DEHYDRATION = "crew_dehydration"       # crew hydration below safe threshold
-    CREW_STARVATION = "crew_starvation"         # consecutive caloric deficit accumulating
-    RADIATION_EXPOSURE = "radiation_exposure"   # cumulative dose exceeds NASA limit
+    CREW_DEHYDRATION = "crew_dehydration"  # crew hydration below safe threshold
+    CREW_STARVATION = "crew_starvation"  # consecutive caloric deficit accumulating
+    RADIATION_EXPOSURE = "radiation_exposure"  # cumulative dose exceeds NASA limit
 
 
-class CrewCauseOfDeath(str, Enum):
+class CrewCauseOfDeath(StrEnum):
     DEHYDRATION = "dehydration"
     STARVATION = "starvation"
     RADIATION = "radiation"
