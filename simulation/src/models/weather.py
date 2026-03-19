@@ -64,9 +64,11 @@ class MarsWeatherModel:
         if not self._store:
             return []
         max_sol = max(self._store)
+        min_sol = min(self._store)
+        start_sol = max(min_sol, max_sol - last_n_sols + 1)
         return [
             self._store[s]
-            for s in range(max(1, max_sol - last_n_sols + 1), max_sol + 1)
+            for s in range(start_sol, max_sol + 1)
             if s in self._store
         ]
 
