@@ -32,7 +32,7 @@ from src.constants import (
 )
 from src.enums import CrisisType, Difficulty, MissionPhase, Severity
 from src.models.climate import ClimateModel
-from src.models.crew import CrewModel, CrewState
+from src.models.crew import CrewModel
 from src.models.crops import CropModel
 from src.models.energy import EnergyModel, EnergyState
 from src.models.events import EventLog
@@ -111,7 +111,11 @@ class SimulationEngine:
         self.water.calc_rates(self.crops)
         self.nutrients.calc_rates(self.crops)
         self.crops.calc_rates(sol, self.climate, self.water, self.nutrients)
-        self.crew.calc_rates()
+        self.crew.calc_rates(
+            water_reservoir_l=self.water.state.reservoir_liters,
+            avg_temp_c=self.climate.avg_temp(),
+            avg_co2_ppm=self.climate.avg_co2(),
+        )
 
         # ── Phase 2: integrate ───────────────────────────────────────
         self.energy.integrate()
@@ -133,6 +137,17 @@ class SimulationEngine:
             )
             tick_events.append(_event_to_dict(ev))
 
+        # Crew death check → mission failure
+        if not self.crew.is_alive and self.mission_phase == MissionPhase.ACTIVE:
+            cause = self.crew.health.cause_of_death or "unknown"
+            self.mission_phase = MissionPhase.FAILED
+            ev = self.events.log(
+                sol, "crisis", "crew",
+                f"MISSION FAILED: Crew perished — cause: {cause}",
+                Severity.CRITICAL,
+            )
+            tick_events.append(_event_to_dict(ev))
+
         # Automatic crisis detection
         avg_temp = self.climate.avg_temp()
         avg_co2 = self.climate.avg_co2()
@@ -147,6 +162,10 @@ class SimulationEngine:
             nutrient_stock_pct=self.nutrients.stock_remaining_pct,
             crew_kcal=self.crew.total_kcal,
             crew_daily_kcal=CREW_DAILY_KCAL,
+            crew_hydration_pct=self.crew.hydration_pct,
+            crew_dehydration_level=self.crew.health.dehydration_level,
+            crew_starvation_level=self.crew.health.starvation_level,
+            cumulative_radiation_msv=self.crew.health.cumulative_radiation_msv,
         )
 
         # Scoring update
@@ -154,7 +173,7 @@ class SimulationEngine:
             sol=sol,
             crew_kcal=self.crew.state.today_kcal_consumed,
             crew_protein_g=self.crew.state.today_protein_consumed_g,
-            crew_alive=self.crew.state.stored_kcal >= 0,
+            crew_alive=self.crew.is_alive,
             micronutrients=self.crew.state.micronutrients_sufficient,
             all_crises=self.events.all_crises(),
             active_crises=self.events.active_crises(),
@@ -164,7 +183,7 @@ class SimulationEngine:
         )
 
         # Mission completion check
-        if sol >= MISSION_DURATION_SOLS:
+        if sol >= MISSION_DURATION_SOLS and self.mission_phase == MissionPhase.ACTIVE:
             self.mission_phase = MissionPhase.COMPLETE
             self.events.log(sol, "info", "mission", "Mission complete after 450 sols.", Severity.INFO)
 
