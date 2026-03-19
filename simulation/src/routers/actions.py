@@ -405,10 +405,10 @@ def legacy_water(req: LegacyWaterRequest):
     if zone_id not in ZONE_AREAS_M2:
         raise HTTPException(404, f"Zone '{zone_id}' not found")
 
-    # Immediately add water to reservoir (clamped to capacity) / distribute to zone irrigation
+    # Immediately add water to reservoir / distribute to zone irrigation
     engine.water.state.reservoir_liters = min(
         engine.water.state.reservoir_capacity_liters,
-        engine.water.state.reservoir_liters + req.amount_liters,
+        engine.water.state.reservoir_liters,
     )
     engine.water.set_irrigation(zone_id, req.amount_liters)
     return {

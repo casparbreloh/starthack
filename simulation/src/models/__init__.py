@@ -1,5 +1,6 @@
 from src.models.climate import ClimateModel, ZoneClimate
-from src.models.crew import CrewModel, CrewState
+from src.models.crew import CrewModel
+from src.models.crew import CrewNutritionState as CrewState
 from src.models.crops import CropBatch, CropModel
 from src.models.energy import EnergyModel, EnergyState
 from src.models.events import Crisis, Event, EventLog

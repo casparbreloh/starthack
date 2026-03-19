@@ -168,13 +168,19 @@ class EventLog:
         nutrient_stock_pct: float,
         crew_kcal: float,
         crew_daily_kcal: float,
-    ) -> list[Event]:
+        crew_hydration_pct: float = 100.0,
+        crew_dehydration_level=None,
+        crew_starvation_level=None,
+        cumulative_radiation_msv: float = 0.0,
+    ) -> None:
         from src.constants import (
             CRISIS_WATER_RESERVOIR_L,
+            HYDRATION_MODERATE_PCT,
+            RADIATION_CRITICAL_MSV,
+            RADIATION_WARNING_MSV,
             WARNING_KCAL_DAYS,
         )
-
-        events_before = len(self._events)
+        from src.enums import DehydrationLevel, StarvationLevel
 
         # Water recycling decline
         if water_recycling_pct < 85.0:
@@ -286,4 +292,59 @@ class EventLog:
         else:
             self.resolve_crisis(CrisisType.FOOD_SHORTAGE, sol)
 
-        return self._events[events_before:]
+        # Crew dehydration (WHO StatPearls NBK555956: moderate = 80% hydration)
+        if (
+            crew_dehydration_level is not None
+            and crew_dehydration_level != DehydrationLevel.HYDRATED
+        ):
+            is_mild = crew_dehydration_level == DehydrationLevel.MILD
+            sev = Severity.WARNING if is_mild else Severity.CRITICAL
+            self.open_crisis(
+                sol,
+                CrisisType.CREW_DEHYDRATION,
+                sev,
+                f"Crew dehydration: {crew_dehydration_level.value} (hydration {crew_hydration_pct:.1f}%)",
+                crew_hydration_pct,
+                HYDRATION_MODERATE_PCT,
+            )
+        else:
+            self.resolve_crisis(CrisisType.CREW_DEHYDRATION, sol)
+
+        # Crew starvation
+        if crew_starvation_level is not None and crew_starvation_level not in (
+            StarvationLevel.FED,
+            StarvationLevel.UNDERFED,
+        ):
+            sev = (
+                Severity.CRITICAL
+                if crew_starvation_level == StarvationLevel.STARVING
+                else Severity.WARNING
+            )
+            self.open_crisis(
+                sol,
+                CrisisType.CREW_STARVATION,
+                sev,
+                f"Crew starvation level: {crew_starvation_level.value}",
+                0.0,
+                0.0,
+            )
+        else:
+            self.resolve_crisis(CrisisType.CREW_STARVATION, sol)
+
+        # Radiation exposure (NASA-STD-3001: warn at 100 mSv, critical at 500 mSv)
+        if cumulative_radiation_msv >= RADIATION_WARNING_MSV:
+            sev = (
+                Severity.CRITICAL
+                if cumulative_radiation_msv >= RADIATION_CRITICAL_MSV
+                else Severity.WARNING
+            )
+            self.open_crisis(
+                sol,
+                CrisisType.RADIATION_EXPOSURE,
+                sev,
+                f"Cumulative radiation dose: {cumulative_radiation_msv:.1f} mSv",
+                cumulative_radiation_msv,
+                RADIATION_WARNING_MSV,
+            )
+        else:
+            self.resolve_crisis(CrisisType.RADIATION_EXPOSURE, sol)

@@ -144,7 +144,6 @@ class NutrientModel:
         potassium_boost: bool = False,
     ) -> None:
         z = self.state[zone_id]
-        stock_changed = False
         if target_ph is not None:
             z.target_ph = target_ph
             z.solution_ph = round(z.solution_ph + (target_ph - z.solution_ph) * 0.5, 2)
@@ -153,14 +152,8 @@ class NutrientModel:
         if nitrogen_boost:
             restock = min(NUTRIENT_RESTOCK_AMOUNT_PCT, self.stock_remaining_pct)
             self.stock_remaining_pct -= restock
-            stock_changed = True
             z.nitrogen_ppm = round(min(TARGET_N_PPM * 1.5, z.nitrogen_ppm + 30.0), 2)
         if potassium_boost:
             restock = min(NUTRIENT_RESTOCK_AMOUNT_PCT, self.stock_remaining_pct)
             self.stock_remaining_pct -= restock
-            stock_changed = True
             z.potassium_ppm = round(min(TARGET_K_PPM * 1.5, z.potassium_ppm + 30.0), 2)
-        if stock_changed:
-            self.days_of_stock_remaining = (
-                self.stock_remaining_pct / NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL
-            )
