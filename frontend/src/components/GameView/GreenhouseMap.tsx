@@ -11,7 +11,9 @@ export default function GreenhouseMap({ crops, greenhouse, nutrients }: Props) {
   const zones = greenhouse?.zones ?? []
   const allCrops = crops?.crops ?? []
   const totalArea = greenhouse?.total_area_m2 ?? 50
-  const availableArea = crops?.available_area_m2 ?? 0
+  const availableArea = crops?.available_area_per_zone
+    ? Object.values(crops.available_area_per_zone).reduce((sum, v) => sum + v, 0)
+    : 0
 
   return (
     <div

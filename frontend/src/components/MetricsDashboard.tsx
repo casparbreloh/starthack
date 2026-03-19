@@ -184,8 +184,8 @@ export default function MetricsDashboard({ data }: Props) {
                 />
                 <MetricRow
                   label="Deficit days"
-                  value={crew.cumulative.deficit_days}
-                  good={crew.cumulative.deficit_days === 0}
+                  value={crew.cumulative.deficit_sols}
+                  good={crew.cumulative.deficit_sols === 0}
                 />
               </div>
             </div>
@@ -354,7 +354,7 @@ export default function MetricsDashboard({ data }: Props) {
               <MetricRow label="Total area" value={greenhouse.total_area_m2} unit="m²" />
               <MetricRow
                 label="External temp"
-                value={greenhouse.external_temp_c.toFixed(1)}
+                value={greenhouse.external_temp_c?.toFixed(1) ?? "—"}
                 unit="°C"
               />
               {greenhouse.zones.map((z) => (
@@ -404,7 +404,10 @@ export default function MetricsDashboard({ data }: Props) {
             <div className="space-y-2">
               <div className="mb-2 flex justify-between text-xs text-gray-500">
                 <span>{crops.crops.length} active batches</span>
-                <span>{crops.available_area_m2} m² free</span>
+                <span>
+                  {Object.values(crops.available_area_per_zone).reduce((sum, v) => sum + v, 0)} m²
+                  free
+                </span>
               </div>
               {crops.crops.map((c) => (
                 <div key={c.crop_id} className="rounded-lg bg-gray-800 p-2.5">
@@ -516,32 +519,17 @@ export default function MetricsDashboard({ data }: Props) {
         {score && (
           <Card title="Mission Score" icon="🏆">
             <div className="space-y-3">
-              {[
-                {
-                  label: "Survival",
-                  val: score.scores.survival.score,
-                  extra: score.scores.survival.crew_alive ? "✓ Crew alive" : "✗ Crew lost",
-                },
-                {
-                  label: "Nutrition",
-                  val: score.scores.nutrition.score,
-                  extra: `${score.scores.nutrition.kcal_achievement_pct.toFixed(0)}% kcal target`,
-                },
-                {
-                  label: "Resources",
-                  val: score.scores.resource_efficiency.score,
-                  extra: `${score.scores.resource_efficiency.water_efficiency_pct.toFixed(0)}% water eff.`,
-                },
-                {
-                  label: "Crisis Mgmt",
-                  val: score.scores.crisis_management.score,
-                  extra: `${score.scores.crisis_management.crises_resolved}/${score.scores.crisis_management.crises_encountered} resolved`,
-                },
-              ].map((s) => (
+              {(
+                [
+                  { label: "Survival", val: score.scores.survival.score },
+                  { label: "Nutrition", val: score.scores.nutrition.score },
+                  { label: "Resources", val: score.scores.resource_efficiency.score },
+                  { label: "Crisis Mgmt", val: score.scores.crisis_management.score },
+                ] as const
+              ).map((s) => (
                 <div key={s.label}>
                   <div className="mb-1 flex justify-between text-xs">
                     <span className="text-gray-400">{s.label}</span>
-                    <span className="text-gray-500">{s.extra}</span>
                     <span
                       className={`font-mono font-bold ${s.val >= 80 ? "text-green-400" : s.val >= 60 ? "text-yellow-400" : "text-red-400"}`}
                     >

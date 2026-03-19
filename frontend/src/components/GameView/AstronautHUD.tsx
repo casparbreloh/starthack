@@ -120,9 +120,9 @@ export default function AstronautHUD({ crew, crises }: Props) {
           <div>
             <div className="font-mono text-xs text-gray-600">DEFICIT DAYS</div>
             <div
-              className={`font-mono text-sm font-bold ${(crew?.cumulative.deficit_days ?? 0) === 0 ? "text-green-400" : "text-red-400"}`}
+              className={`font-mono text-sm font-bold ${(crew?.cumulative.deficit_sols ?? 0) === 0 ? "text-green-400" : "text-red-400"}`}
             >
-              {crew?.cumulative.deficit_days ?? "—"}
+              {crew?.cumulative.deficit_sols ?? "—"}
             </div>
           </div>
         </div>
