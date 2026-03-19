@@ -127,7 +127,6 @@ def create_orchestrator(
     )
 
 
-
 def _extract_key_stats(snapshot: dict[str, Any]) -> str:
     """Extract a one-line summary from a state snapshot."""
     energy = snapshot.get("energy_status", {})
