@@ -1,1 +1,83 @@
 @import "tailwindcss";
+
+/* ── Void Theme ──────────────────────────────────────────────────────────── */
+
+@theme {
+  /* Surface colors — deep blacks to graphite */
+  --color-void-bg: #08090a;
+  --color-void-surface: #0e1011;
+  --color-void-surface-elevated: #141618;
+  --color-void-surface-hover: #1a1d1f;
+  --color-void-border: #1e2224;
+  --color-void-border-subtle: #161819;
+
+  /* Text hierarchy */
+  --color-void-text-primary: #e2e4e6;
+  --color-void-text-secondary: #7a7f84;
+  --color-void-text-tertiary: #4a4f54;
+  --color-void-text-muted: #2e3236;
+
+  /* Accent — desaturated cyan (single accent color) */
+  --color-void-accent: #5b8a9a;
+  --color-void-accent-dim: #3a5f6b;
+  --color-void-accent-muted: #1e3640;
+  --color-void-accent-glow: rgba(91, 138, 154, 0.12);
+
+  /* Status — muted, functional only */
+  --color-void-ok: #4a7a5a;
+  --color-void-ok-dim: #2a4a35;
+  --color-void-warn: #8a7a4a;
+  --color-void-warn-dim: #4a4025;
+  --color-void-critical: #8a4a4a;
+  --color-void-critical-dim: #4a2525;
+
+  /* Spacing rhythm */
+  --spacing-panel: 14px;
+  --spacing-panel-gap: 10px;
+
+  /* Font families */
+  --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Radii */
+  --radius-panel: 12px;
+}
+
+/* ── Base styles ─────────────────────────────────────────────────────────── */
+
+body {
+  background: var(--color-void-bg);
+  color: var(--color-void-text-primary);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Scrollbar — minimal, dark */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-void-border);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-void-text-tertiary);
+}
+
+/* Selection */
+::selection {
+  background: var(--color-void-accent-muted);
+  color: var(--color-void-text-primary);
+}
