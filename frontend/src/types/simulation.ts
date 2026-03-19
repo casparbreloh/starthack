@@ -25,6 +25,8 @@ export type CrewMember = Schemas["CrewMemberResponse"]
 export type CrewMembers = Schemas["CrewMembersResponse"]
 export type Crisis = Schemas["CrisisResponse"]
 export type ActiveCrises = Schemas["ActiveCrisesResponse"]
+export type CrewHealth = Schemas["CrewHealthResponse"]
+export type EventsLog = Schemas["EventsLogResponse"]
 export type ScoreData = Schemas["ScoreCurrentResponse"]
 export type SimAdvanceResponse = Schemas["SimAdvanceResponse"]
 export type CreateSessionRequest = Schemas["CreateSessionRequest"]
@@ -41,8 +43,10 @@ export interface SimulationData {
   crops: CropsStatus | null
   nutrients: NutrientsStatus | null
   crew: CrewNutrition | null
+  crewHealth: CrewHealth | null
   crewMembers: CrewMembers | null
   crises: ActiveCrises | null
+  events: EventsLog | null
   score: ScoreData | null
   loading: boolean
   error: string | null

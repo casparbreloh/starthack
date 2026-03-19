@@ -1,34 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 
-import type {
-  SimStatus,
-  WeatherCurrent,
-  EnergyStatus,
-  GreenhouseEnvironment,
-  WaterStatus,
-  CropsStatus,
-  NutrientsStatus,
-  CrewNutrition,
-  ActiveCrises,
-  ScoreData,
-} from "../types/simulation"
-
 // ── WebSocket message types ──────────────────────────────────────────────────
 
-interface TickPayload {
-  sim_status: SimStatus
-  weather_current: WeatherCurrent | null
-  energy_status: EnergyStatus
-  greenhouse_environment: GreenhouseEnvironment
-  water_status: WaterStatus
-  crops_status: CropsStatus
-  nutrients_status: NutrientsStatus
-  crew_nutrition: CrewNutrition
-  active_crises: ActiveCrises
-  score_current: ScoreData
-  events: unknown[]
-  interrupts: unknown[]
-}
+/** Raw tick payload from the simulation — field names match Python snapshot builder. */
+export type TickPayload = Record<string, unknown>
+import type { CreateSessionRequest } from "../types/simulation"
 
 type WsIncoming =
   | { type: "tick"; payload: TickPayload }
@@ -73,7 +49,6 @@ interface WsOutgoing {
 
 // ── Session config for create_session ────────────────────────────────────────
 
-import type { CreateSessionRequest } from "../types/simulation"
 export type CreateSessionConfig = CreateSessionRequest
 
 // ── Hook return type ─────────────────────────────────────────────────────────
@@ -139,7 +114,7 @@ export function useWebSocket(): WebSocketState {
     switch (msg.type) {
       case "tick":
         setLastState(msg.payload)
-        setLastEvents(msg.payload.events)
+        setLastEvents((msg.payload.events as unknown[]) ?? [])
         break
 
       case "session_created":
