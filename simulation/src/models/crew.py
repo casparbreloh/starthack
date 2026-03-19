@@ -144,7 +144,7 @@ class CrewHealthState:
     cause_of_death: str | None = None
 
     # ── Individual crew members ──────────────────────────────────────────────
-    members: list = field(
+    members: list[CrewMember] = field(
         default_factory=lambda: [
             CrewMember(member_id=f"crew_{i + 1}", name=CREW_MEMBER_NAMES[i])
             for i in range(CREW_SIZE)

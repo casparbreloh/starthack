@@ -15,6 +15,7 @@ unit-tested in isolation.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from src.constants import (
     BATTERY_CAPACITY_WH,
@@ -36,8 +37,8 @@ from src.models.weather import MarsWeatherModel
 @dataclass
 class AgentDecision:
     sol: int
-    decisions: list
-    weather_forecast_used: dict | None = None
+    decisions: list[dict[str, Any]]
+    weather_forecast_used: dict[str, Any] | None = None
     risk_assessment: str = "nominal"
 
 
@@ -74,12 +75,12 @@ class SimulationEngine:
     # Core tick
     # ------------------------------------------------------------------
 
-    def advance(self, sols: int = 1) -> list[dict]:
+    def advance(self, sols: int = 1) -> list[dict[str, Any]]:
         """
         Advance the simulation by `sols` days.
         Returns list of events that occurred during the advance.
         """
-        new_events: list[dict] = []
+        new_events: list[dict[str, Any]] = []
 
         for _ in range(sols):
             if self.mission_phase != MissionPhase.ACTIVE:
@@ -91,7 +92,7 @@ class SimulationEngine:
 
         return new_events
 
-    def _tick(self) -> list[dict]:
+    def _tick(self) -> list[dict[str, Any]]:
         """Single-sol simulation step. Returns serialisable event list."""
         sol = self.current_sol
 
@@ -117,7 +118,7 @@ class SimulationEngine:
         self.crew.integrate()
 
         # ── Event generation ─────────────────────────────────────────
-        tick_events: list[dict] = []
+        tick_events: list[dict[str, Any]] = []
 
         # Dead crops
         for crop_id in dead_crops:
@@ -198,7 +199,7 @@ class SimulationEngine:
         self,
         seed: int = 0,
         difficulty: Difficulty = Difficulty.NORMAL,
-        starting_reserves: dict | None = None,
+        starting_reserves: dict[str, float] | None = None,
     ) -> None:
         """Reset simulation to sol 0 with optional config overrides."""
         self.current_sol = 0
@@ -344,9 +345,9 @@ class SimulationEngine:
     # Derived telemetry helpers
     # ------------------------------------------------------------------
 
-    def sensor_readings(self) -> list[dict]:
+    def sensor_readings(self) -> list[dict[str, Any]]:
         """Generate realistic sensor readings from current state."""
-        readings: list[dict] = []
+        readings: list[dict[str, Any]] = []
         for zone_id, zone in self.climate.state.items():
             readings += [
                 {
@@ -445,7 +446,7 @@ def _apply_difficulty(engine: SimulationEngine, difficulty: Difficulty) -> None:
     # NORMAL = defaults (already set by dataclasses)
 
 
-def _event_to_dict(ev) -> dict:
+def _event_to_dict(ev) -> dict[str, Any]:
     return {
         "sol": ev.sol,
         "type": ev.type,

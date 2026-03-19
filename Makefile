@@ -18,11 +18,13 @@ dev:
 install:
 	@cd agent && uv sync
 	@cd simulation && uv sync
+	@cd ml && uv sync
 	@cd frontend && pnpm install
 
 install-frozen:
 	@cd agent && uv sync --frozen
 	@cd simulation && uv sync --frozen
+	@cd ml && uv sync --frozen
 	@cd frontend && pnpm install --frozen-lockfile
 
 check-agent:
