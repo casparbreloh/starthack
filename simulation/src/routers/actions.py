@@ -76,7 +76,9 @@ class NutrientAdjustRequest(BaseModel):
     target_ec_ms_cm: float | None = Field(default=None, ge=0.1, le=5.0)
     nitrogen_boost: bool = False
     potassium_boost: bool = False
-    flush_solution: bool = False  # dilute solution to remove accumulated salts (costs 10 L water)
+    flush_solution: bool = (
+        False  # dilute solution to remove accumulated salts (costs 10 L water)
+    )
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -204,10 +204,14 @@ class CropModel:
                 par = zone.par_umol_m2s
                 if par < STRESS_PAR_CRITICAL_LOW:
                     d_health -= 0.10
-                    stressors.append(StressIndicator("light_deficiency", current_sol, 1.0))
+                    stressors.append(
+                        StressIndicator("light_deficiency", current_sol, 1.0)
+                    )
                 elif par < STRESS_PAR_LOW:
                     d_health -= 0.05
-                    stressors.append(StressIndicator("light_deficiency", current_sol, 0.5))
+                    stressors.append(
+                        StressIndicator("light_deficiency", current_sol, 0.5)
+                    )
                 elif par > STRESS_PAR_HIGH:
                     d_health -= 0.06
                     stressors.append(StressIndicator("light_excess", current_sol, 0.4))
@@ -227,10 +231,14 @@ class CropModel:
                 ec = n_state.solution_ec_ms_cm
                 if ec > STRESS_EC_SEVERE:
                     d_health -= 0.15
-                    stressors.append(StressIndicator("salinity_stress", current_sol, 1.0))
+                    stressors.append(
+                        StressIndicator("salinity_stress", current_sol, 1.0)
+                    )
                 elif ec > STRESS_EC_MODERATE:
                     d_health -= 0.07
-                    stressors.append(StressIndicator("salinity_stress", current_sol, 0.5))
+                    stressors.append(
+                        StressIndicator("salinity_stress", current_sol, 0.5)
+                    )
 
             # pH imbalance
             if n_state:
@@ -245,8 +253,7 @@ class CropModel:
             # Age increment: stalls on CO₂ < 500 ppm or near-darkness (PAR < critical)
             age_inc = 1
             if zone and (
-                zone.co2_ppm < 500.0
-                or zone.par_umol_m2s < STRESS_PAR_CRITICAL_LOW
+                zone.co2_ppm < 500.0 or zone.par_umol_m2s < STRESS_PAR_CRITICAL_LOW
             ):
                 age_inc = 0  # growth stalled
 

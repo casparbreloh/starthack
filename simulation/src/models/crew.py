@@ -456,16 +456,24 @@ class CrewModel:
 
             # Only trigger new illness after sol 10 and when at least one alive
             alive_members = [m for m in self.health.members if m.alive]
-            if current_sol >= 10 and alive_members and random.random() < ILLNESS_PROBABILITY_PER_SOL:
+            if (
+                current_sol >= 10
+                and alive_members
+                and random.random() < ILLNESS_PROBABILITY_PER_SOL
+            ):
                 sick = random.choice(alive_members)
-                duration = random.randint(ILLNESS_MIN_DURATION_SOLS, ILLNESS_MAX_DURATION_SOLS)
+                duration = random.randint(
+                    ILLNESS_MIN_DURATION_SOLS, ILLNESS_MAX_DURATION_SOLS
+                )
                 illness.active = True
                 illness.sick_member_id = sick.member_id
                 illness.sick_member_name = sick.name
                 illness.duration_remaining_sols = duration
                 illness.kcal_multiplier = ILLNESS_KCAL_MULTIPLIER
                 illness.protein_multiplier = ILLNESS_PROTEIN_MULTIPLIER
-                self.state.today_kcal_target = round(CREW_DAILY_KCAL * ILLNESS_KCAL_MULTIPLIER, 1)
+                self.state.today_kcal_target = round(
+                    CREW_DAILY_KCAL * ILLNESS_KCAL_MULTIPLIER, 1
+                )
                 self.state.today_protein_target_g = round(
                     CREW_DAILY_PROTEIN_G * ILLNESS_PROTEIN_MULTIPLIER, 1
                 )
@@ -507,10 +515,18 @@ class CrewModel:
         #        11+ STARVING (+10/sol) → death ~18 consecutive deficit sols.
         deficit_sols = self.health.consecutive_caloric_deficit_sols
 
-        _underfed_span = STARVATION_SEVERE_DEFICIT_SOLS - STARVATION_ONSET_DEFICIT_SOLS  # 4
-        _malnourished_span = STARVATION_CRITICAL_DEFICIT_SOLS - STARVATION_SEVERE_DEFICIT_SOLS  # 4
-        _max_underfed_penalty = _underfed_span * STARVATION_PENALTY_UNDERFED_PER_SOL  # 8
-        _max_malnourished_penalty = _malnourished_span * STARVATION_PENALTY_MALNOURISHED_PER_SOL  # 20
+        _underfed_span = (
+            STARVATION_SEVERE_DEFICIT_SOLS - STARVATION_ONSET_DEFICIT_SOLS
+        )  # 4
+        _malnourished_span = (
+            STARVATION_CRITICAL_DEFICIT_SOLS - STARVATION_SEVERE_DEFICIT_SOLS
+        )  # 4
+        _max_underfed_penalty = (
+            _underfed_span * STARVATION_PENALTY_UNDERFED_PER_SOL
+        )  # 8
+        _max_malnourished_penalty = (
+            _malnourished_span * STARVATION_PENALTY_MALNOURISHED_PER_SOL
+        )  # 20
 
         if deficit_sols < STARVATION_ONSET_DEFICIT_SOLS:
             self.health.starvation_level = StarvationLevel.FED
@@ -543,7 +559,9 @@ class CrewModel:
         # ── 3. Early-warning events on level transition ───────────────
         current_level = self.health.starvation_level
         if current_level != previous_level:
-            self._emit_starvation_transition(previous_level, current_level, kcal_fraction)
+            self._emit_starvation_transition(
+                previous_level, current_level, kcal_fraction
+            )
 
     def _emit_starvation_transition(
         self,
@@ -611,8 +629,12 @@ class CrewModel:
             self.health.consecutive_micronutrient_deficit_sols += 1
 
         deficit_sols = self.health.consecutive_micronutrient_deficit_sols
-        _deficient_span = MICRONUTRIENT_SEVERE_DEFICIT_SOLS - MICRONUTRIENT_ONSET_DEFICIT_SOLS  # 14
-        _max_deficient_penalty = _deficient_span * MICRONUTRIENT_PENALTY_DEFICIENT_PER_SOL  # 14.0
+        _deficient_span = (
+            MICRONUTRIENT_SEVERE_DEFICIT_SOLS - MICRONUTRIENT_ONSET_DEFICIT_SOLS
+        )  # 14
+        _max_deficient_penalty = (
+            _deficient_span * MICRONUTRIENT_PENALTY_DEFICIENT_PER_SOL
+        )  # 14.0
 
         if deficit_sols < MICRONUTRIENT_ONSET_DEFICIT_SOLS:
             self.health.micronutrient_level = MicronutrientLevel.ADEQUATE

@@ -299,7 +299,8 @@ def crew_nutrition():
                 "kcal_remaining": round(kg * FOOD_KCAL_PER_KG[food_type]),
                 "protein_g_remaining": round(kg * FOOD_PROTEIN_G_PER_KG[food_type]),
                 "pct_remaining": round(kg / INITIAL_FOOD_KG[food_type] * 100.0, 1)
-                if INITIAL_FOOD_KG[food_type] > 0 else 0.0,
+                if INITIAL_FOOD_KG[food_type] > 0
+                else 0.0,
             }
             for food_type, kg in s.stored_food_kg.items()
         },

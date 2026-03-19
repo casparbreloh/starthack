@@ -30,26 +30,26 @@ CREW_DAILY_WATER_L = 12.0
 # Radish:  fast-cycle emergency buffer (16 kcal/100g × 15 kg)
 # Herbs:   crew morale / flavour (40 kcal/100g × 10 kg)
 INITIAL_FOOD_KG: dict[str, float] = {
-    "potato":  1200.0,
-    "beans":    250.0,
-    "lettuce":   30.0,
-    "radish":    15.0,
-    "herbs":     10.0,
+    "potato": 1200.0,
+    "beans": 250.0,
+    "lettuce": 30.0,
+    "radish": 15.0,
+    "herbs": 10.0,
 }
 # Caloric and protein density per kg (matches CROP_CATALOG values × 10)
 FOOD_KCAL_PER_KG: dict[str, float] = {
-    "potato":  770.0,
-    "beans":  1000.0,
+    "potato": 770.0,
+    "beans": 1000.0,
     "lettuce": 150.0,
-    "radish":  160.0,
-    "herbs":   400.0,
+    "radish": 160.0,
+    "herbs": 400.0,
 }
 FOOD_PROTEIN_G_PER_KG: dict[str, float] = {
-    "potato":  20.0,
-    "beans":   90.0,
+    "potato": 20.0,
+    "beans": 90.0,
     "lettuce": 13.0,
-    "radish":   7.0,
-    "herbs":   30.0,
+    "radish": 7.0,
+    "herbs": 30.0,
 }
 
 # ── Initial stores (NORMAL difficulty) ───────────────────────────────────────
@@ -129,18 +129,22 @@ CREW_TEMP_CRITICAL_HIGH_C = 45.0  # Rapid hyperthermia onset
 # ── Starvation model ──────────────────────────────────────────────────────────
 # Source: WHO TRS 724 (1985), Minnesota Starvation Study (Keys 1950)
 # Thresholds for consecutive-deficit-sol counter → level transitions
-STARVATION_ONSET_DEFICIT_SOLS = 3    # FED → UNDERFED   (sols 0–2 = FED)
-STARVATION_SEVERE_DEFICIT_SOLS = 7   # UNDERFED → MALNOURISHED (sols 3–6)
-STARVATION_CRITICAL_DEFICIT_SOLS = 11  # MALNOURISHED → STARVING (sols 7–10); death ~18 sols
+STARVATION_ONSET_DEFICIT_SOLS = 3  # FED → UNDERFED   (sols 0–2 = FED)
+STARVATION_SEVERE_DEFICIT_SOLS = 7  # UNDERFED → MALNOURISHED (sols 3–6)
+STARVATION_CRITICAL_DEFICIT_SOLS = (
+    11  # MALNOURISHED → STARVING (sols 7–10); death ~18 sols
+)
 
 # Caloric thresholds governing counter movement (asymmetric recovery)
-STARVATION_FULL_RECOVERY_THRESHOLD_PCT = 1.0   # ≥100 % kcal → counter −3
-STARVATION_DEFICIT_THRESHOLD_PCT = 0.8          # < 80 % kcal → counter +1; 80–100 % → counter −1
+STARVATION_FULL_RECOVERY_THRESHOLD_PCT = 1.0  # ≥100 % kcal → counter −3
+STARVATION_DEFICIT_THRESHOLD_PCT = (
+    0.8  # < 80 % kcal → counter +1; 80–100 % → counter −1
+)
 
 # Health penalty applied per sol at each starvation level (accumulates cumulatively)
-STARVATION_PENALTY_UNDERFED_PER_SOL = 2.0        # max 8 pts over 4 UNDERFED sols
-STARVATION_PENALTY_MALNOURISHED_PER_SOL = 5.0    # max 20 pts over 4 MALNOURISHED sols
-STARVATION_PENALTY_STARVING_PER_SOL = 10.0       # 10 pts/sol → death ~8 STARVING sols
+STARVATION_PENALTY_UNDERFED_PER_SOL = 2.0  # max 8 pts over 4 UNDERFED sols
+STARVATION_PENALTY_MALNOURISHED_PER_SOL = 5.0  # max 20 pts over 4 MALNOURISHED sols
+STARVATION_PENALTY_STARVING_PER_SOL = 10.0  # 10 pts/sol → death ~8 STARVING sols
 
 # Legacy alias kept for any external callers
 STARVATION_CALORIC_THRESHOLD_PCT = STARVATION_DEFICIT_THRESHOLD_PCT
@@ -151,10 +155,10 @@ STARVATION_CALORIC_THRESHOLD_PCT = STARVATION_DEFICIT_THRESHOLD_PCT
 # (e.g. lettuce). Stored food lacks these after processing. Without a fresh
 # source, subclinical deficiency begins within ~7 days; clinical symptoms emerge
 # around 3 weeks (scurvy onset, immune dysfunction, bone loss).
-MICRONUTRIENT_ONSET_DEFICIT_SOLS = 7     # ADEQUATE → DEFICIENT (subclinical)
-MICRONUTRIENT_SEVERE_DEFICIT_SOLS = 21   # DEFICIENT → DEPLETED (clinical symptoms)
-MICRONUTRIENT_PENALTY_DEFICIENT_PER_SOL = 1.0   # max 14 pts over 14 DEFICIENT sols
-MICRONUTRIENT_PENALTY_DEPLETED_PER_SOL = 3.0    # 3 pts/sol → death ~50 DEPLETED sols
+MICRONUTRIENT_ONSET_DEFICIT_SOLS = 7  # ADEQUATE → DEFICIENT (subclinical)
+MICRONUTRIENT_SEVERE_DEFICIT_SOLS = 21  # DEFICIENT → DEPLETED (clinical symptoms)
+MICRONUTRIENT_PENALTY_DEFICIENT_PER_SOL = 1.0  # max 14 pts over 14 DEFICIENT sols
+MICRONUTRIENT_PENALTY_DEPLETED_PER_SOL = 3.0  # 3 pts/sol → death ~50 DEPLETED sols
 
 # ── Nutrient system ───────────────────────────────────────────────────────────
 NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL = 0.08  # stock depletion rate
@@ -181,29 +185,29 @@ STRESS_HUMIDITY_LOW_PCT = 30.0
 
 # ── Light (PAR) stress ────────────────────────────────────────────────────────
 # Source: Taiz & Zeiger "Plant Physiology" 5th ed.; Bugbee & Salisbury 1988
-STRESS_PAR_CRITICAL_LOW = 50.0    # µmol/m²/s — growth stalls + severe health loss
-STRESS_PAR_LOW = 100.0             # µmol/m²/s — sub-optimal light, mild health loss
-STRESS_PAR_HIGH = 500.0            # µmol/m²/s — photoinhibition onset
+STRESS_PAR_CRITICAL_LOW = 50.0  # µmol/m²/s — growth stalls + severe health loss
+STRESS_PAR_LOW = 100.0  # µmol/m²/s — sub-optimal light, mild health loss
+STRESS_PAR_HIGH = 500.0  # µmol/m²/s — photoinhibition onset
 
 # ── Potassium deficiency ──────────────────────────────────────────────────────
-STRESS_K_DEFICIENCY_PPM = 30.0    # K below this → crop stress (weak stems, poor yield)
+STRESS_K_DEFICIENCY_PPM = 30.0  # K below this → crop stress (weak stems, poor yield)
 
 # ── Salinity / EC thresholds ─────────────────────────────────────────────────
 # Source: Ayers & Westcot FAO Irrigation & Drainage Paper 29 Rev.1
-STRESS_EC_MODERATE = 2.5          # mS/cm — moderate salinity stress begins
-STRESS_EC_SEVERE = 3.5            # mS/cm — severe salinity stress (20–50% biomass loss)
+STRESS_EC_MODERATE = 2.5  # mS/cm — moderate salinity stress begins
+STRESS_EC_SEVERE = 3.5  # mS/cm — severe salinity stress (20–50% biomass loss)
 
 # ── pH crop stress ────────────────────────────────────────────────────────────
 # Optimal hydroponic pH 5.5–6.5; outside this → nutrient lockout
 STRESS_PH_OPTIMAL_LOW = 5.5
 STRESS_PH_OPTIMAL_HIGH = 6.5
-STRESS_PH_CRITICAL_LOW = 5.0      # below → Fe/Mn toxicity risk
-STRESS_PH_CRITICAL_HIGH = 7.0     # above → Fe/P precipitation, severe lockout
+STRESS_PH_CRITICAL_LOW = 5.0  # below → Fe/Mn toxicity risk
+STRESS_PH_CRITICAL_HIGH = 7.0  # above → Fe/P precipitation, severe lockout
 
 # ── Nutrient solution chemistry dynamics ─────────────────────────────────────
 # Plant nutrient uptake acidifies solution (cation > anion uptake)
-SALT_ACCUMULATION_PPM_PER_SOL = 1.5   # ppm/sol — passive mineral residue from water
-PH_ACIDIFICATION_PER_SOL = 0.02       # pH units/sol drop when crops actively growing
+SALT_ACCUMULATION_PPM_PER_SOL = 1.5  # ppm/sol — passive mineral residue from water
+PH_ACIDIFICATION_PER_SOL = 0.02  # pH units/sol drop when crops actively growing
 
 # Nutrient solution targets
 TARGET_PH = 5.8
@@ -220,7 +224,7 @@ TARGET_DO_PPM = 7.0  # dissolved O₂
 ILLNESS_PROBABILITY_PER_SOL: float = 2 / 450  # ≈0.44 % chance each sol
 ILLNESS_MIN_DURATION_SOLS: int = 3
 ILLNESS_MAX_DURATION_SOLS: int = 5
-ILLNESS_KCAL_MULTIPLIER: float = 1.15    # +15 % caloric need while ill
+ILLNESS_KCAL_MULTIPLIER: float = 1.15  # +15 % caloric need while ill
 ILLNESS_PROTEIN_MULTIPLIER: float = 1.20  # +20 % protein need while ill
 
 # ── Scoring ───────────────────────────────────────────────────────────────────
