@@ -1,5 +1,6 @@
 import type { SimulationControls } from "../hooks/useSimulation.ts"
 import type { SimStatus, ScoreData } from "../types/simulation.ts"
+import GreenhouseMap from "./Dashboard/center/GreenhouseMap.tsx"
 import DashboardLayout from "./Dashboard/DashboardLayout.tsx"
 import CrewHealthPanel from "./Dashboard/left/CrewHealthPanel.tsx"
 import CrewNutritionPanel from "./Dashboard/left/CrewNutritionPanel.tsx"
@@ -34,7 +35,7 @@ export default function MetricsDashboard({ data }: MetricsDashboardProps) {
           <CrisesPanel crises={data.crises} />
         </>
       }
-      center={<CenterStage status={data.status} />}
+      center={<GreenhouseMap crops={data.crops} />}
       right={
         <>
           <WaterPanel water={data.water} />
@@ -103,21 +104,6 @@ function TopBar({
           className={`inline-block h-1.5 w-1.5 rounded-full ${loading ? "animate-pulse bg-yellow-500/60" : error ? "bg-red-500/60" : running ? "animate-pulse bg-green-500/40" : "bg-void-text-muted"}`}
         />
       </div>
-    </div>
-  )
-}
-
-/* -- Center zone: greenhouse visual -- */
-
-function CenterStage(_props: { status: SimStatus | null }) {
-  return (
-    <div className="flex h-full w-full items-center justify-center p-4">
-      <img
-        src="/mars-greenhouse.png"
-        alt="Mars greenhouse"
-        className="max-h-full max-w-full object-contain"
-        draggable={false}
-      />
     </div>
   )
 }
