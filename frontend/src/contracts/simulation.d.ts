@@ -821,7 +821,7 @@ export type components = {
     /** CrewMemberResponse */
     CrewMemberResponse: {
       /** Member Id */
-      member_id: number
+      member_id: string
       /** Name */
       name: string
       /** Alive */

@@ -291,7 +291,7 @@ class CrewHealthResponse(BaseModel):
 
 
 class CrewMemberResponse(BaseModel):
-    member_id: int
+    member_id: str
     name: str
     alive: bool
     status: str
