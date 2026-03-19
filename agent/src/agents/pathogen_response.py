@@ -10,7 +10,6 @@ from strands.models.bedrock import BedrockModel
 
 from ..config import AGENT_TEMPERATURE, MODEL_ID
 from ..prompts import PATHOGEN_RESPONSE_PROMPT
-from ..tools._state import get_client
 from ..tools.actions import create_action_tools
 
 
@@ -36,7 +35,7 @@ def pathogen_response_agent(
     Returns:
         String describing the pathogen response actions taken.
     """
-    actions = create_action_tools(get_client())
+    actions = create_action_tools()
     model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
     agent = Agent(
         model=model,

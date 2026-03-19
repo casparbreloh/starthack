@@ -49,6 +49,7 @@ class SimWebSocketClient:
         self._session_created_future: asyncio.Future[dict] | None = None
         self._listen_task: asyncio.Task[None] | None = None
         self._mission_ended = False
+        self._mission_end_payload: dict[str, Any] | None = None
 
     async def __aenter__(self) -> SimWebSocketClient:
         return self
@@ -66,7 +67,7 @@ class SimWebSocketClient:
         Args:
             url: WebSocket URL, e.g. ``ws://localhost:8080/ws``
         """
-        self._ws = await websockets.connect(url)
+        self._ws = await websockets.connect(url, ping_interval=30, ping_timeout=120)
         logger.info("WebSocket connected to %s", url)
 
         # Register as agent
@@ -177,6 +178,11 @@ class SimWebSocketClient:
         """Whether the server has signalled mission end."""
         return self._mission_ended
 
+    @property
+    def mission_end_payload(self) -> dict[str, Any] | None:
+        """The payload from the most recent ``mission_end`` message."""
+        return self._mission_end_payload
+
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
@@ -215,6 +221,7 @@ class SimWebSocketClient:
 
                 elif msg_type == "mission_end":
                     self._mission_ended = True
+                    self._mission_end_payload = msg.get("payload", {})
                     await self._consultation_queue.put(_MISSION_ENDED)
                     logger.info("Mission ended (received mission_end)")
 
@@ -223,6 +230,14 @@ class SimWebSocketClient:
 
                 elif msg_type == "error":
                     error_payload = msg.get("payload", {})
+                    if (
+                        self._session_created_future is not None
+                        and not self._session_created_future.done()
+                    ):
+                        message = error_payload.get("message", "Unknown server error")
+                        self._session_created_future.set_exception(
+                            RuntimeError(message)
+                        )
                     logger.warning(
                         "Server error: %s", error_payload.get("message", msg)
                     )

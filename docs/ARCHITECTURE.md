@@ -314,59 +314,15 @@ Difficulty presets override individual values (easy/normal/hard).
 
 ### Operating Modes
 
-The agent supports two modes:
+The agent exposes two entrypoints:
 
-1. **REST mode** (`uv run mars-agent`): The agent drives the simulation by calling `POST /sim/advance` each sol. It reads state via REST, decides, executes actions, and advances. This is the original synchronous loop.
+1. **BedrockAgentCore app** (`make dev-agent` or `uv run uvicorn src.main:app --reload --port 9090`): serves the hackathon/demo runtime entrypoint. Requests can trigger `run_mission` or ad-hoc query handling.
 
-2. **WebSocket mode** (`uv run mars-agent --ws`): The simulation self-ticks and the agent connects via `/ws`. The agent only acts when consulted — the tick loop pauses, sends a consultation with the current state and interrupts, and waits for the agent to respond with actions and a `next_checkin` interval.
-
-### REST Core Loop (per sol)
-
-```python
-async def run_sol(sim_client, kb_client, journal, weather_model):
-    # 1. Read all state
-    state = await sim_client.read_all_state()
-
-    # 2. Weather prediction (our LSTM model, not sim forecast)
-    forecast_7d = weather_model.predict(state.weather_history)
-    seasonal_outlook = weather_model.seasonal_baseline(state.sol)
-
-    # 3. Energy budget projection
-    energy_forecast = project_energy(forecast_7d, state.energy, state.greenhouse)
-
-    # 4. Decide (single LLM call with structured output)
-    decisions = await decide(
-        current_state=state,
-        energy_forecast=energy_forecast,
-        forecast_7d=forecast_7d,
-        seasonal_outlook=seasonal_outlook,
-        journal_recent=journal.last_n(30),       # last 30 sols of decisions
-        lessons_learned=journal.cross_session(),  # summaries from prev runs
-        kb_context=await kb_client.query(state),  # Syngenta knowledge base
-    )
-
-    # 5. Execute actions
-    for action in decisions.actions:
-        await sim_client.execute(action)
-
-    # 6. Log reasoning
-    journal.append(decisions)
-    await sim_client.log_decision(decisions)
-
-    # 7. Advance
-    events = await sim_client.advance(sols=1)
-
-    # 8. React to events (immediate crisis response if needed)
-    if any(e.type == "crisis" for e in events):
-        crisis_response = await decide_crisis(state, events, journal)
-        for action in crisis_response.actions:
-            await sim_client.execute(action)
-        journal.append(crisis_response)
-```
+2. **Standalone mission runner** (`uv run mars-agent`): connects directly to the simulation WebSocket and runs the autonomous mission loop locally.
 
 ### WebSocket Consultation Loop
 
-In WebSocket mode, the agent waits for consultation requests rather than driving time:
+In the standalone mission runner, the agent waits for consultation requests rather than driving time:
 
 ```python
 async with SimWebSocketClient() as ws_client:
@@ -380,7 +336,7 @@ async with SimWebSocketClient() as ws_client:
 
         # consultation contains: sol, interrupts, snapshot
         actions, next_checkin, reasoning = run_consultation(
-            consultation, rest_client, weather_forecaster, journal, ...
+            consultation, weather_forecaster, journal, ...
         )
         await ws_client.send_actions(actions, next_checkin)
 ```

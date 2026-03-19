@@ -27,6 +27,7 @@ class SessionConfig:
     seed: int | None = None
     difficulty: str = "normal"
     tick_delay_ms: int = 0
+    mission_sols: int = 450
     starting_reserves: dict[str, float] = field(default_factory=dict)
 
 
@@ -45,10 +46,12 @@ class Session:
             import random
 
             self.engine.autonomous_events.rng = random.Random(self.config.seed)
+        self.engine.mission_duration_sols = self.config.mission_sols
         if difficulty != Difficulty.NORMAL or self.config.starting_reserves:
             self.engine.reset(
                 difficulty=difficulty,
                 starting_reserves=self.config.starting_reserves or None,
+                mission_duration_sols=self.config.mission_sols,
             )
         self.lock: asyncio.Lock = asyncio.Lock()
 

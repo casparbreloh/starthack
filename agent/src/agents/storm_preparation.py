@@ -11,7 +11,6 @@ from strands.models.bedrock import BedrockModel
 
 from ..config import AGENT_TEMPERATURE, MODEL_ID
 from ..prompts import STORM_PREPARATION_PROMPT
-from ..tools._state import get_client
 from ..tools.actions import create_action_tools
 
 
@@ -41,7 +40,7 @@ def storm_preparation_agent(
     Returns:
         String describing the storm preparation actions taken.
     """
-    actions = create_action_tools(get_client())
+    actions = create_action_tools()
     model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
     agent = Agent(
         model=model,

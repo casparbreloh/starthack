@@ -468,6 +468,7 @@ class SessionConfigResponse(BaseModel):
     seed: int | None
     difficulty: str
     tick_delay_ms: int
+    mission_sols: int
     starting_reserves: dict[str, float]
 
 

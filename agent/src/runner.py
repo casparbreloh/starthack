@@ -13,7 +13,7 @@ import logging
 import os
 import sys
 
-from .config import SIM_BASE_URL, SIM_WS_URL, VALID_DIFFICULTIES
+from .config import SIM_WS_URL, VALID_DIFFICULTIES
 
 
 def main() -> None:
@@ -31,14 +31,8 @@ def main() -> None:
         "--difficulty",
         type=str,
         default="normal",
-        choices=VALID_DIFFICULTIES,  # [C-6] validated against Difficulty str enum
+        choices=VALID_DIFFICULTIES,
         help="Simulation difficulty: easy, normal, or hard (default: normal)",
-    )
-    parser.add_argument(
-        "--sim-url",
-        type=str,
-        default=SIM_BASE_URL,
-        help=f"Simulation API base URL (default: {SIM_BASE_URL})",
     )
     parser.add_argument(
         "--sols",
@@ -52,11 +46,6 @@ def main() -> None:
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         help="Logging level (default: INFO)",
-    )
-    parser.add_argument(
-        "--ws",
-        action="store_true",
-        help="Use WebSocket mode instead of REST polling",
     )
     parser.add_argument(
         "--ws-url",
@@ -77,9 +66,6 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Apply --no-memory: clear env var AND patch the already-imported config module
-    # (config.py is imported at module level for SIM_BASE_URL/VALID_DIFFICULTIES,
-    # so memory_enabled was already computed — we must patch it directly)
     if args.no_memory:
         os.environ.pop("BEDROCK_AGENTCORE_MEMORY_ID", None)
         from . import config as _cfg
@@ -87,7 +73,6 @@ def main() -> None:
         _cfg.MEMORY_ID = ""
         _cfg.memory_enabled = False
 
-    # Configure logging with sol numbers in format
     logging.basicConfig(
         level=getattr(logging, args.log_level),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -100,83 +85,39 @@ def main() -> None:
             "--no-memory flag set: using legacy file-based cross-session learning."
         )
 
-    if args.ws:
-        # WebSocket mode
-        from .agents.orchestrator import run_mission_ws
+    from .agents.orchestrator import run_mission
 
-        logger.info(
-            "Starting Mars Greenhouse Mission (WebSocket): "
-            "seed=%d, difficulty=%s, sols=%d, ws_url=%s",
-            args.seed,
-            args.difficulty,
-            args.sols,
-            args.ws_url,
-        )
+    logger.info(
+        "Starting Mars Greenhouse Mission: seed=%d, difficulty=%s, sols=%d, ws_url=%s",
+        args.seed,
+        args.difficulty,
+        args.sols,
+        args.ws_url,
+    )
 
-        try:
-            result = asyncio.run(
-                run_mission_ws(
-                    ws_url=args.ws_url,
-                    seed=args.seed,
-                    difficulty=args.difficulty,
-                    mission_sols=args.sols,
-                )
-            )
-
-            print("\n" + "=" * 60)
-            print("MISSION COMPLETE (WebSocket)")
-            print("=" * 60)
-            print(f"Run ID:        {result['run_id']}")
-            print(f"Final Score:   {result['final_score']:.2f}")
-            print(f"Mission Phase: {result['mission_phase']}")
-            print(f"Total Crises:  {result['total_crises']}")
-            print("=" * 60)
-
-        except KeyboardInterrupt:
-            logger.info("Mission interrupted by user.")
-            print("\nInterrupted.")
-            sys.exit(0)
-
-    else:
-        # REST mode (original)
-        from .agents.orchestrator import run_mission
-        from .sim_client import SimClient
-
-        client = SimClient(args.sim_url)
-
-        logger.info(
-            "Starting Mars Greenhouse Mission: seed=%d, difficulty=%s, sols=%d",
-            args.seed,
-            args.difficulty,
-            args.sols,
-        )
-
-        try:
-            result = run_mission(
-                client,
+    try:
+        result = asyncio.run(
+            run_mission(
+                ws_url=args.ws_url,
                 seed=args.seed,
                 difficulty=args.difficulty,
                 mission_sols=args.sols,
             )
+        )
 
-            print("\n" + "=" * 60)
-            print("MISSION COMPLETE")
-            print("=" * 60)
-            print(f"Run ID:        {result['run_id']}")
-            print(f"Final Score:   {result['final_score']:.2f}")
-            print(f"Mission Phase: {result['mission_phase']}")
-            print(f"Total Crises:  {result['total_crises']}")
-            print("=" * 60)
+        print("\n" + "=" * 60)
+        print("MISSION COMPLETE")
+        print("=" * 60)
+        print(f"Run ID:        {result['run_id']}")
+        print(f"Final Score:   {result['final_score']:.2f}")
+        print(f"Mission Phase: {result['mission_phase']}")
+        print(f"Total Crises:  {result['total_crises']}")
+        print("=" * 60)
 
-        except KeyboardInterrupt:
-            logger.info("Mission interrupted by user. Fetching current score...")
-            try:
-                current = client.get_score_current()
-                score = current.get("scores", {}).get("overall_score", 0.0)
-                print(f"\nInterrupted. Current score: {score:.2f}")
-            except Exception:
-                print("\nInterrupted. Could not fetch current score.")
-            sys.exit(0)
+    except KeyboardInterrupt:
+        logger.info("Mission interrupted by user.")
+        print("\nInterrupted.")
+        sys.exit(0)
 
 
 if __name__ == "__main__":

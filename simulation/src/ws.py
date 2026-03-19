@@ -16,8 +16,10 @@ import logging
 from typing import Any
 
 from fastapi import APIRouter
+from pydantic import BaseModel, Field, ValidationError
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from src.constants import MISSION_DURATION_SOLS
 from src.engine import AgentDecision
 from src.session import SessionConfig
 from src.state import session_manager
@@ -34,6 +36,16 @@ _SCENARIO_MAP: dict[str, str] = {
     "dust_storm": "scenario_dust_storm",
     "energy_disruption": "scenario_energy_disruption",
 }
+
+
+class _CreateSessionPayload(BaseModel):
+    seed: int | None = None
+    difficulty: str = "normal"
+    tick_delay_ms: int = Field(default=0, ge=0)
+    mission_sols: int = Field(
+        default=MISSION_DURATION_SOLS, ge=1, le=MISSION_DURATION_SOLS
+    )
+    starting_reserves: dict[str, float] = Field(default_factory=dict)
 
 
 @router.websocket("/ws")
@@ -69,7 +81,9 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             payload = msg.get("payload", {})
 
             if msg_type == "create_session":
-                session_id = await _handle_create_session(ws, role, payload)
+                new_session_id = await _handle_create_session(ws, role, payload)
+                if new_session_id is not None:
+                    session_id = new_session_id
 
             elif msg_type == "join_session":
                 session_id = await _handle_join_session(ws, role, payload)
@@ -113,13 +127,32 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
 async def _handle_create_session(
     ws: WebSocket, role: str | None, payload: dict[str, Any]
-) -> str:
+) -> str | None:
     """Create a session, register the WS, start the tick loop, return session_id."""
+    normalized_payload = dict(payload)
+    if "mission_sols" not in normalized_payload and "sols" in normalized_payload:
+        normalized_payload["mission_sols"] = normalized_payload["sols"]
+
+    try:
+        req = _CreateSessionPayload(**normalized_payload)
+    except ValidationError as exc:
+        await ws.send_json(
+            {
+                "type": "error",
+                "payload": {
+                    "message": "Invalid create_session payload",
+                    "errors": exc.errors(),
+                },
+            }
+        )
+        return None
+
     config = SessionConfig(
-        seed=payload.get("seed"),
-        difficulty=payload.get("difficulty", "normal"),
-        tick_delay_ms=payload.get("tick_delay_ms", 0),
-        starting_reserves=payload.get("starting_reserves", {}),
+        seed=req.seed,
+        difficulty=req.difficulty,
+        tick_delay_ms=req.tick_delay_ms,
+        mission_sols=req.mission_sols,
+        starting_reserves=req.starting_reserves,
     )
     session = session_manager.create(config)
     session.connections.register(ws, role or "frontend")
@@ -135,6 +168,7 @@ async def _handle_create_session(
                     "seed": config.seed,
                     "difficulty": config.difficulty,
                     "tick_delay_ms": config.tick_delay_ms,
+                    "mission_sols": config.mission_sols,
                 },
             },
         }

@@ -1,9 +1,9 @@
 """
 FastAPI application factory.
 
-Wires together the app instance, CORS middleware, and all routers.
-Exposed as the module-level `app` so uvicorn can target `src.app:app`
-or (via main.py re-export) `main:app`.
+Wires together the app instance, CORS middleware, and the WebSocket router.
+REST routers are kept in src/routers/ for OpenAPI schema generation only
+(see scripts/export_openapi.py) — the running app is WebSocket-only.
 """
 
 from contextlib import asynccontextmanager
@@ -11,7 +11,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.routers import actions_router, admin_router, telemetry_router
 from src.state import session_manager
 from src.ws import router as ws_router
 
@@ -28,11 +27,6 @@ async def lifespan(application: FastAPI):
 def create_app() -> FastAPI:
     application = FastAPI(
         title="Mars Greenhouse Simulation Engine",
-        description=(
-            "Deterministic physics/biology state machine for the Syngenta START Hack "
-            "'Agriculture on Mars' challenge. No internal AI — exposes the greenhouse "
-            "environment to an external AI agent via REST."
-        ),
         version="1.0.0",
         lifespan=lifespan,
     )
@@ -45,9 +39,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    application.include_router(telemetry_router)
-    application.include_router(actions_router)
-    application.include_router(admin_router)
+    @application.get("/health")
+    async def health() -> dict:
+        return {"status": "ok"}
+
     application.include_router(ws_router)
 
     return application
