@@ -216,10 +216,9 @@ domain knowledge would materially improve your decision.
 
 ## Decision Logging
 
-Every sol, you MUST explain your reasoning. After making all decisions,
-summarize: what you decided, why, what telemetry drove the decision, and
-what risks you identified. This goes to log_decision() and is visible to
-hackathon judges — be thorough and specific.
+After making all decisions, provide a BRIEF reasoning summary (3-5 sentences).
+State: key metric changes, what you decided, why. No markdown tables, no
+headers, no emoji, no bullet lists. Plain text only — keep output tokens low.
 
 ## Crisis Escalation
 

@@ -13,6 +13,10 @@ MODEL_ID: str = os.environ.get(
     "MODEL_ID",
     "us.anthropic.claude-sonnet-4-6",
 )
+SPECIALIST_MODEL_ID: str = os.environ.get(
+    "SPECIALIST_MODEL_ID",
+    "us.anthropic.claude-haiku-4-5-20251001",
+)
 AGENT_TEMPERATURE: float = float(os.environ.get("AGENT_TEMPERATURE", "0.3"))
 AGENTCORE_GATEWAY_URL: str = os.environ.get(
     "AGENTCORE_GATEWAY_URL",
