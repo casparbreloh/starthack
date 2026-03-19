@@ -54,6 +54,12 @@ def main() -> None:
         help=f"Simulation WebSocket URL (default: {SIM_WS_URL})",
     )
     parser.add_argument(
+        "--session-id",
+        type=str,
+        default=None,
+        help="Join an existing session instead of creating a new one",
+    )
+    parser.add_argument(
         "--no-memory",
         action="store_true",
         default=False,
@@ -85,25 +91,36 @@ def main() -> None:
             "--no-memory flag set: using legacy file-based cross-session learning."
         )
 
-    from .agents.orchestrator import run_mission
-
-    logger.info(
-        "Starting Mars Greenhouse Mission: seed=%d, difficulty=%s, sols=%d, ws_url=%s",
-        args.seed,
-        args.difficulty,
-        args.sols,
-        args.ws_url,
-    )
-
     try:
-        result = asyncio.run(
-            run_mission(
-                ws_url=args.ws_url,
-                seed=args.seed,
-                difficulty=args.difficulty,
-                mission_sols=args.sols,
+        if args.session_id:
+            from .agents.orchestrator import join_mission
+
+            logger.info(
+                "Joining session %s at %s",
+                args.session_id,
+                args.ws_url,
             )
-        )
+            result = asyncio.run(
+                join_mission(ws_url=args.ws_url, session_id=args.session_id)
+            )
+        else:
+            from .agents.orchestrator import run_mission
+
+            logger.info(
+                "Starting Mars Greenhouse Mission: seed=%d, difficulty=%s, sols=%d, ws_url=%s",
+                args.seed,
+                args.difficulty,
+                args.sols,
+                args.ws_url,
+            )
+            result = asyncio.run(
+                run_mission(
+                    ws_url=args.ws_url,
+                    seed=args.seed,
+                    difficulty=args.difficulty,
+                    mission_sols=args.sols,
+                )
+            )
 
         print("\n" + "=" * 60)
         print("MISSION COMPLETE")

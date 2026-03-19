@@ -82,6 +82,9 @@ class SimulationEngine:
         # Agent decision log
         self.agent_decisions: deque[AgentDecision] = deque(maxlen=500)
 
+        # Autonomous events toggle (demo mode disables these)
+        self.autonomous_events_enabled: bool = True
+
         # Dust storm scenario state
         self._dust_storm_remaining_sols: int = 0
         self._dust_storm_opacity: float = 0.0
@@ -175,10 +178,13 @@ class SimulationEngine:
 
         # ── Autonomous events (post-integration effects this sol) ─────
         tick_events: list[dict[str, Any]] = []
-        for ae in self.autonomous_events.tick(sol, self):
-            sev = Severity(ae["severity"])
-            ev = self.events.log(sol, ae["type"], ae["category"], ae["message"], sev)
-            tick_events.append(ev.to_dict())
+        if self.autonomous_events_enabled:
+            for ae in self.autonomous_events.tick(sol, self):
+                sev = Severity(ae["severity"])
+                ev = self.events.log(
+                    sol, ae["type"], ae["category"], ae["message"], sev
+                )
+                tick_events.append(ev.to_dict())
 
         # ── Event generation ─────────────────────────────────────────
 

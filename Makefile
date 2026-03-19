@@ -4,7 +4,7 @@
 	codegen check-codegen
 
 dev-simulation:
-	@cd simulation && uv run uvicorn main:app --reload --port 8080
+	@cd simulation && AGENT_URL=$${AGENT_URL:-http://localhost:9090} uv run uvicorn main:app --reload --port 8080
 
 dev-agent:
 	@cd agent && uv run uvicorn src.main:app --reload --port 9090

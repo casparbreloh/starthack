@@ -62,6 +62,7 @@ class CreateSessionRequest(BaseModel):
     tick_delay_ms: int = 0
     mission_sols: int = Field(default=450, ge=1, le=450)
     starting_reserves: dict[str, float] = Field(default_factory=dict)
+    autonomous_events_enabled: bool = True
 
 
 # ──────────────────────────────────────────────────────────────────────────────

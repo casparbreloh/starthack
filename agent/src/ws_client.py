@@ -47,6 +47,7 @@ class SimWebSocketClient:
         self._session_id: str | None = None
         self._consultation_queue: asyncio.Queue[dict | object] = asyncio.Queue()
         self._session_created_future: asyncio.Future[dict] | None = None
+        self._session_joined_future: asyncio.Future[dict] | None = None
         self._listen_task: asyncio.Task[None] | None = None
         self._mission_ended = False
         self._mission_end_payload: dict[str, Any] | None = None
@@ -82,6 +83,32 @@ class SimWebSocketClient:
 
         # Start background listener
         self._listen_task = asyncio.create_task(self._listen_loop())
+
+    async def join_session(self, session_id: str) -> str:
+        """Join an existing simulation session via WebSocket.
+
+        Args:
+            session_id: The session ID to join.
+
+        Returns:
+            The confirmed session_id string from the server.
+        """
+        loop = asyncio.get_running_loop()
+        self._session_joined_future = loop.create_future()
+
+        await self._send(
+            {
+                "type": "join_session",
+                "payload": {"session_id": session_id},
+            }
+        )
+
+        result = await self._session_joined_future
+        confirmed_id: str = str(result["session_id"])
+        self._session_id = confirmed_id
+        self._session_joined_future = None
+        logger.info("Joined session: %s", self._session_id)
+        return confirmed_id
 
     async def create_session(self, config: dict[str, Any]) -> str:
         """Create a new simulation session via WebSocket.
@@ -216,6 +243,10 @@ class SimWebSocketClient:
                     if self._session_created_future is not None:
                         self._session_created_future.set_result(msg.get("payload", {}))
 
+                elif msg_type == "session_joined":
+                    if self._session_joined_future is not None:
+                        self._session_joined_future.set_result(msg.get("payload", {}))
+
                 elif msg_type == "consultation":
                     await self._consultation_queue.put(msg.get("payload", {}))
 
@@ -230,14 +261,19 @@ class SimWebSocketClient:
 
                 elif msg_type == "error":
                     error_payload = msg.get("payload", {})
+                    message = error_payload.get("message", "Unknown server error")
                     if (
                         self._session_created_future is not None
                         and not self._session_created_future.done()
                     ):
-                        message = error_payload.get("message", "Unknown server error")
                         self._session_created_future.set_exception(
                             RuntimeError(message)
                         )
+                    if (
+                        self._session_joined_future is not None
+                        and not self._session_joined_future.done()
+                    ):
+                        self._session_joined_future.set_exception(RuntimeError(message))
                     logger.warning(
                         "Server error: %s", error_payload.get("message", msg)
                     )

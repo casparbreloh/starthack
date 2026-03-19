@@ -368,6 +368,128 @@ def run_consultation(
     return actions_list, next_checkin, reasoning
 
 
+async def _consultation_loop(
+    ws_client: Any,
+    kb_tools: list,
+    cross_session_context: str,
+) -> tuple[dict[str, Any], int, DecisionJournal]:
+    """Shared consultation loop for both run_mission and join_mission.
+
+    Receives consultations, runs the LLM, and sends actions back.
+
+    Returns:
+        Tuple of (last_snapshot, total_crises_seen, journal).
+    """
+    weather_forecaster = WeatherForecaster()
+    journal = DecisionJournal()
+    prev_score: float | None = None
+    last_snapshot: dict[str, Any] = {}
+    total_crises_seen = 0
+
+    while True:
+        consultation = await ws_client.wait_for_consultation()
+        if consultation is None:
+            logger.info("Mission ended (WS signal)")
+            break
+
+        sol = consultation.get("sol", 0)
+        logger.info("=== Sol %d (WS consultation) ===", sol)
+
+        snapshot = consultation.get("snapshot", {})
+        last_snapshot = snapshot
+        current_score = (
+            snapshot.get("score_current", {})
+            .get("scores", {})
+            .get("overall_score", 0.0)
+        )
+        if prev_score is not None:
+            score_delta = current_score - prev_score
+            journal.update_previous_outcome(
+                {
+                    "score_delta": score_delta,
+                    "state_summary": compact_state_summary(snapshot),
+                }
+            )
+        prev_score = current_score
+
+        interrupts = consultation.get("interrupts", [])
+        crisis_interrupts = [i for i in interrupts if i.get("type") == "new_crisis"]
+        total_crises_seen += len(crisis_interrupts)
+
+        import asyncio as _asyncio
+
+        actions, next_checkin, reasoning = await _asyncio.to_thread(
+            run_consultation,
+            consultation,
+            weather_forecaster,
+            journal,
+            cross_session_context,
+            kb_tools,
+        )
+
+        log_decision = {
+            "reasoning": reasoning[:500] if reasoning else "nominal",
+            "risk_assessment": reasoning[:200] if reasoning else "nominal",
+        }
+        await ws_client.send_actions(actions, next_checkin, log_decision)
+
+        logger.info(
+            "Sol %d: sent %d actions, next_checkin=%d",
+            sol,
+            len(actions),
+            next_checkin,
+        )
+
+    return last_snapshot, total_crises_seen, journal
+
+
+def _generate_mission_summary(
+    run_id: str,
+    final_score: float,
+    total_crises_seen: int,
+    cross_session: CrossSessionLearning,
+    journal_prompt: str,
+) -> dict:
+    """Generate and save a cross-session mission summary."""
+    summary_agent = create_orchestrator({})
+    summary_prompt = (
+        "Generate a structured mission summary as JSON in a ```json code block.\n\n"
+        f"Run ID: {run_id}\n"
+        f"Final score: {final_score}\n"
+        f"Total crises handled: {total_crises_seen}\n\n"
+        f"Journal (last 50 sols):\n{journal_prompt}\n\n"
+        "Return JSON with exactly these keys:\n"
+        '{"run_id": "...", "final_score": 0.0, "total_crises": 0, '
+        '"crises_resolved": 0, "avg_daily_kcal": 0.0, '
+        '"key_learnings": ["..."], "worst_decision": "...", "best_decision": "..."}\n'
+    )
+    try:
+        summary_result = summary_agent(summary_prompt)
+        summary_text = str(summary_result.message)
+        start = summary_text.find("```json")
+        end = summary_text.find("```", start + 7) if start != -1 else -1
+        if start != -1 and end != -1:
+            json_str = summary_text[start + 7 : end].strip()
+            summary = json.loads(json_str)
+        else:
+            raise ValueError("No JSON block found in summary response")
+    except Exception as exc:
+        logger.warning("Failed to parse LLM summary: %s", exc)
+        summary = {
+            "run_id": run_id,
+            "final_score": final_score,
+            "total_crises": total_crises_seen,
+            "crises_resolved": total_crises_seen,
+            "avg_daily_kcal": 0.0,
+            "key_learnings": ["Parse error — manual review needed"],
+            "worst_decision": "N/A",
+            "best_decision": "N/A",
+        }
+
+    cross_session.save_summary(summary)
+    return summary
+
+
 async def run_mission(
     ws_url: str,
     seed: int = 0,
@@ -376,9 +498,8 @@ async def run_mission(
 ) -> dict:
     """Run the full Mars greenhouse mission over a WebSocket connection.
 
-    This is the async counterpart of ``run_mission()``. Instead of driving
-    the simulation via REST advance calls, it connects to the simulation's
-    ``/ws`` endpoint and responds to consultation requests.
+    Connects to the simulation's /ws endpoint, creates a new session,
+    and runs the consultation loop until the mission ends.
 
     Args:
         ws_url: WebSocket URL, e.g. ``ws://localhost:8080/ws``
@@ -391,24 +512,17 @@ async def run_mission(
     """
     from ..ws_client import SimWebSocketClient
 
-    # Initialize cross-session learning
     cross_session = CrossSessionLearning()
     cross_session_context = cross_session.format_for_prompt()
 
-    # Create MCP client and discover KB tools
     mcp_client = create_mcp_client()
     with mcp_client:
         kb_tools = discover_kb_tools(mcp_client)
         logger.info("KB tools discovered: %d", len(kb_tools))
 
-        # Initialize components
-        weather_forecaster = WeatherForecaster()
-        journal = DecisionJournal()
         run_id = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        total_crises_seen = 0
 
         async with SimWebSocketClient() as ws_client:
-            # Connect and create session
             await ws_client.connect(ws_url)
 
             session_config: dict[str, Any] = {
@@ -416,6 +530,7 @@ async def run_mission(
                 "difficulty": difficulty,
                 "tick_delay_ms": 0,
                 "mission_sols": mission_sols,
+                "paused": False,
             }
             session_id = await ws_client.create_session(session_config)
             logger.info(
@@ -425,120 +540,93 @@ async def run_mission(
                 difficulty,
             )
 
-            prev_score: float | None = None
-            last_snapshot: dict[str, Any] = {}
-
-            # Main consultation loop
-            while True:
-                consultation = await ws_client.wait_for_consultation()
-                if consultation is None:
-                    logger.info("Mission ended (WS signal)")
-                    break
-
-                sol = consultation.get("sol", 0)
-                logger.info("=== Sol %d (WS consultation) ===", sol)
-
-                # Track score delta for journal
-                snapshot = consultation.get("snapshot", {})
-                last_snapshot = snapshot
-                current_score = (
-                    snapshot.get("score_current", {})
-                    .get("scores", {})
-                    .get("overall_score", 0.0)
-                )
-                if prev_score is not None:
-                    score_delta = current_score - prev_score
-                    journal.update_previous_outcome(
-                        {
-                            "score_delta": score_delta,
-                            "state_summary": compact_state_summary(snapshot),
-                        }
-                    )
-                prev_score = current_score
-
-                # Count crises from interrupts
-                interrupts = consultation.get("interrupts", [])
-                crisis_interrupts = [
-                    i for i in interrupts if i.get("type") == "new_crisis"
-                ]
-                total_crises_seen += len(crisis_interrupts)
-
-                # Run the consultation in a thread to avoid blocking
-                # the event loop (LLM calls and retries are synchronous)
-                import asyncio as _asyncio
-
-                actions, next_checkin, reasoning = await _asyncio.to_thread(
-                    run_consultation,
-                    consultation,
-                    weather_forecaster,
-                    journal,
-                    cross_session_context,
-                    kb_tools,
-                )
-
-                # Send actions back via WebSocket
-                log_decision = {
-                    "reasoning": reasoning[:500] if reasoning else "nominal",
-                    "risk_assessment": reasoning[:200] if reasoning else "nominal",
-                }
-                await ws_client.send_actions(actions, next_checkin, log_decision)
-
-                logger.info(
-                    "Sol %d: sent %d actions, next_checkin=%d",
-                    sol,
-                    len(actions),
-                    next_checkin,
-                )
+            last_snapshot, total_crises_seen, journal = await _consultation_loop(
+                ws_client, kb_tools, cross_session_context
+            )
 
         mission_end_payload = ws_client.mission_end_payload or {}
         final_snapshot = mission_end_payload.get("snapshot", last_snapshot)
         mission_phase = mission_end_payload.get("mission_phase", "complete")
 
-        # Use the terminal snapshot for final score when available.
         final_score = (
             final_snapshot.get("score_current", {})
             .get("scores", {})
-            .get("overall_score", prev_score or 0.0)
+            .get("overall_score", 0.0)
         )
         logger.info("Final score: %.2f", final_score)
 
-        # Generate cross-session summary
-        summary_agent = create_orchestrator({})
-        summary_prompt = (
-            "Generate a structured mission summary as JSON in a ```json code block.\n\n"
-            f"Run ID: {run_id}\n"
-            f"Final score: {final_score}\n"
-            f"Total crises handled: {total_crises_seen}\n\n"
-            f"Journal (last 50 sols):\n{journal.format_for_prompt(50)}\n\n"
-            "Return JSON with exactly these keys:\n"
-            '{"run_id": "...", "final_score": 0.0, "total_crises": 0, '
-            '"crises_resolved": 0, "avg_daily_kcal": 0.0, '
-            '"key_learnings": ["..."], "worst_decision": "...", "best_decision": "..."}\n'
+        summary = _generate_mission_summary(
+            run_id,
+            final_score,
+            total_crises_seen,
+            cross_session,
+            journal.format_for_prompt(50),
         )
-        try:
-            summary_result = summary_agent(summary_prompt)
-            summary_text = str(summary_result.message)
-            start = summary_text.find("```json")
-            end = summary_text.find("```", start + 7) if start != -1 else -1
-            if start != -1 and end != -1:
-                json_str = summary_text[start + 7 : end].strip()
-                summary = json.loads(json_str)
-            else:
-                raise ValueError("No JSON block found in summary response")
-        except Exception as exc:
-            logger.warning("Failed to parse LLM summary: %s", exc)
-            summary = {
-                "run_id": run_id,
-                "final_score": final_score,
-                "total_crises": total_crises_seen,
-                "crises_resolved": total_crises_seen,
-                "avg_daily_kcal": 0.0,
-                "key_learnings": ["Parse error — manual review needed"],
-                "worst_decision": "N/A",
-                "best_decision": "N/A",
-            }
 
-        cross_session.save_summary(summary)
+        return {
+            "run_id": run_id,
+            "final_score": final_score,
+            "mission_phase": mission_phase,
+            "total_crises": total_crises_seen,
+            "summary": summary,
+        }
+
+
+async def join_mission(
+    ws_url: str,
+    session_id: str,
+) -> dict:
+    """Join an existing simulation session and run the consultation loop.
+
+    Instead of creating a new session, connects to a session that was
+    already created (e.g. by the frontend or simulation auto-invoke).
+
+    Args:
+        ws_url: WebSocket URL, e.g. ``ws://localhost:8080/ws``
+        session_id: The session ID to join.
+
+    Returns:
+        Mission summary dict with final score and stats.
+    """
+    from ..ws_client import SimWebSocketClient
+
+    cross_session = CrossSessionLearning()
+    cross_session_context = cross_session.format_for_prompt()
+
+    mcp_client = create_mcp_client()
+    with mcp_client:
+        kb_tools = discover_kb_tools(mcp_client)
+        logger.info("KB tools discovered: %d", len(kb_tools))
+
+        run_id = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+
+        async with SimWebSocketClient() as ws_client:
+            await ws_client.connect(ws_url)
+            confirmed_id = await ws_client.join_session(session_id)
+            logger.info("Joined session: %s", confirmed_id)
+
+            last_snapshot, total_crises_seen, journal = await _consultation_loop(
+                ws_client, kb_tools, cross_session_context
+            )
+
+        mission_end_payload = ws_client.mission_end_payload or {}
+        final_snapshot = mission_end_payload.get("snapshot", last_snapshot)
+        mission_phase = mission_end_payload.get("mission_phase", "complete")
+
+        final_score = (
+            final_snapshot.get("score_current", {})
+            .get("scores", {})
+            .get("overall_score", 0.0)
+        )
+        logger.info("Final score: %.2f", final_score)
+
+        summary = _generate_mission_summary(
+            run_id,
+            final_score,
+            total_crises_seen,
+            cross_session,
+            journal.format_for_prompt(50),
+        )
 
         return {
             "run_id": run_id,
