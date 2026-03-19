@@ -30,7 +30,9 @@ async def invoke_agent(agent_url: str, session_id: str, ws_url: str) -> None:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(None)) as client:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(connect=5.0, read=300.0, write=5.0, pool=5.0)
+        ) as client:
             async with client.stream(
                 "POST", f"{agent_url}/invocations", json=payload
             ) as resp:

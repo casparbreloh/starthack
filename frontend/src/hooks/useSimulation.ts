@@ -38,9 +38,12 @@ export function useSimulation(): SimulationControls {
     }
   }, [ws, running])
 
-  const reset = useCallback(() => {
-    ws.reset()
-  }, [ws])
+  const reset = useCallback(
+    (config?: Partial<CreateSessionConfig>) => {
+      ws.reset(config)
+    },
+    [ws],
+  )
 
   const data: SimulationData = useMemo(() => {
     const s = ws.lastState

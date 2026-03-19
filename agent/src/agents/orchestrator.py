@@ -372,13 +372,13 @@ async def _consultation_loop(
     ws_client: Any,
     kb_tools: list,
     cross_session_context: str,
-) -> tuple[dict[str, Any], int]:
+) -> tuple[dict[str, Any], int, DecisionJournal]:
     """Shared consultation loop for both run_mission and join_mission.
 
     Receives consultations, runs the LLM, and sends actions back.
 
     Returns:
-        Tuple of (last_snapshot, total_crises_seen).
+        Tuple of (last_snapshot, total_crises_seen, journal).
     """
     weather_forecaster = WeatherForecaster()
     journal = DecisionJournal()
@@ -440,7 +440,7 @@ async def _consultation_loop(
             next_checkin,
         )
 
-    return last_snapshot, total_crises_seen
+    return last_snapshot, total_crises_seen, journal
 
 
 def _generate_mission_summary(
@@ -540,7 +540,7 @@ async def run_mission(
                 difficulty,
             )
 
-            last_snapshot, total_crises_seen = await _consultation_loop(
+            last_snapshot, total_crises_seen, journal = await _consultation_loop(
                 ws_client, kb_tools, cross_session_context
             )
 
@@ -556,7 +556,11 @@ async def run_mission(
         logger.info("Final score: %.2f", final_score)
 
         summary = _generate_mission_summary(
-            run_id, final_score, total_crises_seen, cross_session, ""
+            run_id,
+            final_score,
+            total_crises_seen,
+            cross_session,
+            journal.format_for_prompt(50),
         )
 
         return {
@@ -601,7 +605,7 @@ async def join_mission(
             confirmed_id = await ws_client.join_session(session_id)
             logger.info("Joined session: %s", confirmed_id)
 
-            last_snapshot, total_crises_seen = await _consultation_loop(
+            last_snapshot, total_crises_seen, journal = await _consultation_loop(
                 ws_client, kb_tools, cross_session_context
             )
 
@@ -617,7 +621,11 @@ async def join_mission(
         logger.info("Final score: %.2f", final_score)
 
         summary = _generate_mission_summary(
-            run_id, final_score, total_crises_seen, cross_session, ""
+            run_id,
+            final_score,
+            total_crises_seen,
+            cross_session,
+            journal.format_for_prompt(50),
         )
 
         return {
