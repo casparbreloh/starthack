@@ -30,6 +30,7 @@ from src.constants import (
     TOTAL_GREENHOUSE_AREA_M2,
     ZONE_AREAS_M2,
 )
+from src.enums import MissionPhase
 from src.models.responses import (
     ActiveCrisesResponse,
     CrewHealthResponse,
@@ -450,26 +451,17 @@ def events_active_crises():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def _scores_dict(snap) -> dict[str, float]:
-    return {
-        "survival": snap.survival,
-        "nutrition": snap.nutrition,
-        "resource_efficiency": snap.resource_efficiency,
-        "crisis_management": snap.crisis_management,
-        "overall_score": snap.overall_score,
-    }
-
-
 @router.get("/score/current", response_model=ScoreCurrentResponse)
 def score_current():
     snap = engine.scoring.snapshot
-    return {"current_sol": snap.current_sol, "scores": _scores_dict(snap)}
+    return {
+        "current_sol": snap.current_sol,
+        "scores": _snapshot_to_scores(snap),
+    }
 
 
 @router.get("/score/final", response_model=ScoreFinalResponse)
 def score_final():
-    from src.enums import MissionPhase
-
     if engine.mission_phase != MissionPhase.COMPLETE:
         raise HTTPException(
             400,
@@ -479,7 +471,7 @@ def score_final():
     return {
         "final_sol": snap.current_sol,
         "mission_phase": engine.mission_phase.value,
-        "final_scores": _scores_dict(snap),
+        "final_scores": _snapshot_to_scores(snap),
         "agent_decisions_logged": len(engine.agent_decisions),
     }
 
@@ -563,6 +555,16 @@ def sim_state():
 # ──────────────────────────────────────────────────────────────────────────────
 # Private helpers
 # ──────────────────────────────────────────────────────────────────────────────
+
+
+def _snapshot_to_scores(snap) -> dict[str, Any]:
+    return {
+        "survival": snap.survival,
+        "nutrition": snap.nutrition,
+        "resource_efficiency": snap.resource_efficiency,
+        "crisis_management": snap.crisis_management,
+        "overall_score": snap.overall_score,
+    }
 
 
 def _weather_to_dict(w) -> dict[str, Any]:

@@ -56,6 +56,12 @@ class SimulationEngine:
     """
 
     def __init__(self) -> None:
+        self._init_state()
+        # Compute initial weather for sol 0
+        self.weather.advance(0)
+
+    def _init_state(self) -> None:
+        """Shared initialisation for __init__ and reset."""
         self.current_sol: int = 0
         self.mission_phase: MissionPhase = MissionPhase.ACTIVE
         self.paused: bool = False
@@ -78,9 +84,6 @@ class SimulationEngine:
         # Dust storm scenario state
         self._dust_storm_remaining_sols: int = 0
         self._dust_storm_opacity: float = 0.0
-
-        # Compute initial weather for sol 0
-        self.weather.advance(0)
 
     # ------------------------------------------------------------------
     # Core tick
@@ -164,14 +167,14 @@ class SimulationEngine:
         for ae in self.autonomous_events.tick(sol, self):
             sev = Severity(ae["severity"])
             ev = self.events.log(sol, ae["type"], ae["category"], ae["message"], sev)
-            tick_events.append(_event_to_dict(ev))
+            tick_events.append(ev.to_dict())
 
         # ── Event generation ─────────────────────────────────────────
 
         # Starvation level-change events (emitted by CrewModel)
         for category, message, sev_str in self.crew.pending_events:
             ev = self.events.log(sol, "alert", category, message, Severity(sev_str))
-            tick_events.append(_event_to_dict(ev))
+            tick_events.append(ev.to_dict())
 
         # Dead crops
         for crop_id in dead_crops:
@@ -182,7 +185,7 @@ class SimulationEngine:
                 f"Crop '{crop_id}' died (health reached 0)",
                 Severity.CRITICAL,
             )
-            tick_events.append(_event_to_dict(ev))
+            tick_events.append(ev.to_dict())
 
         # Crew death check → mission failure
         if not self.crew.is_alive and self.mission_phase == MissionPhase.ACTIVE:
@@ -195,7 +198,7 @@ class SimulationEngine:
                 f"MISSION FAILED: Crew perished — cause: {cause}",
                 Severity.CRITICAL,
             )
-            tick_events.append(_event_to_dict(ev))
+            tick_events.append(ev.to_dict())
 
         # Automatic crisis detection
         avg_temp = self.climate.avg_temp()
@@ -254,23 +257,7 @@ class SimulationEngine:
         starting_reserves: dict[str, float] | None = None,
     ) -> None:
         """Reset simulation to sol 0 with optional config overrides."""
-        self.current_sol = 0
-        self.mission_phase = MissionPhase.ACTIVE
-        self.paused = False
-
-        # Re-initialise sub-models
-        self.weather = MarsWeatherModel()
-        self.energy = EnergyModel()
-        self.climate = ClimateModel()
-        self.water = WaterModel()
-        self.nutrients = NutrientModel()
-        self.crops = CropModel()
-        self.crew = CrewModel()
-        self.events = EventLog()
-        self.scoring = ScoringModel()
-        self.agent_decisions = deque(maxlen=500)
-        self._dust_storm_remaining_sols = 0
-        self._dust_storm_opacity = 0.0
+        self._init_state()
 
         # Apply difficulty modifiers
         _apply_difficulty(self, difficulty)
@@ -510,13 +497,3 @@ def _apply_difficulty(engine: SimulationEngine, difficulty: Difficulty) -> None:
         engine.crew.state.stored_protein_g = 30_000.0
         engine.energy.state.battery_level_wh = 15_000.0 * 0.6
     # NORMAL = defaults (already set by dataclasses)
-
-
-def _event_to_dict(ev) -> dict[str, Any]:
-    return {
-        "sol": ev.sol,
-        "type": ev.type,
-        "category": ev.category,
-        "message": ev.message,
-        "severity": ev.severity.value if hasattr(ev.severity, "value") else ev.severity,
-    }

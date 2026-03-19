@@ -28,10 +28,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    pass  # engine is passed as Any to avoid circular import
+from typing import Any
 
 
 @dataclass
@@ -140,7 +137,7 @@ class AutonomousEventSystem:
                 0.0, engine.water.state.filter_health_pct - dmg
             )
             # Immediately recompute recycling efficiency
-            _recalc_recycling(engine)
+            engine.water._update_recycling_efficiency()
             emitted.append(
                 _entry(
                     "alert",
@@ -528,7 +525,7 @@ class AutonomousEventSystem:
 
         elif event.event_type == "water_mechanical":
             # Self-healed mechanical issue — restore recycling efficiency from filter health
-            _recalc_recycling(engine)
+            engine.water._update_recycling_efficiency()
 
         elif event.event_type == "temp_hvac_failure":
             zone_id = eff.get("zone_id", "")
@@ -591,20 +588,3 @@ def _entry(type_: str, category: str, message: str, severity: str) -> dict[str, 
         "message": message,
         "severity": severity,
     }
-
-
-def _recalc_recycling(engine: Any) -> None:
-    """Recompute recycling_efficiency_pct from current filter_health_pct."""
-    from src.constants import (
-        FILTER_HEALTH_MIN_EFFICIENCY_FACTOR,
-        WATER_RECYCLING_NOMINAL_PCT,
-    )
-
-    fh = engine.water.state.filter_health_pct
-    factor = (
-        FILTER_HEALTH_MIN_EFFICIENCY_FACTOR
-        + (1.0 - FILTER_HEALTH_MIN_EFFICIENCY_FACTOR) * fh / 100.0
-    )
-    engine.water.state.recycling_efficiency_pct = round(
-        WATER_RECYCLING_NOMINAL_PCT * factor, 2
-    )

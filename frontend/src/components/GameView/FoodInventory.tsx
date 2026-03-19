@@ -1,4 +1,6 @@
-import type { CrewNutrition, FoodInventoryItem } from "../../types/simulation"
+import type { CrewNutrition, FoodItem } from "../../types/simulation"
+
+type FoodInventoryItem = FoodItem
 
 interface Props {
   crew: CrewNutrition | null

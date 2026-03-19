@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from src.engine import AgentDecision
-from src.enums import Difficulty
+from src.enums import Difficulty, MissionPhase
 from src.models.responses import SimAdvanceResponse
 from src.state import engine
 
@@ -52,8 +52,6 @@ class AgentDecisionRequest(BaseModel):
 
 @router.post("/sim/advance", response_model=SimAdvanceResponse)
 def sim_advance(req: AdvanceRequest):
-    from src.enums import MissionPhase
-
     if engine.mission_phase != MissionPhase.ACTIVE:
         raise HTTPException(
             400, f"Mission is {engine.mission_phase.value}, cannot advance"

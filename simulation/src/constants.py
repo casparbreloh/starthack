@@ -146,9 +146,6 @@ STARVATION_PENALTY_UNDERFED_PER_SOL = 2.0  # max 8 pts over 4 UNDERFED sols
 STARVATION_PENALTY_MALNOURISHED_PER_SOL = 5.0  # max 20 pts over 4 MALNOURISHED sols
 STARVATION_PENALTY_STARVING_PER_SOL = 10.0  # 10 pts/sol → death ~8 STARVING sols
 
-# Legacy alias kept for any external callers
-STARVATION_CALORIC_THRESHOLD_PCT = STARVATION_DEFICIT_THRESHOLD_PCT
-
 # ── Micronutrient model ───────────────────────────────────────────────────────
 # Source: NASA-STD-3001 Vol.2 Rev.B §6.2.4; IOM Dietary Reference Intakes 2006
 # Micronutrients (vitamins A, C, K, folate, minerals) come only from fresh crops
