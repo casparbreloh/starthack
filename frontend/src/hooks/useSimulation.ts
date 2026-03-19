@@ -72,7 +72,7 @@ export function useSimulation(): SimulationControls {
       crewHealth: (s.crew_health as CrewHealth) ?? null,
       crewMembers: (s.crew_members as CrewMembers) ?? null,
       crises: (s.active_crises as ActiveCrises) ?? null,
-      events: (s.events as EventsLog) ?? null,
+      events: s.events ? ({ events: s.events } as EventsLog) : null,
       score: (s.score_current as ScoreData) ?? null,
       loading: false,
       error: null,
