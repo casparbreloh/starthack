@@ -103,6 +103,25 @@ class AutonomousEventSystem:
 
         return emitted
 
+    def active_solar_factor(self, sol: int) -> float:
+        """Combined solar reduction factor from all active energy_dust_storm events.
+
+        Returns 1.0 when no storm is active.  Called by the engine BEFORE
+        calc_rates so that the energy model sees correct solar generation
+        and surplus_wh reflects reality.
+
+        Events that have expired for ``sol`` are skipped even if they
+        haven't been pruned from ``active_events`` yet (expiry happens
+        later in ``tick()``).
+        """
+        factor = 1.0
+        for e in self.active_events:
+            if e.has_expired(sol):
+                continue
+            if e.event_type == "energy_dust_storm":
+                factor *= e.effects.get("solar_factor", 1.0)
+        return factor
+
     def reset(self, rng: random.Random) -> None:
         """Clear all state; called when engine resets."""
         self.rng = rng
@@ -468,16 +487,9 @@ class AutonomousEventSystem:
         eff = event.effects
 
         if event.event_type == "energy_dust_storm":
-            factor = eff.get("solar_factor", 1.0)
-            # Drain the battery by the solar that was *not* generated this sol
-            lost = engine.energy.state.solar_generation_wh * (1.0 - factor)
-            engine.energy.state.battery_level_wh = max(
-                0.0, engine.energy.state.battery_level_wh - lost
-            )
-            # Update the displayed solar generation so telemetry shows reduced value
-            engine.energy.state.solar_generation_wh = round(
-                engine.energy.state.solar_generation_wh * factor, 1
-            )
+            # Solar reduction is now applied pre-calc_rates via
+            # active_solar_factor(), so no post-hoc battery drain needed.
+            pass
 
         elif event.event_type == "energy_consumption_spike":
             extra = eff.get("extra_wh_per_sol", 0.0)
