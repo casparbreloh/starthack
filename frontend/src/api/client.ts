@@ -11,14 +11,16 @@ import type {
   ScoreData,
 } from "../types/simulation"
 
+const BASE = "/simulation"
+
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(path)
+  const res = await fetch(`${BASE}${path}`)
   if (!res.ok) throw new Error(`${path} → ${res.status}`)
   return res.json() as Promise<T>
 }
 
 async function post<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(path, {
+  const res = await fetch(`${BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: body !== undefined ? JSON.stringify(body) : undefined,

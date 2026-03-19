@@ -33,6 +33,8 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 - `make dev-frontend` — run frontend only
 - `make check` — lint, format-check, and type-check all projects
 - `make check-fix` — auto-fix lint and format issues in all projects
+- `make codegen` — regenerate TypeScript types from the simulation OpenAPI schema
+- `make check-codegen` — regenerate and verify types are up-to-date (used in CI)
 - `cd ml && ../.venv/bin/python -m mars_weather.train` — train ML models
 - `cd ml && ../.venv/bin/python -m mars_weather.evaluate` — evaluate on test set
 - `cd ml && ../.venv/bin/python -m mars_weather.predict` — run predictions
@@ -43,10 +45,26 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 - Challenge requirements → `docs/CHALLENGE.MD`
 - Crop/nutrition/stress data → `docs/mcp-data/`
 - Trained model artifacts → `ml/models/`
+- API response models (Pydantic) → `simulation/src/models/responses.py`
+- Generated TypeScript types → `frontend/src/contracts/simulation.d.ts`
+- Frontend type re-exports → `frontend/src/types/simulation.ts`
+- OpenAPI schema export script → `simulation/scripts/export_openapi.py`
+
+## OpenAPI Contracts
+
+Frontend TypeScript types are auto-generated from the simulation's OpenAPI schema:
+
+1. Pydantic response models in `simulation/src/models/responses.py` define the API contract
+2. `simulation/scripts/export_openapi.py` extracts the OpenAPI JSON without starting a server
+3. `openapi-typescript` generates `frontend/src/contracts/simulation.d.ts` from the schema
+4. `frontend/src/types/simulation.ts` re-exports generated types under stable names
+
+When changing an API response shape: update the Pydantic model in `responses.py`, run `make codegen`, and the frontend types update automatically. CI runs `make check-codegen` to enforce types stay in sync.
 
 ## Conventions
 
 - Python: snake_case, relative imports within packages
 - TypeScript: strict mode, bundler module resolution
+- Frontend types come from OpenAPI codegen — do not hand-write API types in `frontend/src/types/`
 - Temporal train/val/test splits (no data leakage)
 - Models saved with metadata JSON + pickle scalers

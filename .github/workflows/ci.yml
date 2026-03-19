@@ -32,4 +32,5 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: make install-frozen
+      - run: make check-codegen
       - run: make check
