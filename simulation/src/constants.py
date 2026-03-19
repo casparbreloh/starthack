@@ -90,6 +90,16 @@ FILTER_DEGRADATION_RATE_PCT_PER_SOL = 0.05
 FILTER_HEALTH_MAINTENANCE_RESTORE = 15.0  # % restored by clean_filters action
 FILTER_HEALTH_MIN_EFFICIENCY_FACTOR = 0.5  # recycling can fall to 50 % of nominal
 
+# ── Ice mining ────────────────────────────────────────────────────────────────
+# Source: docs/mcp-data/01_MARS_ENVIRONMENT_EXTENDED.MD §1.8: subsurface ice deposits
+ICE_MINING_ENERGY_COST_WH = 800.0
+ICE_MINING_BASE_YIELD_L = 15.0
+ICE_MINING_MIN_YIELD_L = 5.0  # Yield formula: MIN + (BASE - MIN) * drill_health_pct / 100; range at usable health (10-100%): 6.0-15.0 L
+ICE_MINING_DRILL_DEGRADATION_PCT = 5.0
+ICE_MINING_DRILL_MAINTENANCE_RESTORE_PCT = 20.0
+ICE_MINING_DRILL_MIN_HEALTH_PCT = 10.0
+ICE_MINING_DRILL_INITIAL_HEALTH_PCT = 100.0
+
 # ── Crew hydration model ──────────────────────────────────────────────────────
 # Source: IOM 2004, WHO StatPearls NBK555956, medical consensus
 DEHYDRATION_RATE_PCT_PER_SOL = 35.0  # hydration loss/sol at zero water (death ~3 sols)

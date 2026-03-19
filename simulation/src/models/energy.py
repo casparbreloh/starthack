@@ -165,6 +165,21 @@ class EnergyModel:
     def allocate(self, allocation: dict[str, int | float]) -> None:
         """Agent updates energy allocation priorities."""
         self.state.allocation.update(allocation)
+        # Normalize if active allocations exceed 100%
+        active_keys = (
+            "heating_pct",
+            "lighting_pct",
+            "water_recycling_pct",
+            "nutrient_pumps_pct",
+        )
+        total = sum(self.state.allocation.get(k, 0) for k in active_keys)
+        if total > 100:
+            scale = 100.0 / total
+            for k in active_keys:
+                if k in self.state.allocation:
+                    self.state.allocation[k] = round(
+                        self.state.allocation[k] * scale, 1
+                    )
 
     # ------------------------------------------------------------------
     # Derived helpers

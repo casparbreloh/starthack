@@ -68,6 +68,7 @@ class Session:
         self.next_checkin: int = 1
         self.tick_task: asyncio.Task | None = None  # type: ignore[type-arg]
         self.crisis_interrupt_pending: bool = False
+        self.last_interrupt_sols: dict[str, int] = {}
 
     def start(self) -> None:
         """Start the self-ticking loop as an asyncio Task."""
