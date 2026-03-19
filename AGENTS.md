@@ -12,10 +12,10 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 
 ## Structure
 
-- `agent/` — AI agent (Python, uv)
+- `agent/` — AI agent system: orchestrator + 6 specialist crisis agents (Python, uv)
 - `simulation/` — greenhouse simulation API (Python, FastAPI, uv)
 - `frontend/` — dashboard UI (React, TypeScript, Vite, pnpm)
-- `ml/` — Mars weather prediction ML pipeline (PyTorch LSTM)
+- `ml/` — Mars weather prediction ML pipeline + HTTP sidecar service (PyTorch LSTM, FastAPI)
 - `docs/` — project references (see below)
 
 ## Docs
@@ -31,6 +31,7 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 - `make dev-agent` — run agent only
 - `make dev-simulation` — run simulation only
 - `make dev-frontend` — run frontend only
+- `make dev-ml` — run ML sidecar service only (port 8090)
 - `make check` — lint, format-check, and type-check all projects
 - `make check-fix` — auto-fix lint and format issues in all projects
 - `make codegen` — regenerate TypeScript types from the simulation OpenAPI schema
@@ -42,6 +43,12 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 ## Where to Look
 
 - Weather prediction logic → `ml/mars_weather/`
+- ML sidecar service → `ml/serve.py`
+- Agent weather client → `agent/src/weather_integration.py`
+- Agent orchestrator → `agent/src/agents/orchestrator.py`
+- Specialist crisis agents → `agent/src/agents/`
+- Agent tool factories → `agent/src/tools/`
+- Simulation sub-models → `simulation/src/models/`
 - Challenge requirements → `docs/CHALLENGE.md`
 - Crop/nutrition/stress data → `docs/mcp-data/`
 - Trained model artifacts → `ml/models/`
