@@ -21,7 +21,7 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 ## Docs
 
 - `docs/ARCHITECTURE.md` — infrastructure and deployment
-- `docs/CHALLENGE.MD` — Syngenta START Hack challenge brief
+- `docs/CHALLENGE.md` — Syngenta START Hack challenge brief
 - `docs/mcp-data/` — domain knowledge: Mars environment, crop profiles, nutrition, plant stress, greenhouse scenarios
 
 ## Commands
@@ -42,7 +42,7 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 ## Where to Look
 
 - Weather prediction logic → `ml/mars_weather/`
-- Challenge requirements → `docs/CHALLENGE.MD`
+- Challenge requirements → `docs/CHALLENGE.md`
 - Crop/nutrition/stress data → `docs/mcp-data/`
 - Trained model artifacts → `ml/models/`
 - API response models (Pydantic) → `simulation/src/models/responses.py`

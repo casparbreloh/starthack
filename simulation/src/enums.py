@@ -53,13 +53,6 @@ class Severity(StrEnum):
     CRITICAL = "critical"
 
 
-class SensorStatus(StrEnum):
-    OK = "ok"
-    DEGRADED = "degraded"
-    ERROR = "error"
-    OFFLINE = "offline"
-
-
 class Difficulty(StrEnum):
     EASY = "easy"
     NORMAL = "normal"
@@ -79,6 +72,7 @@ class CrisisType(StrEnum):
     CREW_DEHYDRATION = "crew_dehydration"  # crew hydration below safe threshold
     CREW_STARVATION = "crew_starvation"  # consecutive caloric deficit accumulating
     RADIATION_EXPOSURE = "radiation_exposure"  # cumulative dose exceeds NASA limit
+    DUST_STORM = "dust_storm"  # active dust storm reducing solar irradiance
 
 
 class CrewCauseOfDeath(StrEnum):

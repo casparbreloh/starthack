@@ -59,34 +59,58 @@ class WaterModel:
         self.rates = WaterRates()
 
     # ------------------------------------------------------------------
-    # PCSE lifecycle
+    # Internal helpers
     # ------------------------------------------------------------------
 
-    def calc_rates(self, crop_model: CropModel) -> None:
-        """Compute net water change this sol.
-
-        Two recycling loops (NASA ECLSS):
-          1. Crew metabolic water (urine, sweat, respiration): WATER_RECYCLING_NOMINAL_PCT
-          2. Plant transpiration captured by condensing heat exchanger: PLANT_TRANSPIRATION_RECOVERY_PCT
-        """
-        # Crop water demand: sum of zone irrigation settings (L/sol)
-        total_irrigation = sum(self.state.irrigation_settings.values())
-        self.state.daily_crop_consumption_liters = round(total_irrigation, 2)
-
-        # Loop 1 — Crew metabolic water recovery
-        recycled_from_crew = (
-            CREW_DAILY_WATER_L * self.state.recycling_efficiency_pct / 100.0
-        )
-
-        # Loop 2 — Plant transpiration recovery (filter health degrades this too)
-        health_factor = (
+    def _health_factor(self) -> float:
+        """Clamped filter health as an efficiency multiplier in [FILTER_HEALTH_MIN_EFFICIENCY_FACTOR, 1.0]."""
+        return (
             FILTER_HEALTH_MIN_EFFICIENCY_FACTOR
             + (1.0 - FILTER_HEALTH_MIN_EFFICIENCY_FACTOR)
             * self.state.filter_health_pct
             / 100.0
         )
-        effective_transpiration_pct = PLANT_TRANSPIRATION_RECOVERY_PCT * health_factor
-        recycled_from_plants = total_irrigation * effective_transpiration_pct / 100.0
+
+    # ------------------------------------------------------------------
+    # PCSE lifecycle
+    # ------------------------------------------------------------------
+
+    def calc_rates(
+        self,
+        crop_model: CropModel,
+        water_pumps_delivery_ratio: float = 1.0,
+    ) -> None:
+        """Compute net water change this sol.
+
+        Two recycling loops (NASA ECLSS):
+          1. Crew metabolic water (urine, sweat, respiration): WATER_RECYCLING_NOMINAL_PCT
+          2. Plant transpiration captured by condensing heat exchanger: PLANT_TRANSPIRATION_RECOVERY_PCT
+
+        ``water_pumps_delivery_ratio`` (0.0–1.0) scales recycling efficiency
+        when the water pumps receive less energy than they need.
+        """
+        # Crop water demand: sum of zone irrigation settings (L/sol)
+        total_irrigation = sum(self.state.irrigation_settings.values())
+        self.state.daily_crop_consumption_liters = round(total_irrigation, 2)
+
+        # Loop 1 — Crew metabolic water recovery (scaled by pump power)
+        recycled_from_crew = (
+            CREW_DAILY_WATER_L
+            * self.state.recycling_efficiency_pct
+            / 100.0
+            * water_pumps_delivery_ratio
+        )
+
+        # Loop 2 — Plant transpiration recovery (filter health degrades this too)
+        effective_transpiration_pct = (
+            PLANT_TRANSPIRATION_RECOVERY_PCT * self._health_factor()
+        )
+        recycled_from_plants = (
+            total_irrigation
+            * effective_transpiration_pct
+            / 100.0
+            * water_pumps_delivery_ratio
+        )
 
         total_recycled = recycled_from_crew + recycled_from_plants
         self.state.daily_recycled_liters = round(total_recycled, 2)
@@ -118,14 +142,8 @@ class WaterModel:
         )
 
         # Recycling efficiency scales with filter health
-        health_factor = (
-            FILTER_HEALTH_MIN_EFFICIENCY_FACTOR
-            + (1.0 - FILTER_HEALTH_MIN_EFFICIENCY_FACTOR)
-            * self.state.filter_health_pct
-            / 100.0
-        )
         self.state.recycling_efficiency_pct = round(
-            WATER_RECYCLING_NOMINAL_PCT * health_factor, 2
+            WATER_RECYCLING_NOMINAL_PCT * self._health_factor(), 2
         )
 
         # Estimate days until critical (50 L)
@@ -157,14 +175,8 @@ class WaterModel:
                 min(100.0, self.state.filter_health_pct + restored), 2
             )
             # Immediately recalculate recycling efficiency
-            health_factor = (
-                FILTER_HEALTH_MIN_EFFICIENCY_FACTOR
-                + (1.0 - FILTER_HEALTH_MIN_EFFICIENCY_FACTOR)
-                * self.state.filter_health_pct
-                / 100.0
-            )
             self.state.recycling_efficiency_pct = round(
-                WATER_RECYCLING_NOMINAL_PCT * health_factor, 2
+                WATER_RECYCLING_NOMINAL_PCT * self._health_factor(), 2
             )
             return {
                 "result": "success",

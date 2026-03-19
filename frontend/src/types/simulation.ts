@@ -23,6 +23,7 @@ export type CrewNutrition = Schemas["CrewNutritionResponse"]
 export type Crisis = Schemas["CrisisResponse"]
 export type ActiveCrises = Schemas["ActiveCrisesResponse"]
 export type ScoreData = Schemas["ScoreCurrentResponse"]
+export type SimAdvanceResponse = Schemas["SimAdvanceResponse"]
 
 // ── Frontend-only state (not an API response) ─────────────────────────
 export interface SimulationData {

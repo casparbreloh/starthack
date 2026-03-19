@@ -47,7 +47,6 @@ class SetEnvironmentRequest(BaseModel):
 class SetIrrigationRequest(BaseModel):
     zone_id: str
     irrigation_liters_per_sol: float = Field(ge=0)
-    irrigation_frequency: str | None = "continuous"
 
 
 class WaterMaintenanceRequest(BaseModel):
@@ -86,7 +85,6 @@ class NutrientAdjustRequest(BaseModel):
 @router.post("/energy/allocate")
 def energy_allocate(req: EnergyAllocateRequest):
     engine.energy.allocate(req.model_dump())
-    engine.scoring.record_preventive_action()
     return {"status": "ok", "allocation": engine.energy.state.allocation}
 
 

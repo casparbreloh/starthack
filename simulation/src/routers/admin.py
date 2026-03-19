@@ -30,7 +30,6 @@ class AdvanceRequest(BaseModel):
 
 
 class ResetRequest(BaseModel):
-    seed: int = 0
     difficulty: Difficulty = Difficulty.NORMAL
     starting_reserves: dict[str, float] | None = None
 
@@ -71,7 +70,6 @@ def sim_advance(req: AdvanceRequest):
 @router.post("/sim/reset")
 def sim_reset(req: ResetRequest):
     engine.reset(
-        seed=req.seed,
         difficulty=req.difficulty,
         starting_reserves=req.starting_reserves,
     )
@@ -155,5 +153,4 @@ def agent_log_decision(req: AgentDecisionRequest):
         risk_assessment=req.risk_assessment,
     )
     engine.log_agent_decision(decision)
-    engine.scoring.record_preventive_action()
     return {"status": "ok", "sol": req.sol, "decisions_logged": len(req.decisions)}
