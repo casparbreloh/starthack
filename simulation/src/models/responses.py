@@ -56,7 +56,6 @@ class EnergyBreakdownResponse(BaseModel):
     water_recycling_wh: float
     nutrient_pumps_wh: float
     sensors_control_wh: float
-    other_wh: float
 
 
 class EnergyAllocationResponse(BaseModel):
@@ -217,6 +216,20 @@ class CumulativeNutritionResponse(BaseModel):
     surplus_sols: int
 
 
+class MicronutrientsResponse(BaseModel):
+    sufficient_today: bool
+    level: str
+    consecutive_deficit_sols: int
+    health_penalty_pct: float
+
+
+class FoodItemResponse(BaseModel):
+    kg_remaining: float
+    kcal_remaining: float
+    protein_g_remaining: float
+    pct_remaining: float
+
+
 class CrewNutritionResponse(BaseModel):
     current_sol: int
     today: CrewNutritionTodayResponse
@@ -224,7 +237,8 @@ class CrewNutritionResponse(BaseModel):
     food_buffer: FoodBufferResponse
     cumulative: CumulativeNutritionResponse
     crew_status: str
-    micronutrients_sufficient: bool
+    micronutrients: MicronutrientsResponse
+    food_inventory: dict[str, FoodItemResponse]
     days_of_food_remaining: float
     days_of_protein_remaining: float
 
