@@ -3,12 +3,11 @@ Admin / simulation control router.
 
   POST /sim/advance            — advance N sols (core simulation loop step)
   POST /sim/reset              — reset simulation (supports difficulty + overrides)
-  POST /admin/tick             — legacy single-sol advance
-  POST /admin/tick/bulk        — legacy multi-sol advance
-  POST /admin/reset            — legacy alias for /sim/reset
   POST /admin/scenario/*       — hackathon crisis injection
   POST /agent/log_decision     — agent reasoning log
 """
+
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -33,7 +32,7 @@ class AdvanceRequest(BaseModel):
 class ResetRequest(BaseModel):
     seed: int = 0
     difficulty: Difficulty = Difficulty.NORMAL
-    starting_reserves: dict | None = None
+    starting_reserves: dict[str, float] | None = None
 
 
 class PathogenRequest(BaseModel):
@@ -42,8 +41,8 @@ class PathogenRequest(BaseModel):
 
 class AgentDecisionRequest(BaseModel):
     sol: int
-    decisions: list
-    weather_forecast_used: dict | None = None
+    decisions: list[dict[str, Any]]
+    weather_forecast_used: dict[str, Any] | None = None
     risk_assessment: str = "nominal"
 
 
@@ -84,46 +83,11 @@ def sim_reset(req: ResetRequest):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Legacy /admin/* endpoints
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-@router.post("/api/admin/tick")
-def admin_tick():
-    """Advance by exactly 1 sol (legacy)."""
-    from src.enums import MissionPhase
-
-    if engine.mission_phase != MissionPhase.ACTIVE:
-        raise HTTPException(400, "Mission complete or failed")
-    events = engine.advance(1)
-    return {"current_day": engine.current_sol, "events": events}
-
-
-@router.post("/api/admin/tick/bulk")
-def admin_tick_bulk(days: int = 1):
-    """Advance by N sols (legacy)."""
-    from src.enums import MissionPhase
-
-    if days < 1 or days > 450:
-        raise HTTPException(400, "days must be 1–450")
-    if engine.mission_phase != MissionPhase.ACTIVE:
-        raise HTTPException(400, "Mission complete or failed")
-    events = engine.advance(days)
-    return {"current_day": engine.current_sol, "days_advanced": days, "events": events}
-
-
-@router.post("/api/admin/reset")
-def admin_reset():
-    engine.reset()
-    return {"status": "ok", "current_day": engine.current_sol}
-
-
-# ──────────────────────────────────────────────────────────────────────────────
 # Scenario injection
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.post("/api/admin/scenario/water_leak")
+@router.post("/admin/scenario/water_leak")
 def scenario_water_leak():
     engine.scenario_water_leak()
     return {
@@ -134,7 +98,7 @@ def scenario_water_leak():
     }
 
 
-@router.post("/api/admin/scenario/hvac_failure")
+@router.post("/admin/scenario/hvac_failure")
 def scenario_hvac_failure():
     engine.scenario_hvac_failure()
     return {
@@ -144,7 +108,7 @@ def scenario_hvac_failure():
     }
 
 
-@router.post("/api/admin/scenario/pathogen")
+@router.post("/admin/scenario/pathogen")
 def scenario_pathogen(req: PathogenRequest):
     try:
         # Trigger the pathogen scenario for the given crop; this mutates engine state.
@@ -161,13 +125,13 @@ def scenario_pathogen(req: PathogenRequest):
     }
 
 
-@router.post("/api/admin/scenario/dust_storm")
+@router.post("/admin/scenario/dust_storm")
 def scenario_dust_storm(duration_sols: int = 10):
     engine.scenario_dust_storm(duration_sols)
     return {"status": "ok", "scenario": "dust_storm", "duration_sols": duration_sols}
 
 
-@router.post("/api/admin/scenario/energy_disruption")
+@router.post("/admin/scenario/energy_disruption")
 def scenario_energy_disruption():
     engine.scenario_energy_disruption()
     return {

@@ -46,9 +46,9 @@ class ZoneClimate:
 
 @dataclass
 class ClimateRates:
-    d_temp: dict = field(default_factory=dict)  # zone_id → °C/sol
-    d_co2: dict = field(default_factory=dict)
-    d_humidity: dict = field(default_factory=dict)
+    d_temp: dict[str, float] = field(default_factory=dict)
+    d_co2: dict[str, float] = field(default_factory=dict)
+    d_humidity: dict[str, float] = field(default_factory=dict)
 
 
 class ClimateModel:

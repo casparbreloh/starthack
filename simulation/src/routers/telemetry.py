@@ -13,8 +13,10 @@ Covers the full simulation spec:
   /sensors/readings
   /events/log, /events/active_crises
   /score/current, /score/final
-  /api/catalog/crops          ← static biological rules
+  /crops/catalog
 """
+
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -471,18 +473,18 @@ def score_final():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/api/catalog/crops")
+@router.get("/crops/catalog")
 def catalog_crops():
     return {crop_type.value: {**info} for crop_type, info in CROP_CATALOG.items()}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Master state endpoint (legacy / convenience)
+# Master state endpoint
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/api/state")
-def api_state():
+@router.get("/sim/state")
+def sim_state():
     """Full telemetry snapshot — convenience endpoint for the frontend."""
     return {
         "current_sol": engine.current_sol,
@@ -546,7 +548,7 @@ def api_state():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def _weather_to_dict(w) -> dict:
+def _weather_to_dict(w) -> dict[str, Any]:
     return {
         "sol": w.sol,
         "min_temp_c": w.min_temp_c,

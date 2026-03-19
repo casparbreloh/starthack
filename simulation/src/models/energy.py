@@ -38,7 +38,7 @@ class EnergyState:
     total_consumption_wh: float = 0.0
     surplus_wh: float = 0.0
     deficit: bool = False
-    breakdown: dict = field(
+    breakdown: dict[str, float] = field(
         default_factory=lambda: {
             "heating_wh": 0.0,
             "lighting_wh": 0.0,
@@ -49,7 +49,7 @@ class EnergyState:
         }
     )
     # Agent-set allocation percentages (must sum to ~100)
-    allocation: dict = field(
+    allocation: dict[str, int | float] = field(
         default_factory=lambda: {
             "heating_pct": 47,
             "lighting_pct": 30,
@@ -133,7 +133,7 @@ class EnergyModel:
     # Agent action
     # ------------------------------------------------------------------
 
-    def allocate(self, allocation: dict) -> None:
+    def allocate(self, allocation: dict[str, int | float]) -> None:
         """Agent updates energy allocation priorities."""
         self.state.allocation.update(allocation)
 

@@ -34,3 +34,4 @@ jobs:
       - run: make install-frozen
       - run: make check-codegen
       - run: make check
+      - run: cd frontend && pnpm build

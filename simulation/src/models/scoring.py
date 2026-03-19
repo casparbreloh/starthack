@@ -11,25 +11,25 @@ Four dimensions evaluated each sol:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from src.constants import CREW_DAILY_KCAL, CREW_DAILY_PROTEIN_G
 
 if TYPE_CHECKING:
-    pass
+    from src.models.events import Crisis
 
 
 @dataclass
 class ScoreSnapshot:
     current_sol: int = 0
-    survival: dict = field(
+    survival: dict[str, Any] = field(
         default_factory=lambda: {
             "crew_alive": True,
             "days_without_critical_deficit": 0,
             "score": 100,
         }
     )
-    nutrition: dict = field(
+    nutrition: dict[str, Any] = field(
         default_factory=lambda: {
             "avg_daily_kcal": 0.0,
             "target_kcal": CREW_DAILY_KCAL,
@@ -40,7 +40,7 @@ class ScoreSnapshot:
             "score": 100,
         }
     )
-    resource_efficiency: dict = field(
+    resource_efficiency: dict[str, Any] = field(
         default_factory=lambda: {
             "water_efficiency_pct": 100.0,
             "energy_efficiency_pct": 100.0,
@@ -48,7 +48,7 @@ class ScoreSnapshot:
             "score": 100,
         }
     )
-    crisis_management: dict = field(
+    crisis_management: dict[str, Any] = field(
         default_factory=lambda: {
             "crises_encountered": 0,
             "crises_resolved": 0,
@@ -71,8 +71,8 @@ class ScoringModel:
         self._total_kcal_score: float = 0.0
         self._total_protein_score: float = 0.0
         self._water_waste_total_L: float = 0.0
-        self._crises_encountered: list = []
-        self._crises_resolved: list = []
+        self._crises_encountered: list[Crisis] = []
+        self._crises_resolved: list[Crisis] = []
         self._preventive_actions: int = 0
         self._crop_waste_kg: float = 0.0
         self._total_harvest_kg: float = 0.0
@@ -84,8 +84,8 @@ class ScoringModel:
         crew_protein_g: float,
         crew_alive: bool,
         micronutrients: bool,
-        all_crises: list,
-        active_crises: list,
+        all_crises: list[Crisis],
+        active_crises: list[Crisis],
         battery_pct: float,
         reservoir_L: float,
         reservoir_capacity_L: float,

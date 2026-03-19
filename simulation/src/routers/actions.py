@@ -10,12 +10,6 @@ with the simulation.
   POST /crops/harvest
   POST /crops/remove
   POST /nutrients/adjust
-
-  POST /api/action/plant        ← legacy convenience aliases
-  POST /api/action/harvest
-  POST /api/action/water
-  POST /api/action/fertilize
-  POST /api/action/set_environment
 """
 
 from fastapi import APIRouter, HTTPException
@@ -82,38 +76,6 @@ class NutrientAdjustRequest(BaseModel):
     target_ec_ms_cm: float | None = Field(default=None, ge=0.1, le=5.0)
     nitrogen_boost: bool = False
     potassium_boost: bool = False
-
-
-# ── Legacy API action schemas ──────────────────────────────────────────────
-
-
-class LegacyPlantRequest(BaseModel):
-    bed_id: int
-    crop_type: CropType
-
-
-class LegacyHarvestRequest(BaseModel):
-    bed_id: int | None = None
-    crop_id: str | None = None
-
-
-class LegacyWaterRequest(BaseModel):
-    bed_id: int | None = None
-    zone_id: str | None = None
-    amount_liters: float = Field(gt=0)
-
-
-class LegacyFertilizeRequest(BaseModel):
-    bed_id: int | None = None
-    zone_id: str | None = None
-    amount_nitrogen: float = Field(gt=0)
-
-
-class LegacySetEnvironmentRequest(BaseModel):
-    temperature: float | None = None
-    co2_ppm: float | None = None
-    humidity: float | None = None
-    light_par: float | None = None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -322,125 +284,3 @@ def nutrients_adjust(req: NutrientAdjustRequest):
         "potassium_ppm": z.potassium_ppm,
         "stock_remaining_pct": engine.nutrients.stock_remaining_pct,
     }
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Legacy /api/action/* endpoints (backwards-compatible with original spec)
-# ──────────────────────────────────────────────────────────────────────────────
-
-
-def _bed_id_to_zone(bed_id: int) -> str:
-    """Map legacy integer bed_id (0–9) to zone letter."""
-    zones = sorted(ZONE_AREAS_M2.keys())
-    idx = bed_id % len(zones)
-    return zones[idx]
-
-
-@router.post("/api/action/plant")
-def legacy_plant(req: LegacyPlantRequest):
-    zone_id = _bed_id_to_zone(req.bed_id)
-    area_m2 = 3.0  # default area per bed
-    available = max(0.0, ZONE_AREAS_M2[zone_id] - engine.crops.zone_used_area(zone_id))
-    area_m2 = min(area_m2, available)
-    if area_m2 <= 0:
-        raise HTTPException(
-            400, f"No space available in zone {zone_id} for bed {req.bed_id}"
-        )
-    try:
-        batch = engine.crops.plant(
-            current_sol=engine.current_sol,
-            crop_type=req.crop_type,
-            zone_id=zone_id,
-            area_m2=area_m2,
-            batch_name=f"bed{req.bed_id}_{req.crop_type.value}",
-        )
-    except ValueError as e:
-        raise HTTPException(400, str(e)) from e
-    from src.catalog import CROP_CATALOG
-
-    return {
-        "status": "ok",
-        "bed_id": req.bed_id,
-        "crop_id": batch.crop_id,
-        "expected_harvest_sol": batch.planted_sol
-        + CROP_CATALOG[req.crop_type]["growth_days"],
-    }
-
-
-@router.post("/api/action/harvest")
-def legacy_harvest(req: LegacyHarvestRequest):
-    if req.crop_id:
-        crop_id = req.crop_id
-    elif req.bed_id is not None:
-        # Find crop in that bed
-        prefix = f"bed{req.bed_id}_"
-        matches = [cid for cid in engine.crops.batches if cid.startswith(prefix)]
-        if not matches:
-            raise HTTPException(404, f"No crop found in bed {req.bed_id}")
-        crop_id = matches[0]
-    else:
-        raise HTTPException(400, "Provide either crop_id or bed_id")
-
-    try:
-        result = engine.crops.harvest(crop_id)
-    except KeyError as e:
-        raise HTTPException(404, str(e)) from e
-
-    engine.crew.add_harvest(
-        result["calories_kcal"], result["protein_g"], result["provides_micronutrients"]
-    )
-    engine.scoring.record_harvest(result["yield_kg"])
-    return result
-
-
-@router.post("/api/action/water")
-def legacy_water(req: LegacyWaterRequest):
-    if req.zone_id:
-        zone_id = req.zone_id
-    elif req.bed_id is not None:
-        zone_id = _bed_id_to_zone(req.bed_id)
-    else:
-        raise HTTPException(400, "Provide zone_id or bed_id")
-
-    if zone_id not in ZONE_AREAS_M2:
-        raise HTTPException(404, f"Zone '{zone_id}' not found")
-
-    # Immediately add water to reservoir / distribute to zone irrigation
-    engine.water.state.reservoir_liters = min(
-        engine.water.state.reservoir_capacity_liters,
-        engine.water.state.reservoir_liters,
-    )
-    engine.water.set_irrigation(zone_id, req.amount_liters)
-    return {
-        "status": "ok",
-        "zone_id": zone_id,
-        "irrigation_set_liters_per_sol": req.amount_liters,
-    }
-
-
-@router.post("/api/action/fertilize")
-def legacy_fertilize(req: LegacyFertilizeRequest):
-    if req.zone_id:
-        zone_id = req.zone_id
-    elif req.bed_id is not None:
-        zone_id = _bed_id_to_zone(req.bed_id)
-    else:
-        raise HTTPException(400, "Provide zone_id or bed_id")
-
-    engine.nutrients.adjust(zone_id=zone_id, nitrogen_boost=True)
-    z = engine.nutrients.state[zone_id]
-    return {"status": "ok", "zone_id": zone_id, "nitrogen_ppm": z.nitrogen_ppm}
-
-
-@router.post("/api/action/set_environment")
-def legacy_set_environment(req: LegacySetEnvironmentRequest):
-    """Apply the same environment settings to ALL zones."""
-    for zone_id in engine.climate.state:
-        engine.climate.set_zone(
-            zone_id=zone_id,
-            target_temp_c=req.temperature,
-            target_co2_ppm=req.co2_ppm,
-            target_humidity_pct=req.humidity,
-            par_umol_m2s=req.light_par,
-        )
-    return {"status": "ok", "applied_to_zones": list(engine.climate.state.keys())}

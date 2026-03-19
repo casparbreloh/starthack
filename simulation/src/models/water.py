@@ -38,7 +38,7 @@ class WaterState:
     daily_net_change_liters: float = 0.0
     days_until_critical: float = 999.0
     # Per-zone irrigation (L/sol)
-    irrigation_settings: dict = field(
+    irrigation_settings: dict[str, float] = field(
         default_factory=lambda: {z: 5.0 for z in ZONE_AREAS_M2}
     )
 
