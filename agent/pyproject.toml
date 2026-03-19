@@ -7,3 +7,12 @@ dependencies = [
     "strands-agents>=1.30.0",
     "strands-agents-tools>=0.2.22",
 ]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.408",
+    "ruff>=0.15.6",
+]
+
+[tool.ruff.lint]
+extend-select = ["I", "B", "UP"]
