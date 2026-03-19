@@ -142,8 +142,10 @@ class SimulationEngine:
                 )
 
         # Apply autonomous dust storm solar reduction (if any) so that
-        # the energy model sees correct generation and surplus_wh is accurate
-        auto_solar_factor = self.autonomous_events.active_solar_factor()
+        # the energy model sees correct generation and surplus_wh is accurate.
+        # This stacks multiplicatively with the scenario dust storm above,
+        # which is intentional — they are independent systems.
+        auto_solar_factor = self.autonomous_events.active_solar_factor(sol)
         if auto_solar_factor < 1.0:
             weather.solar_irradiance_wm2 = round(
                 weather.solar_irradiance_wm2 * auto_solar_factor, 1

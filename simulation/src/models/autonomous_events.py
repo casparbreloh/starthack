@@ -103,15 +103,21 @@ class AutonomousEventSystem:
 
         return emitted
 
-    def active_solar_factor(self) -> float:
+    def active_solar_factor(self, sol: int) -> float:
         """Combined solar reduction factor from all active energy_dust_storm events.
 
         Returns 1.0 when no storm is active.  Called by the engine BEFORE
         calc_rates so that the energy model sees correct solar generation
         and surplus_wh reflects reality.
+
+        Events that have expired for ``sol`` are skipped even if they
+        haven't been pruned from ``active_events`` yet (expiry happens
+        later in ``tick()``).
         """
         factor = 1.0
         for e in self.active_events:
+            if e.has_expired(sol):
+                continue
             if e.event_type == "energy_dust_storm":
                 factor *= e.effects.get("solar_factor", 1.0)
         return factor
