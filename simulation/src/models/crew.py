@@ -114,13 +114,13 @@ class CrewNutritionState:
     fresh_buffer_kcal: float = 0.0
     fresh_buffer_protein_g: float = 0.0
     today_kcal_consumed: float = 0.0
-    today_kcal_target: float = float(CREW_DAILY_KCAL)
+    today_kcal_target: float = CREW_DAILY_KCAL
     today_protein_consumed_g: float = 0.0
-    today_protein_target_g: float = float(CREW_DAILY_PROTEIN_G)
+    today_protein_target_g: float = CREW_DAILY_PROTEIN_G
     from_greenhouse_pct: float = 0.0
     from_stored_pct: float = 100.0
-    cumulative_avg_kcal: float = float(CREW_DAILY_KCAL)
-    cumulative_avg_protein_g: float = float(CREW_DAILY_PROTEIN_G)
+    cumulative_avg_kcal: float = CREW_DAILY_KCAL
+    cumulative_avg_protein_g: float = CREW_DAILY_PROTEIN_G
     deficit_sols: int = 0
     surplus_sols: int = 0
     total_sols_tracked: int = 0
@@ -250,7 +250,7 @@ class CrewModel:
         self.rates.d_stored_protein_g = -max(0.0, CREW_DAILY_PROTEIN_G - fresh_protein)
 
         # ── Hydration rate ────────────────────────────────────────────────
-        water_available = min(float(CREW_DAILY_WATER_L), water_reservoir_l)
+        water_available = min(CREW_DAILY_WATER_L, water_reservoir_l)
         self.health.water_fraction_met = (
             water_available / CREW_DAILY_WATER_L if CREW_DAILY_WATER_L > 0 else 1.0
         )
@@ -369,9 +369,8 @@ class CrewModel:
         self.state.today_kcal_consumed = round(actual_kcal, 1)
         self.state.today_protein_consumed_g = round(actual_protein, 1)
 
-        total_food = actual_kcal
         self.state.from_greenhouse_pct = round(
-            fresh_kcal_used / total_food * 100.0 if total_food > 0 else 0.0, 1
+            fresh_kcal_used / actual_kcal * 100.0 if actual_kcal > 0 else 0.0, 1
         )
         self.state.from_stored_pct = round(100.0 - self.state.from_greenhouse_pct, 1)
 

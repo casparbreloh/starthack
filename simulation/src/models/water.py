@@ -71,6 +71,12 @@ class WaterModel:
             / 100.0
         )
 
+    def _update_recycling_efficiency(self) -> None:
+        """Recompute recycling_efficiency_pct from current filter health."""
+        self.state.recycling_efficiency_pct = round(
+            WATER_RECYCLING_NOMINAL_PCT * self._health_factor(), 2
+        )
+
     # ------------------------------------------------------------------
     # PCSE lifecycle
     # ------------------------------------------------------------------
@@ -142,9 +148,7 @@ class WaterModel:
         )
 
         # Recycling efficiency scales with filter health
-        self.state.recycling_efficiency_pct = round(
-            WATER_RECYCLING_NOMINAL_PCT * self._health_factor(), 2
-        )
+        self._update_recycling_efficiency()
 
         # Estimate days until critical (50 L)
         if self.rates.d_reservoir < 0:
@@ -175,9 +179,7 @@ class WaterModel:
                 min(100.0, self.state.filter_health_pct + restored), 2
             )
             # Immediately recalculate recycling efficiency
-            self.state.recycling_efficiency_pct = round(
-                WATER_RECYCLING_NOMINAL_PCT * self._health_factor(), 2
-            )
+            self._update_recycling_efficiency()
             return {
                 "result": "success",
                 "new_efficiency_pct": self.state.recycling_efficiency_pct,
