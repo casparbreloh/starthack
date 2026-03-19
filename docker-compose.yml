@@ -3,6 +3,12 @@ services:
     build: ./simulation
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/sim/status')"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
   agent:
     build: ./agent
@@ -16,4 +22,5 @@ services:
     volumes:
       - ~/.aws:/root/.aws:ro
     depends_on:
-      - simulation
+      simulation:
+        condition: service_healthy

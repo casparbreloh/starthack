@@ -40,7 +40,7 @@ class Session:
         self.created_at: datetime = datetime.now(UTC)
 
         # Apply config to engine
-        difficulty = Difficulty(self.config.difficulty.upper())
+        difficulty = Difficulty(self.config.difficulty.lower())
         if self.config.seed is not None:
             import random
 
