@@ -12,15 +12,20 @@ with the simulation.
   POST /nutrients/adjust
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from src.catalog import CROP_CATALOG
 from src.constants import ZONE_AREAS_M2
+from src.engine import SimulationEngine
 from src.enums import CropType
-from src.state import engine
+from src.state import session_manager
 
 router = APIRouter()
+
+
+def _engine(session_id: str | None) -> SimulationEngine:
+    return session_manager.get_or_default(session_id).engine
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -86,7 +91,11 @@ class NutrientAdjustRequest(BaseModel):
 
 
 @router.post("/energy/allocate")
-def energy_allocate(req: EnergyAllocateRequest):
+def energy_allocate(
+    req: EnergyAllocateRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     engine.energy.allocate(req.model_dump())
     return {"status": "ok", "allocation": engine.energy.state.allocation}
 
@@ -97,7 +106,11 @@ def energy_allocate(req: EnergyAllocateRequest):
 
 
 @router.post("/greenhouse/set_environment")
-def greenhouse_set_environment(req: SetEnvironmentRequest):
+def greenhouse_set_environment(
+    req: SetEnvironmentRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     if req.zone_id not in engine.climate.state:
         raise HTTPException(
             404,
@@ -136,7 +149,11 @@ def greenhouse_set_environment(req: SetEnvironmentRequest):
 
 
 @router.post("/water/set_irrigation")
-def water_set_irrigation(req: SetIrrigationRequest):
+def water_set_irrigation(
+    req: SetIrrigationRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     if req.zone_id not in ZONE_AREAS_M2:
         raise HTTPException(404, f"Zone '{req.zone_id}' not found")
     engine.water.set_irrigation(req.zone_id, req.irrigation_liters_per_sol)
@@ -149,7 +166,11 @@ def water_set_irrigation(req: SetIrrigationRequest):
 
 
 @router.post("/water/maintenance")
-def water_maintenance(req: WaterMaintenanceRequest):
+def water_maintenance(
+    req: WaterMaintenanceRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     result = engine.water.maintenance(req.action)
     if result.get("result") == "success":
         engine.scoring.record_preventive_action()
@@ -169,7 +190,11 @@ def water_maintenance(req: WaterMaintenanceRequest):
 
 
 @router.post("/crops/plant")
-def crops_plant(req: PlantRequest):
+def crops_plant(
+    req: PlantRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     # Validate zone
     if req.zone_id not in engine.climate.state:
         raise HTTPException(404, f"Zone '{req.zone_id}' not found")
@@ -216,7 +241,11 @@ def crops_plant(req: PlantRequest):
 
 
 @router.post("/crops/harvest")
-def crops_harvest(req: HarvestRequest):
+def crops_harvest(
+    req: HarvestRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     try:
         result = engine.crops.harvest(req.crop_id)
     except KeyError as e:
@@ -240,7 +269,11 @@ def crops_harvest(req: HarvestRequest):
 
 
 @router.post("/crops/remove")
-def crops_remove(req: RemoveRequest):
+def crops_remove(
+    req: RemoveRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     try:
         result = engine.crops.remove(req.crop_id, req.reason)
     except KeyError as e:
@@ -263,7 +296,11 @@ def crops_remove(req: RemoveRequest):
 
 
 @router.post("/nutrients/adjust")
-def nutrients_adjust(req: NutrientAdjustRequest):
+def nutrients_adjust(
+    req: NutrientAdjustRequest,
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     if req.zone_id not in engine.nutrients.state:
         raise HTTPException(404, f"Zone '{req.zone_id}' not found")
 

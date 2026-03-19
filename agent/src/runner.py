@@ -8,10 +8,11 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import logging
 import sys
 
-from .config import SIM_BASE_URL, VALID_DIFFICULTIES
+from .config import SIM_BASE_URL, SIM_WS_URL, VALID_DIFFICULTIES
 from .sim_client import SimClient
 
 
@@ -52,6 +53,17 @@ def main() -> None:
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         help="Logging level (default: INFO)",
     )
+    parser.add_argument(
+        "--ws",
+        action="store_true",
+        help="Use WebSocket mode instead of REST polling",
+    )
+    parser.add_argument(
+        "--ws-url",
+        type=str,
+        default=SIM_WS_URL,
+        help=f"Simulation WebSocket URL (default: {SIM_WS_URL})",
+    )
 
     args = parser.parse_args()
 
@@ -63,44 +75,82 @@ def main() -> None:
     )
     logger = logging.getLogger(__name__)
 
-    # Lazy import to avoid loading torch/strands at import time
-    from .agents.orchestrator import run_mission
+    if args.ws:
+        # WebSocket mode
+        from .agents.orchestrator import run_mission_ws
 
-    client = SimClient(args.sim_url)
-
-    logger.info(
-        "Starting Mars Greenhouse Mission: seed=%d, difficulty=%s, sols=%d",
-        args.seed,
-        args.difficulty,
-        args.sols,
-    )
-
-    try:
-        result = run_mission(
-            client,
-            seed=args.seed,
-            difficulty=args.difficulty,
-            mission_sols=args.sols,
+        logger.info(
+            "Starting Mars Greenhouse Mission (WebSocket): "
+            "seed=%d, difficulty=%s, sols=%d, ws_url=%s",
+            args.seed,
+            args.difficulty,
+            args.sols,
+            args.ws_url,
         )
 
-        print("\n" + "=" * 60)
-        print("MISSION COMPLETE")
-        print("=" * 60)
-        print(f"Run ID:        {result['run_id']}")
-        print(f"Final Score:   {result['final_score']:.2f}")
-        print(f"Mission Phase: {result['mission_phase']}")
-        print(f"Total Crises:  {result['total_crises']}")
-        print("=" * 60)
-
-    except KeyboardInterrupt:
-        logger.info("Mission interrupted by user. Fetching current score...")
         try:
-            current = client.get_score_current()
-            score = current.get("scores", {}).get("overall_score", 0.0)
-            print(f"\nInterrupted. Current score: {score:.2f}")
-        except Exception:
-            print("\nInterrupted. Could not fetch current score.")
-        sys.exit(0)
+            result = asyncio.run(
+                run_mission_ws(
+                    ws_url=args.ws_url,
+                    seed=args.seed,
+                    difficulty=args.difficulty,
+                    mission_sols=args.sols,
+                )
+            )
+
+            print("\n" + "=" * 60)
+            print("MISSION COMPLETE (WebSocket)")
+            print("=" * 60)
+            print(f"Run ID:        {result['run_id']}")
+            print(f"Final Score:   {result['final_score']:.2f}")
+            print(f"Mission Phase: {result['mission_phase']}")
+            print(f"Total Crises:  {result['total_crises']}")
+            print("=" * 60)
+
+        except KeyboardInterrupt:
+            logger.info("Mission interrupted by user.")
+            print("\nInterrupted.")
+            sys.exit(0)
+
+    else:
+        # REST mode (original)
+        from .agents.orchestrator import run_mission
+
+        client = SimClient(args.sim_url)
+
+        logger.info(
+            "Starting Mars Greenhouse Mission: seed=%d, difficulty=%s, sols=%d",
+            args.seed,
+            args.difficulty,
+            args.sols,
+        )
+
+        try:
+            result = run_mission(
+                client,
+                seed=args.seed,
+                difficulty=args.difficulty,
+                mission_sols=args.sols,
+            )
+
+            print("\n" + "=" * 60)
+            print("MISSION COMPLETE")
+            print("=" * 60)
+            print(f"Run ID:        {result['run_id']}")
+            print(f"Final Score:   {result['final_score']:.2f}")
+            print(f"Mission Phase: {result['mission_phase']}")
+            print(f"Total Crises:  {result['total_crises']}")
+            print("=" * 60)
+
+        except KeyboardInterrupt:
+            logger.info("Mission interrupted by user. Fetching current score...")
+            try:
+                current = client.get_score_current()
+                score = current.get("scores", {}).get("overall_score", 0.0)
+                print(f"\nInterrupted. Current score: {score:.2f}")
+            except Exception:
+                print("\nInterrupted. Could not fetch current score.")
+            sys.exit(0)
 
 
 if __name__ == "__main__":

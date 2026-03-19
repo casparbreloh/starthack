@@ -511,6 +511,24 @@ export type paths = {
     patch?: never
     trace?: never
   }
+  "/sessions": {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** List Sessions */
+    get: operations["list_sessions_sessions_get"]
+    put?: never
+    /** Create Session */
+    post: operations["create_session_sessions_post"]
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   "/admin/scenario/water_leak": {
     parameters: {
       query?: never
@@ -658,6 +676,25 @@ export type components = {
       health_penalty_pct: number
       /** Osha 8H Limit Ppm */
       osha_8h_limit_ppm: number
+    }
+    /** CreateSessionRequest */
+    CreateSessionRequest: {
+      /** Seed */
+      seed?: number | null
+      /**
+       * Difficulty
+       * @default normal
+       */
+      difficulty: string
+      /**
+       * Tick Delay Ms
+       * @default 0
+       */
+      tick_delay_ms: number
+      /** Starting Reserves */
+      starting_reserves?: {
+        [key: string]: number
+      }
     }
     /** CrewHealthResponse */
     CrewHealthResponse: {
@@ -1418,7 +1455,9 @@ export type $defs = Record<string, never>
 export interface operations {
   sim_status_sim_status_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1434,11 +1473,22 @@ export interface operations {
           "application/json": components["schemas"]["SimStatusResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   weather_current_weather_current_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1454,12 +1504,22 @@ export interface operations {
           "application/json": components["schemas"]["WeatherResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   weather_history_weather_history_get: {
     parameters: {
       query?: {
         last_n_sols?: number
+        session_id?: string | null
       }
       header?: never
       path?: never
@@ -1491,6 +1551,7 @@ export interface operations {
     parameters: {
       query?: {
         horizon?: number
+        session_id?: string | null
       }
       header?: never
       path?: never
@@ -1520,7 +1581,9 @@ export interface operations {
   }
   energy_status_energy_status_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1536,11 +1599,22 @@ export interface operations {
           "application/json": components["schemas"]["EnergyStatusResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   greenhouse_environment_greenhouse_environment_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1556,11 +1630,22 @@ export interface operations {
           "application/json": components["schemas"]["GreenhouseEnvironmentResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   water_status_water_status_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1576,11 +1661,22 @@ export interface operations {
           "application/json": components["schemas"]["WaterStatusResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   crops_status_crops_status_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1596,11 +1692,22 @@ export interface operations {
           "application/json": components["schemas"]["CropsStatusResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   nutrients_status_nutrients_status_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1616,11 +1723,22 @@ export interface operations {
           "application/json": components["schemas"]["NutrientsStatusResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   crew_nutrition_crew_nutrition_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1636,11 +1754,22 @@ export interface operations {
           "application/json": components["schemas"]["CrewNutritionResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   crew_health_crew_health_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1656,11 +1785,22 @@ export interface operations {
           "application/json": components["schemas"]["CrewHealthResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   crew_members_crew_members_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1676,11 +1816,22 @@ export interface operations {
           "application/json": components["schemas"]["CrewMembersResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   sensors_readings_sensors_readings_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1696,12 +1847,22 @@ export interface operations {
           "application/json": components["schemas"]["SensorsReadingsResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   events_log_events_log_get: {
     parameters: {
       query?: {
         since_sol?: number
+        session_id?: string | null
       }
       header?: never
       path?: never
@@ -1731,7 +1892,9 @@ export interface operations {
   }
   events_active_crises_events_active_crises_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1747,11 +1910,22 @@ export interface operations {
           "application/json": components["schemas"]["ActiveCrisesResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   score_current_score_current_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1767,11 +1941,22 @@ export interface operations {
           "application/json": components["schemas"]["ScoreCurrentResponse"]
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   score_final_score_final_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1785,6 +1970,15 @@ export interface operations {
         }
         content: {
           "application/json": components["schemas"]["ScoreFinalResponse"]
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
         }
       }
     }
@@ -1811,7 +2005,9 @@ export interface operations {
   }
   sim_state_sim_state_get: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1827,11 +2023,22 @@ export interface operations {
           "application/json": unknown
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   energy_allocate_energy_allocate_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1864,7 +2071,9 @@ export interface operations {
   }
   greenhouse_set_environment_greenhouse_set_environment_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1897,7 +2106,9 @@ export interface operations {
   }
   water_set_irrigation_water_set_irrigation_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1930,7 +2141,9 @@ export interface operations {
   }
   water_maintenance_water_maintenance_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1963,7 +2176,9 @@ export interface operations {
   }
   crops_plant_crops_plant_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -1996,7 +2211,9 @@ export interface operations {
   }
   crops_harvest_crops_harvest_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -2029,7 +2246,9 @@ export interface operations {
   }
   crops_remove_crops_remove_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -2062,7 +2281,9 @@ export interface operations {
   }
   nutrients_adjust_nutrients_adjust_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -2095,7 +2316,9 @@ export interface operations {
   }
   sim_advance_sim_advance_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -2128,7 +2351,9 @@ export interface operations {
   }
   sim_reset_sim_reset_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -2159,7 +2384,7 @@ export interface operations {
       }
     }
   }
-  scenario_water_leak_admin_scenario_water_leak_post: {
+  list_sessions_sessions_get: {
     parameters: {
       query?: never
       header?: never
@@ -2175,13 +2400,79 @@ export interface operations {
         }
         content: {
           "application/json": unknown
+        }
+      }
+    }
+  }
+  create_session_sessions_post: {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CreateSessionRequest"]
+      }
+    }
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
+    }
+  }
+  scenario_water_leak_admin_scenario_water_leak_post: {
+    parameters: {
+      query?: {
+        session_id?: string | null
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": unknown
+        }
+      }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
         }
       }
     }
   }
   scenario_hvac_failure_admin_scenario_hvac_failure_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -2197,11 +2488,22 @@ export interface operations {
           "application/json": unknown
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   scenario_pathogen_admin_scenario_pathogen_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -2236,6 +2538,7 @@ export interface operations {
     parameters: {
       query?: {
         duration_sols?: number
+        session_id?: string | null
       }
       header?: never
       path?: never
@@ -2265,7 +2568,9 @@ export interface operations {
   }
   scenario_energy_disruption_admin_scenario_energy_disruption_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never
@@ -2281,11 +2586,22 @@ export interface operations {
           "application/json": unknown
         }
       }
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"]
+        }
+      }
     }
   }
   agent_log_decision_agent_log_decision_post: {
     parameters: {
-      query?: never
+      query?: {
+        session_id?: string | null
+      }
       header?: never
       path?: never
       cookie?: never

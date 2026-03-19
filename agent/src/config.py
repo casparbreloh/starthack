@@ -19,6 +19,7 @@ AGENTCORE_GATEWAY_URL: str = os.environ.get(
     "https://kb-start-hack-gateway-buyjtibfpg.gateway.bedrock-agentcore.us-east-2.amazonaws.com/mcp",
 )
 ML_SERVICE_URL: str = os.environ.get("ML_SERVICE_URL", "http://localhost:8090")
+SIM_WS_URL: str = os.environ.get("SIM_WS_URL", "ws://localhost:8080/ws")
 
 # -- Zone constants --
 ZONE_IDS: list[str] = ["A", "B", "C"]

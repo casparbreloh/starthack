@@ -1,5 +1,4 @@
 import type {
-  SimAdvanceResponse,
   SimStatus,
   WeatherCurrent,
   EnergyStatus,
@@ -31,8 +30,42 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// ── Session types ────────────────────────────────────────────────────────────
+
+export interface CreateSessionRequest {
+  seed?: number
+  difficulty?: string
+  tick_delay_ms?: number
+  starting_reserves?: Record<string, number>
+}
+
+export interface CreateSessionResponse {
+  session_id: string
+  config: {
+    seed: number | null
+    difficulty: string
+    tick_delay_ms: number
+    starting_reserves: Record<string, number>
+  }
+}
+
+export interface ListSessionsResponse {
+  sessions: Array<{
+    id: string
+    created_at: string
+    current_sol: number
+  }>
+}
+
+// ── API client ───────────────────────────────────────────────────────────────
+
 export const api = {
-  advance: (sols: number) => post<SimAdvanceResponse>("/sim/advance", { sols }),
+  // Session management
+  createSession: (config?: CreateSessionRequest) =>
+    post<CreateSessionResponse>("/sessions", config ?? {}),
+  listSessions: () => get<ListSessionsResponse>("/sessions"),
+
+  // Telemetry (read-only)
   getStatus: () => get<SimStatus>("/sim/status"),
   getWeather: () => get<WeatherCurrent>("/weather/current"),
   getEnergy: () => get<EnergyStatus>("/energy/status"),
