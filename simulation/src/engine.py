@@ -514,12 +514,12 @@ class SimulationEngine:
 def _apply_difficulty(engine: SimulationEngine, difficulty: Difficulty) -> None:
     if difficulty == Difficulty.EASY:
         engine.water.state.reservoir_liters = 600.0
-        engine.crew.state.stored_kcal = 2_000_000.0
-        engine.crew.state.stored_protein_g = 80_000.0
+        engine.crew.state.stored_kcal = 4_500_000.0  # ~375-sol buffer
+        engine.crew.state.stored_protein_g = 180_000.0
         engine.energy.state.battery_level_wh = 25_000.0 * 0.6
     elif difficulty == Difficulty.HARD:
         engine.water.state.reservoir_liters = 350.0
-        engine.crew.state.stored_kcal = 800_000.0
-        engine.crew.state.stored_protein_g = 30_000.0
+        engine.crew.state.stored_kcal = 2_400_000.0  # ~200-sol buffer
+        engine.crew.state.stored_protein_g = 90_000.0
         engine.energy.state.battery_level_wh = 15_000.0 * 0.6
     # NORMAL = defaults (already set by dataclasses)
