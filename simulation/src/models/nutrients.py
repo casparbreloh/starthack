@@ -43,9 +43,6 @@ class ZoneNutrients:
     magnesium_ppm: float = 35.0
     # Setpoints
     target_ph: float = TARGET_PH
-    target_ec_ms_cm: float = TARGET_EC
-    nitrogen_boost: bool = False
-    potassium_boost: bool = False
 
 
 @dataclass
@@ -139,7 +136,6 @@ class NutrientModel:
         self,
         zone_id: str,
         target_ph: float | None = None,
-        target_ec_ms_cm: float | None = None,
         nitrogen_boost: bool = False,
         potassium_boost: bool = False,
     ) -> None:
@@ -147,8 +143,6 @@ class NutrientModel:
         if target_ph is not None:
             z.target_ph = target_ph
             z.solution_ph = round(z.solution_ph + (target_ph - z.solution_ph) * 0.5, 2)
-        if target_ec_ms_cm is not None:
-            z.target_ec_ms_cm = target_ec_ms_cm
         if nitrogen_boost:
             restock = min(NUTRIENT_RESTOCK_AMOUNT_PCT, self.stock_remaining_pct)
             self.stock_remaining_pct -= restock

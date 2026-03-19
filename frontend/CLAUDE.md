@@ -2,7 +2,7 @@
 
 ## Purpose
 
-React/TypeScript dashboard UI for the Mars Greenhouse simulation. Two views: immersive GameView and structured MetricsDashboard.
+React/TypeScript dashboard UI for the Mars Greenhouse simulation.
 
 ## Tech
 
@@ -19,7 +19,6 @@ React/TypeScript dashboard UI for the Mars Greenhouse simulation. Two views: imm
 - `src/hooks/useSimulation.ts` — Central state management hook (polling + auto-advance)
 - `src/types/simulation.ts` — Re-exports generated types under stable names
 - `src/contracts/simulation.d.ts` — Auto-generated TypeScript types from OpenAPI (do not edit)
-- `src/components/` — GameView and MetricsDashboard components
 - `src/index.css` — Tailwind imports
 
 ## Commands

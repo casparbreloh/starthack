@@ -6,7 +6,7 @@ Challenge brief and reference data from the Syngenta Mars Crop Knowledge Base (e
 
 ## Key Files
 
-- `CHALLENGE.MD` — START Hack challenge brief and requirements
+- `CHALLENGE.md` — START Hack challenge brief and requirements
 - `mcp-data/` — 7 reference documents extracted from the Syngenta KB:
   - `01_MARS_ENVIRONMENT_EXTENDED.MD` — Mars surface conditions, radiation, dust storms
   - `02_CONTROLLED_ENVIRONMENT_AGRICULTURE_PRINCIPLES.MD` — CEA fundamentals

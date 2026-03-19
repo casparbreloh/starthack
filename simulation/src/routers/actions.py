@@ -47,7 +47,6 @@ class SetEnvironmentRequest(BaseModel):
 class SetIrrigationRequest(BaseModel):
     zone_id: str
     irrigation_liters_per_sol: float = Field(ge=0)
-    irrigation_frequency: str | None = "continuous"
 
 
 class WaterMaintenanceRequest(BaseModel):
@@ -73,7 +72,6 @@ class RemoveRequest(BaseModel):
 class NutrientAdjustRequest(BaseModel):
     zone_id: str
     target_ph: float | None = Field(default=None, ge=4.0, le=8.0)
-    target_ec_ms_cm: float | None = Field(default=None, ge=0.1, le=5.0)
     nitrogen_boost: bool = False
     potassium_boost: bool = False
 
@@ -86,7 +84,6 @@ class NutrientAdjustRequest(BaseModel):
 @router.post("/energy/allocate")
 def energy_allocate(req: EnergyAllocateRequest):
     engine.energy.allocate(req.model_dump())
-    engine.scoring.record_preventive_action()
     return {"status": "ok", "allocation": engine.energy.state.allocation}
 
 
@@ -271,7 +268,6 @@ def nutrients_adjust(req: NutrientAdjustRequest):
     engine.nutrients.adjust(
         zone_id=req.zone_id,
         target_ph=req.target_ph,
-        target_ec_ms_cm=req.target_ec_ms_cm,
         nitrogen_boost=req.nitrogen_boost,
         potassium_boost=req.potassium_boost,
     )

@@ -1,12 +1,9 @@
 import json
-import logging
 from typing import Any
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp, RequestContext
 from strands import Agent
 from strands.models.bedrock import BedrockModel
-
-logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """\
 You are the AI agent managing a Martian greenhouse for a 450-day crew mission.

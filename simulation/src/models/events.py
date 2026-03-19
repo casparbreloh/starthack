@@ -5,16 +5,11 @@ Follows PCSE's dispatcher/signal pattern but simplified: instead of PyDispatcher
 we use a plain list with automatic crisis detection each tick.
 """
 
-from __future__ import annotations
-
 import uuid
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from src.enums import CrisisType, Severity
-
-if TYPE_CHECKING:
-    pass  # avoid circular; engine passes primitive snapshots
 
 
 @dataclass
@@ -127,14 +122,6 @@ class EventLog:
                     f"Crisis '{crisis_type.value}' resolved.",
                     Severity.INFO,
                 )
-
-    def resolve_by_id(self, crisis_id: str, sol: int) -> bool:
-        if crisis_id in self._crises:
-            c = self._crises[crisis_id]
-            c.resolved = True
-            c.resolved_sol = sol
-            return True
-        return False
 
     def active_crises(self) -> list[Crisis]:
         return [c for c in self._crises.values() if not c.resolved]

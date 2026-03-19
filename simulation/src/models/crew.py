@@ -64,7 +64,11 @@ CREW_MEMBER_NAMES = [
 
 @dataclass
 class CrewMember:
-    """Per-person health snapshot. All 4 share the same habitat conditions."""
+    """Per-person health snapshot.
+
+    Individual crew differentiation is not yet implemented — all crew members
+    share identical health values from the shared habitat model.
+    """
 
     member_id: str
     name: str
@@ -519,7 +523,11 @@ class CrewModel:
                 self.health.cause_of_death = "unknown"
 
     def _sync_crew_members(self) -> None:
-        """Propagate shared health state to individual crew member records."""
+        """Propagate shared health state to individual crew member records.
+
+        Individual crew differentiation is not yet implemented — all crew
+        members receive identical values from the shared habitat model.
+        """
         for m in self.health.members:
             m.alive = self.health.alive
             m.health_pct = round(self.health.overall_health_pct, 1)
