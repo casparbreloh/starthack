@@ -46,7 +46,7 @@ class SimulationEngine:
     """
     Central state machine for the Mars greenhouse simulation.
 
-    All state lives here; routers only read/write through this object.
+    All state lives here; routers only read/write through this object.yeah
     """
 
     def __init__(self) -> None:
@@ -119,6 +119,14 @@ class SimulationEngine:
 
         # ── Event generation ─────────────────────────────────────────
         tick_events: list[dict[str, Any]] = []
+
+        # Starvation level-change events (emitted by CrewModel)
+        for category, message, sev_str in self.crew.pending_events:
+            severity = Severity.INFO if sev_str == "info" else (
+                Severity.WARNING if sev_str == "warning" else Severity.CRITICAL
+            )
+            ev = self.events.log(sol, "alert", category, message, severity)
+            tick_events.append(_event_to_dict(ev))
 
         # Dead crops
         for crop_id in dead_crops:
@@ -197,7 +205,7 @@ class SimulationEngine:
 
     def reset(
         self,
-        seed: int = 0,
+        _seed: int = 0,
         difficulty: Difficulty = Difficulty.NORMAL,
         starting_reserves: dict[str, float] | None = None,
     ) -> None:
