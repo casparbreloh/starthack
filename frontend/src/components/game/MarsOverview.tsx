@@ -1,9 +1,23 @@
 import { motion } from "framer-motion"
-import { Thermometer, Sun, CloudFog, Gauge, AlertTriangle, CheckCircle } from "lucide-react"
+import {
+  Thermometer,
+  Sun,
+  CloudFog,
+  Gauge,
+  AlertTriangle,
+  CheckCircle,
+  Play,
+  Pause,
+  RotateCcw,
+} from "lucide-react"
+import { useState } from "react"
 
 import marsLandscape from "@/assets/mars-landscape.png"
-import { useActiveCrises, useScore } from "@/hooks/useGameData"
+import { useActiveCrises, useScore, useWebSocketControls } from "@/hooks/useGameData"
 import type { WeatherCurrent, SimStatus } from "@/types/game"
+
+import { CrisisInjector } from "./CrisisInjector"
+import { DifficultySelector } from "./DifficultySelector"
 
 interface MarsOverviewProps {
   onSelectZone: (zone: string) => void
@@ -22,6 +36,17 @@ const HOTSPOTS = [
 export function MarsOverview({ onSelectZone, onSelectCrew, weather, sim }: MarsOverviewProps) {
   const { data: crises = [] } = useActiveCrises()
   const { data: score } = useScore()
+  const ws = useWebSocketControls()
+  const [difficulty, setDifficulty] = useState("normal")
+
+  const handleDifficultySelect = (d: string) => {
+    setDifficulty(d)
+    ws.reset({ difficulty: d })
+  }
+
+  const handleReset = () => {
+    ws.reset({ difficulty })
+  }
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -174,14 +199,37 @@ export function MarsOverview({ onSelectZone, onSelectCrew, weather, sim }: MarsO
         )}
       </motion.div>
 
-      {/* Bottom: Status bar */}
+      {/* Top-center: Sim controls */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="absolute inset-x-0 top-4 mx-auto flex w-fit items-center gap-6 rounded-sm border border-border bg-card/80 px-6 py-2 backdrop-blur-sm"
+        className="absolute inset-x-0 top-4 z-30 mx-auto flex w-fit items-center gap-4 rounded-sm border border-border bg-card/80 px-5 py-2 backdrop-blur-sm"
       >
-        <span className="label-aerospace text-primary">● ONLINE</span>
+        <span
+          className={`label-aerospace ${ws.isPaused ? "text-muted-foreground" : "text-primary"}`}
+        >
+          {ws.isPaused ? "PAUSED" : "● RUNNING"}
+        </span>
+        <div className="h-4 w-px bg-border" />
+        <DifficultySelector current={difficulty} onSelect={handleDifficultySelect} />
+        <div className="h-4 w-px bg-border" />
+        <button
+          onClick={() => (ws.isPaused ? ws.resume() : ws.pause())}
+          className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-foreground transition-colors hover:text-primary"
+        >
+          {ws.isPaused ? <Play className="h-3 w-3" /> : <Pause className="h-3 w-3" />}
+          {ws.isPaused ? "Run" : "Pause"}
+        </button>
+        <button
+          onClick={handleReset}
+          className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-foreground transition-colors hover:text-primary"
+        >
+          <RotateCcw className="h-3 w-3" />
+          Reset
+        </button>
+        <div className="h-4 w-px bg-border" />
+        <CrisisInjector ws={ws} disabled={ws.isPaused || sim.mission_phase !== "active"} />
       </motion.div>
     </div>
   )

@@ -29,6 +29,7 @@ class SessionConfig:
     tick_delay_ms: int = 0
     mission_sols: int = 450
     starting_reserves: dict[str, float] = field(default_factory=dict)
+    autonomous_events_enabled: bool = True
 
 
 class Session:

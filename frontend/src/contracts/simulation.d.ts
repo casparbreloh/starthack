@@ -700,6 +700,11 @@ export type components = {
       starting_reserves?: {
         [key: string]: number
       }
+      /**
+       * Autonomous Events Enabled
+       * @default true
+       */
+      autonomous_events_enabled: boolean
     }
     /** CreateSessionResponse */
     CreateSessionResponse: {

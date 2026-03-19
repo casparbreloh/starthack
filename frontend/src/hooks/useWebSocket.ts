@@ -12,7 +12,7 @@ type WsIncoming =
   | {
       type: "session_created"
       session_id: string
-      payload: { session_id: string; config: unknown }
+      payload: { session_id: string; paused?: boolean; config: unknown }
     }
   | {
       type: "mission_end"
@@ -51,17 +51,26 @@ interface WsOutgoing {
 
 export type CreateSessionConfig = CreateSessionRequest
 
+// ── Demo mode defaults ───────────────────────────────────────────────────────
+
+const DEMO_DEFAULTS: Partial<CreateSessionConfig> = {
+  tick_delay_ms: 1000,
+  autonomous_events_enabled: false,
+}
+
 // ── Hook return type ─────────────────────────────────────────────────────────
 
 export interface WebSocketState {
   connected: boolean
   sessionId: string | null
+  isPaused: boolean
   lastState: TickPayload | null
   lastEvents: unknown[]
   injectCrisis: (scenario: string, params?: Record<string, unknown>) => void
   setTickDelay: (ms: number) => void
   pause: () => void
   resume: () => void
+  reset: (config?: Partial<CreateSessionConfig>) => void
   createSession: (config?: CreateSessionConfig) => void
 }
 
@@ -82,6 +91,7 @@ function buildWsUrl(): string {
 export function useWebSocket(): WebSocketState {
   const [connected, setConnected] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [isPaused, setIsPaused] = useState(true)
   const [lastState, setLastState] = useState<TickPayload | null>(null)
   const [lastEvents, setLastEvents] = useState<unknown[]>([])
 
@@ -103,40 +113,54 @@ export function useWebSocket(): WebSocketState {
     }
   }, [])
 
-  const handleMessage = useCallback((event: MessageEvent<string>) => {
-    let msg: WsIncoming
-    try {
-      msg = JSON.parse(event.data) as WsIncoming
-    } catch {
-      return
+  // Store handleMessage in a ref so `connect` doesn't depend on it.
+  // This prevents React strict mode double-mount from recreating the WS.
+  const handleMessageRef = useRef<(event: MessageEvent<string>) => void>(() => {})
+
+  useEffect(() => {
+    handleMessageRef.current = (event: MessageEvent<string>) => {
+      let msg: WsIncoming
+      try {
+        msg = JSON.parse(event.data) as WsIncoming
+      } catch {
+        return
+      }
+
+      switch (msg.type) {
+        case "tick":
+          setLastState(msg.payload)
+          setLastEvents((msg.payload.events as unknown[]) ?? [])
+          break
+
+        case "session_created":
+          setSessionId(msg.session_id)
+          setIsPaused("paused" in msg.payload && Boolean(msg.payload.paused))
+          break
+
+        case "mission_end":
+          setLastState(msg.payload.snapshot)
+          break
+
+        case "paused":
+          setIsPaused(true)
+          break
+
+        case "resumed":
+          setIsPaused(false)
+          break
+
+        case "registered":
+        case "session_joined":
+        case "crisis_injected":
+        case "tick_delay_set":
+        case "error":
+          // Acknowledged; no state change needed
+          break
+      }
     }
+  })
 
-    switch (msg.type) {
-      case "tick":
-        setLastState(msg.payload)
-        setLastEvents((msg.payload.events as unknown[]) ?? [])
-        break
-
-      case "session_created":
-        setSessionId(msg.session_id)
-        break
-
-      case "mission_end":
-        setLastState(msg.payload.snapshot)
-        break
-
-      case "registered":
-      case "session_joined":
-      case "paused":
-      case "resumed":
-      case "crisis_injected":
-      case "tick_delay_set":
-      case "error":
-        // Acknowledged; no state change needed
-        break
-    }
-  }, [])
-
+  // connect is stable (no deps) — only fires once per mount
   const connect = useCallback(() => {
     if (!mountedRef.current) return
 
@@ -160,13 +184,13 @@ export function useWebSocket(): WebSocketState {
         ws.send(
           JSON.stringify({
             type: "create_session",
-            payload: { tick_delay_ms: 100 },
+            payload: { ...DEMO_DEFAULTS, paused: true },
           }),
         )
       }
     }
 
-    ws.onmessage = handleMessage
+    ws.onmessage = (e) => handleMessageRef.current(e)
 
     ws.onclose = () => {
       setConnected(false)
@@ -185,7 +209,7 @@ export function useWebSocket(): WebSocketState {
     ws.onerror = () => {
       // onclose will fire after onerror, handling reconnect there
     }
-  }, [handleMessage])
+  }, [])
 
   // Connect on mount, clean up on unmount
   useEffect(() => {
@@ -244,6 +268,23 @@ export function useWebSocket(): WebSocketState {
     })
   }, [send])
 
+  const reset = useCallback(
+    (config?: Partial<CreateSessionConfig>) => {
+      setLastEvents([])
+      setIsPaused(true)
+      send({
+        type: "reset_session",
+        session_id: sessionIdRef.current ?? undefined,
+        payload: {
+          ...DEMO_DEFAULTS,
+          paused: true,
+          ...config,
+        } as Record<string, unknown>,
+      })
+    },
+    [send],
+  )
+
   const createSession = useCallback(
     (config?: CreateSessionConfig) => {
       send({
@@ -257,12 +298,14 @@ export function useWebSocket(): WebSocketState {
   return {
     connected,
     sessionId,
+    isPaused,
     lastState,
     lastEvents,
     injectCrisis,
     setTickDelay,
     pause,
     resume,
+    reset,
     createSession,
   }
 }
