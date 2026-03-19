@@ -88,6 +88,7 @@ def detect_anomalies(actuals, preds, threshold_sigma=3):
 
 def load_lstm(horizon=1, model_dir=MODEL_DIR):
     """Load a saved LSTM model."""
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     with open(os.path.join(model_dir, f"lstm_h{horizon}_meta.json")) as f:
         meta = json.load(f)
 
@@ -97,7 +98,11 @@ def load_lstm(horizon=1, model_dir=MODEL_DIR):
         num_layers=meta["num_layers"],
         output_size=meta["output_size"],
     )
-    model.load_state_dict(torch.load(os.path.join(model_dir, f"lstm_h{horizon}.pt"), weights_only=True))
+    model.load_state_dict(torch.load(
+        os.path.join(model_dir, f"lstm_h{horizon}.pt"),
+        weights_only=True,
+        map_location=device,
+    ))
     return model, meta
 
 

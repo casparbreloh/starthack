@@ -90,7 +90,8 @@ def prepare_dataset(path: str = DATA_PATH):
 
     Returns:
         train_df, val_df, test_df: DataFrames with features and targets
-        scaler: fitted StandardScaler (fit on train only)
+        feature_scaler: StandardScaler fitted on train features
+        target_scaler: StandardScaler fitted on train targets
         feature_cols: list of feature column names
     """
     df = load_raw(path)
@@ -100,14 +101,15 @@ def prepare_dataset(path: str = DATA_PATH):
     max_lag = max(LAG_STEPS)
     df = df.iloc[max_lag:].reset_index(drop=True)
 
-    # Interpolate remaining NaN in features
-    df = df.interpolate(method="linear", limit_direction="both")
-    df = df.ffill().bfill()
-
-    # Split by sol
+    # Split by sol BEFORE imputation to prevent data leakage
     train_df = df[df["sol"] <= TRAIN_SOL].copy()
     val_df = df[(df["sol"] > TRAIN_SOL) & (df["sol"] <= VAL_SOL)].copy()
     test_df = df[df["sol"] > VAL_SOL].copy()
+
+    # Impute missing values per split (forward-fill only to avoid lookahead)
+    train_df = train_df.ffill().bfill()
+    val_df = val_df.ffill().bfill()
+    test_df = test_df.ffill().bfill()
 
     # Identify feature columns (everything except sol and targets)
     feature_cols = [c for c in df.columns if c not in TARGETS and c != "sol"]
