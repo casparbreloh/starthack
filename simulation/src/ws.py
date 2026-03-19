@@ -30,7 +30,7 @@ from src.state import session_manager
 
 logger = logging.getLogger(__name__)
 
-AGENT_URL: str | None = os.environ.get("AGENT_URL", "http://localhost:9090")
+AGENT_URL: str | None = os.environ.get("AGENT_URL") or None
 SIM_WS_URL: str = os.environ.get("SIM_WS_URL", "ws://localhost:8080/ws")
 
 router = APIRouter()
