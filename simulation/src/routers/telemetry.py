@@ -21,6 +21,9 @@ from fastapi import APIRouter, HTTPException, Query
 from src.catalog import CROP_CATALOG
 from src.constants import (
     CREW_DAILY_KCAL,
+    FOOD_KCAL_PER_KG,
+    FOOD_PROTEIN_G_PER_KG,
+    INITIAL_FOOD_KG,
     MISSION_DURATION_SOLS,
     ZONE_AREAS_M2,
 )
@@ -174,6 +177,7 @@ def crops_status():
                 ],
                 "area_m2": batch.area_m2,
                 "soil_moisture_pct": batch.soil_moisture_pct,
+                "is_bolting": batch.is_bolting,
                 "estimated_yield_kg": batch.estimated_yield_kg(),
                 "estimated_calories_kcal": batch.estimated_calories_kcal(),
             }
@@ -206,6 +210,7 @@ def nutrients_status():
             "zone_id": z.zone_id,
             "solution_ph": z.solution_ph,
             "solution_ec_ms_cm": z.solution_ec_ms_cm,
+            "base_salt_ppm": z.base_salt_ppm,
             "solution_temp_c": z.solution_temp_c,
             "dissolved_o2_ppm": z.dissolved_o2_ppm,
             "nitrogen_ppm": z.nitrogen_ppm,
@@ -262,7 +267,22 @@ def crew_nutrition():
             "surplus_sols": s.surplus_sols,
         },
         "crew_status": s.crew_status.value,
-        "micronutrients_sufficient": s.micronutrients_sufficient,
+        "micronutrients": {
+            "sufficient_today": s.micronutrients_sufficient,
+            "level": engine.crew.health.micronutrient_level.value,
+            "consecutive_deficit_sols": engine.crew.health.consecutive_micronutrient_deficit_sols,
+            "health_penalty_pct": engine.crew.health.micronutrient_health_penalty,
+        },
+        "food_inventory": {
+            food_type: {
+                "kg_remaining": round(kg, 2),
+                "kcal_remaining": round(kg * FOOD_KCAL_PER_KG[food_type]),
+                "protein_g_remaining": round(kg * FOOD_PROTEIN_G_PER_KG[food_type]),
+                "pct_remaining": round(kg / INITIAL_FOOD_KG[food_type] * 100.0, 1)
+                if INITIAL_FOOD_KG[food_type] > 0 else 0.0,
+            }
+            for food_type, kg in s.stored_food_kg.items()
+        },
         "days_of_food_remaining": round(engine.crew.days_of_food, 1),
         "days_of_protein_remaining": round(engine.crew.days_of_protein, 1),
     }
@@ -322,6 +342,11 @@ def crew_health():
             "level": h.starvation_level.value,
             "consecutive_deficit_sols": h.consecutive_caloric_deficit_sols,
             "health_penalty_pct": h.starvation_health_penalty,
+        },
+        "micronutrients": {
+            "level": h.micronutrient_level.value,
+            "consecutive_deficit_sols": h.consecutive_micronutrient_deficit_sols,
+            "health_penalty_pct": h.micronutrient_health_penalty,
         },
     }
 
@@ -504,6 +529,7 @@ def api_state():
                 "growth_pct": b.growth_pct,
                 "health_score": round(b.health * 100, 1),
                 "soil_moisture_pct": b.soil_moisture_pct,
+                "is_bolting": b.is_bolting,
                 "is_ready": b.is_ready,
                 "active_stressors": [s.type for s in b.stress_indicators],
             }

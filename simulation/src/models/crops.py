@@ -20,6 +20,18 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from src.catalog import CROP_CATALOG
+from src.constants import (
+    STRESS_EC_MODERATE,
+    STRESS_EC_SEVERE,
+    STRESS_K_DEFICIENCY_PPM,
+    STRESS_PAR_CRITICAL_LOW,
+    STRESS_PAR_HIGH,
+    STRESS_PAR_LOW,
+    STRESS_PH_CRITICAL_HIGH,
+    STRESS_PH_CRITICAL_LOW,
+    STRESS_PH_OPTIMAL_HIGH,
+    STRESS_PH_OPTIMAL_LOW,
+)
 from src.enums import CropType
 
 if TYPE_CHECKING:
@@ -55,6 +67,7 @@ class CropBatch:
     health: float = 1.0  # 0 – 1 (1 = perfect)
     age_days: int = 0  # sols since planting
     soil_moisture_pct: float = 60.0
+    is_bolting: bool = False  # lettuce only: once set, harvest yield → 10% (inedible)
     stress_indicators: list = field(default_factory=list)  # list[StressIndicator]
     # Internal water tracking
     _soil_water_L: float = field(default=0.0, repr=False)
@@ -176,6 +189,7 @@ class CropModel:
                     label = "heat_stress"
                     if batch.crop_type == CropType.LETTUCE and temp > 25.0:
                         label = "bolting_risk"
+                        batch.is_bolting = True  # permanent: bolted lettuce is inedible
                     stressors.append(StressIndicator(label, current_sol, 0.4))
 
                 # CO₂ imbalance
@@ -187,14 +201,54 @@ class CropModel:
                     d_health -= 0.05
                     stressors.append(StressIndicator("fungal_risk", current_sol, 0.4))
 
+                # PAR / light stress
+                par = zone.par_umol_m2s
+                if par < STRESS_PAR_CRITICAL_LOW:
+                    d_health -= 0.10
+                    stressors.append(StressIndicator("light_deficiency", current_sol, 1.0))
+                elif par < STRESS_PAR_LOW:
+                    d_health -= 0.05
+                    stressors.append(StressIndicator("light_deficiency", current_sol, 0.5))
+                elif par > STRESS_PAR_HIGH:
+                    d_health -= 0.06
+                    stressors.append(StressIndicator("light_excess", current_sol, 0.4))
+
             # N-deficiency
             if n_state and n_state.nitrogen_ppm < 50.0:
                 d_health -= 0.10
                 stressors.append(StressIndicator("n_deficiency", current_sol, 0.6))
 
-            # Age increment: slowed when CO₂ is very low (< 500 ppm)
+            # K-deficiency
+            if n_state and n_state.potassium_ppm < STRESS_K_DEFICIENCY_PPM:
+                d_health -= 0.08
+                stressors.append(StressIndicator("k_deficiency", current_sol, 0.5))
+
+            # Salinity / EC stress
+            if n_state:
+                ec = n_state.solution_ec_ms_cm
+                if ec > STRESS_EC_SEVERE:
+                    d_health -= 0.15
+                    stressors.append(StressIndicator("salinity_stress", current_sol, 1.0))
+                elif ec > STRESS_EC_MODERATE:
+                    d_health -= 0.07
+                    stressors.append(StressIndicator("salinity_stress", current_sol, 0.5))
+
+            # pH imbalance
+            if n_state:
+                ph = n_state.solution_ph
+                if ph < STRESS_PH_CRITICAL_LOW or ph > STRESS_PH_CRITICAL_HIGH:
+                    d_health -= 0.08
+                    stressors.append(StressIndicator("ph_imbalance", current_sol, 0.6))
+                elif ph < STRESS_PH_OPTIMAL_LOW or ph > STRESS_PH_OPTIMAL_HIGH:
+                    d_health -= 0.03
+                    stressors.append(StressIndicator("ph_imbalance", current_sol, 0.2))
+
+            # Age increment: stalls on CO₂ < 500 ppm or near-darkness (PAR < critical)
             age_inc = 1
-            if zone and zone.co2_ppm < 500.0:
+            if zone and (
+                zone.co2_ppm < 500.0
+                or zone.par_umol_m2s < STRESS_PAR_CRITICAL_LOW
+            ):
                 age_inc = 0  # growth stalled
 
             self.rates.age_increment[batch_id] = age_inc
@@ -266,6 +320,11 @@ class CropModel:
         actual_yield_kg = round(
             base_yield_kg * batch.health * min(1.0, batch.growth_pct / 100.0), 3
         )
+
+        # Bolting: lettuce enters reproductive phase — leaves become bitter/inedible
+        if batch.is_bolting:
+            actual_yield_kg = round(actual_yield_kg * 0.1, 3)
+
         kcal = round(actual_yield_kg * catalog["kcal_per_100g"] * 10.0, 0)
         protein_g = round(actual_yield_kg * catalog["protein_per_100g_g"] * 10.0, 0)
         vitamin_c_mg = round(actual_yield_kg * 20.0, 0)  # approximate
@@ -284,6 +343,7 @@ class CropModel:
             "provides_micronutrients": catalog["provides_micronutrients"],
             "age_days": batch.age_days,
             "growth_pct": batch.growth_pct,
+            "was_bolting": batch.is_bolting,
         }
 
     def remove(self, crop_id: str, reason: str = "") -> dict:
