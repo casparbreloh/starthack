@@ -304,7 +304,7 @@ export type paths = {
     patch?: never
     trace?: never
   }
-  "/api/catalog/crops": {
+  "/crops/catalog": {
     parameters: {
       query?: never
       header?: never
@@ -312,7 +312,7 @@ export type paths = {
       cookie?: never
     }
     /** Catalog Crops */
-    get: operations["catalog_crops_api_catalog_crops_get"]
+    get: operations["catalog_crops_crops_catalog_get"]
     put?: never
     post?: never
     delete?: never
@@ -321,7 +321,7 @@ export type paths = {
     patch?: never
     trace?: never
   }
-  "/api/state": {
+  "/sim/state": {
     parameters: {
       query?: never
       header?: never
@@ -329,10 +329,10 @@ export type paths = {
       cookie?: never
     }
     /**
-     * Api State
+     * Sim State
      * @description Full telemetry snapshot — convenience endpoint for the frontend.
      */
-    get: operations["api_state_api_state_get"]
+    get: operations["sim_state_sim_state_get"]
     put?: never
     post?: never
     delete?: never
@@ -477,94 +477,6 @@ export type paths = {
     patch?: never
     trace?: never
   }
-  "/api/action/plant": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /** Legacy Plant */
-    post: operations["legacy_plant_api_action_plant_post"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/action/harvest": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /** Legacy Harvest */
-    post: operations["legacy_harvest_api_action_harvest_post"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/action/water": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /** Legacy Water */
-    post: operations["legacy_water_api_action_water_post"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/action/fertilize": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /** Legacy Fertilize */
-    post: operations["legacy_fertilize_api_action_fertilize_post"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/action/set_environment": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Legacy Set Environment
-     * @description Apply the same environment settings to ALL zones.
-     */
-    post: operations["legacy_set_environment_api_action_set_environment_post"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
   "/sim/advance": {
     parameters: {
       query?: never
@@ -599,64 +511,7 @@ export type paths = {
     patch?: never
     trace?: never
   }
-  "/api/admin/tick": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Admin Tick
-     * @description Advance by exactly 1 sol (legacy).
-     */
-    post: operations["admin_tick_api_admin_tick_post"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/admin/tick/bulk": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /**
-     * Admin Tick Bulk
-     * @description Advance by N sols (legacy).
-     */
-    post: operations["admin_tick_bulk_api_admin_tick_bulk_post"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/admin/reset": {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get?: never
-    put?: never
-    /** Admin Reset */
-    post: operations["admin_reset_api_admin_reset_post"]
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  "/api/admin/scenario/water_leak": {
+  "/admin/scenario/water_leak": {
     parameters: {
       query?: never
       header?: never
@@ -666,14 +521,14 @@ export type paths = {
     get?: never
     put?: never
     /** Scenario Water Leak */
-    post: operations["scenario_water_leak_api_admin_scenario_water_leak_post"]
+    post: operations["scenario_water_leak_admin_scenario_water_leak_post"]
     delete?: never
     options?: never
     head?: never
     patch?: never
     trace?: never
   }
-  "/api/admin/scenario/hvac_failure": {
+  "/admin/scenario/hvac_failure": {
     parameters: {
       query?: never
       header?: never
@@ -683,14 +538,14 @@ export type paths = {
     get?: never
     put?: never
     /** Scenario Hvac Failure */
-    post: operations["scenario_hvac_failure_api_admin_scenario_hvac_failure_post"]
+    post: operations["scenario_hvac_failure_admin_scenario_hvac_failure_post"]
     delete?: never
     options?: never
     head?: never
     patch?: never
     trace?: never
   }
-  "/api/admin/scenario/pathogen": {
+  "/admin/scenario/pathogen": {
     parameters: {
       query?: never
       header?: never
@@ -700,14 +555,14 @@ export type paths = {
     get?: never
     put?: never
     /** Scenario Pathogen */
-    post: operations["scenario_pathogen_api_admin_scenario_pathogen_post"]
+    post: operations["scenario_pathogen_admin_scenario_pathogen_post"]
     delete?: never
     options?: never
     head?: never
     patch?: never
     trace?: never
   }
-  "/api/admin/scenario/dust_storm": {
+  "/admin/scenario/dust_storm": {
     parameters: {
       query?: never
       header?: never
@@ -717,14 +572,14 @@ export type paths = {
     get?: never
     put?: never
     /** Scenario Dust Storm */
-    post: operations["scenario_dust_storm_api_admin_scenario_dust_storm_post"]
+    post: operations["scenario_dust_storm_admin_scenario_dust_storm_post"]
     delete?: never
     options?: never
     head?: never
     patch?: never
     trace?: never
   }
-  "/api/admin/scenario/energy_disruption": {
+  "/admin/scenario/energy_disruption": {
     parameters: {
       query?: never
       header?: never
@@ -734,7 +589,7 @@ export type paths = {
     get?: never
     put?: never
     /** Scenario Energy Disruption */
-    post: operations["scenario_energy_disruption_api_admin_scenario_energy_disruption_post"]
+    post: operations["scenario_energy_disruption_admin_scenario_energy_disruption_post"]
     delete?: never
     options?: never
     head?: never
@@ -780,7 +635,9 @@ export type components = {
       /** Sol */
       sol: number
       /** Decisions */
-      decisions: unknown[]
+      decisions: {
+        [key: string]: unknown
+      }[]
       /** Weather Forecast Used */
       weather_forecast_used?: {
         [key: string]: unknown
@@ -1121,48 +978,6 @@ export type components = {
       /** Consecutive Deficit Sols */
       consecutive_deficit_sols: number
     }
-    /** LegacyFertilizeRequest */
-    LegacyFertilizeRequest: {
-      /** Bed Id */
-      bed_id?: number | null
-      /** Zone Id */
-      zone_id?: string | null
-      /** Amount Nitrogen */
-      amount_nitrogen: number
-    }
-    /** LegacyHarvestRequest */
-    LegacyHarvestRequest: {
-      /** Bed Id */
-      bed_id?: number | null
-      /** Crop Id */
-      crop_id?: string | null
-    }
-    /** LegacyPlantRequest */
-    LegacyPlantRequest: {
-      /** Bed Id */
-      bed_id: number
-      crop_type: components["schemas"]["CropType"]
-    }
-    /** LegacySetEnvironmentRequest */
-    LegacySetEnvironmentRequest: {
-      /** Temperature */
-      temperature?: number | null
-      /** Co2 Ppm */
-      co2_ppm?: number | null
-      /** Humidity */
-      humidity?: number | null
-      /** Light Par */
-      light_par?: number | null
-    }
-    /** LegacyWaterRequest */
-    LegacyWaterRequest: {
-      /** Bed Id */
-      bed_id?: number | null
-      /** Zone Id */
-      zone_id?: string | null
-      /** Amount Liters */
-      amount_liters: number
-    }
     /** NutrientAdjustRequest */
     NutrientAdjustRequest: {
       /** Zone Id */
@@ -1259,7 +1074,7 @@ export type components = {
       difficulty: components["schemas"]["Difficulty"]
       /** Starting Reserves */
       starting_reserves?: {
-        [key: string]: unknown
+        [key: string]: number
       } | null
     }
     /** ResourceEfficiencyScoreResponse */
@@ -1946,7 +1761,7 @@ export interface operations {
       }
     }
   }
-  catalog_crops_api_catalog_crops_get: {
+  catalog_crops_crops_catalog_get: {
     parameters: {
       query?: never
       header?: never
@@ -1966,7 +1781,7 @@ export interface operations {
       }
     }
   }
-  api_state_api_state_get: {
+  sim_state_sim_state_get: {
     parameters: {
       query?: never
       header?: never
@@ -2250,171 +2065,6 @@ export interface operations {
       }
     }
   }
-  legacy_plant_api_action_plant_post: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["LegacyPlantRequest"]
-      }
-    }
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": unknown
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"]
-        }
-      }
-    }
-  }
-  legacy_harvest_api_action_harvest_post: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["LegacyHarvestRequest"]
-      }
-    }
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": unknown
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"]
-        }
-      }
-    }
-  }
-  legacy_water_api_action_water_post: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["LegacyWaterRequest"]
-      }
-    }
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": unknown
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"]
-        }
-      }
-    }
-  }
-  legacy_fertilize_api_action_fertilize_post: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["LegacyFertilizeRequest"]
-      }
-    }
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": unknown
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"]
-        }
-      }
-    }
-  }
-  legacy_set_environment_api_action_set_environment_post: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        "application/json": components["schemas"]["LegacySetEnvironmentRequest"]
-      }
-    }
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": unknown
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"]
-        }
-      }
-    }
-  }
   sim_advance_sim_advance_post: {
     parameters: {
       query?: never
@@ -2481,7 +2131,7 @@ export interface operations {
       }
     }
   }
-  admin_tick_api_admin_tick_post: {
+  scenario_water_leak_admin_scenario_water_leak_post: {
     parameters: {
       query?: never
       header?: never
@@ -2501,38 +2151,7 @@ export interface operations {
       }
     }
   }
-  admin_tick_bulk_api_admin_tick_bulk_post: {
-    parameters: {
-      query?: {
-        days?: number
-      }
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": unknown
-        }
-      }
-      /** @description Validation Error */
-      422: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": components["schemas"]["HTTPValidationError"]
-        }
-      }
-    }
-  }
-  admin_reset_api_admin_reset_post: {
+  scenario_hvac_failure_admin_scenario_hvac_failure_post: {
     parameters: {
       query?: never
       header?: never
@@ -2552,47 +2171,7 @@ export interface operations {
       }
     }
   }
-  scenario_water_leak_api_admin_scenario_water_leak_post: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": unknown
-        }
-      }
-    }
-  }
-  scenario_hvac_failure_api_admin_scenario_hvac_failure_post: {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    requestBody?: never
-    responses: {
-      /** @description Successful Response */
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content: {
-          "application/json": unknown
-        }
-      }
-    }
-  }
-  scenario_pathogen_api_admin_scenario_pathogen_post: {
+  scenario_pathogen_admin_scenario_pathogen_post: {
     parameters: {
       query?: never
       header?: never
@@ -2625,7 +2204,7 @@ export interface operations {
       }
     }
   }
-  scenario_dust_storm_api_admin_scenario_dust_storm_post: {
+  scenario_dust_storm_admin_scenario_dust_storm_post: {
     parameters: {
       query?: {
         duration_sols?: number
@@ -2656,7 +2235,7 @@ export interface operations {
       }
     }
   }
-  scenario_energy_disruption_api_admin_scenario_energy_disruption_post: {
+  scenario_energy_disruption_admin_scenario_energy_disruption_post: {
     parameters: {
       query?: never
       header?: never
