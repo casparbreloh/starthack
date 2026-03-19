@@ -14,6 +14,7 @@ unit-tested in isolation.
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 from typing import Any
 
@@ -23,6 +24,7 @@ from src.constants import (
     MISSION_DURATION_SOLS,
 )
 from src.enums import CrisisType, Difficulty, MissionPhase, Severity
+from src.models.autonomous_events import AutonomousEventSystem
 from src.models.climate import ClimateModel
 from src.models.crew import CrewModel
 from src.models.crops import CropModel
@@ -64,6 +66,7 @@ class SimulationEngine:
         self.crew = CrewModel()
         self.events = EventLog()
         self.scoring = ScoringModel()
+        self.autonomous_events = AutonomousEventSystem(random.Random(42))
 
         # Agent decision log
         self.agent_decisions: list[AgentDecision] = []
@@ -117,8 +120,19 @@ class SimulationEngine:
         dead_crops = self.crops.integrate()
         self.crew.integrate(current_sol=sol)
 
-        # ── Event generation ─────────────────────────────────────────
+        # ── Autonomous events (post-integration effects this sol) ─────
         tick_events: list[dict[str, Any]] = []
+        for ae in self.autonomous_events.tick(sol, self):
+            sev_map = {
+                "info": Severity.INFO,
+                "warning": Severity.WARNING,
+                "critical": Severity.CRITICAL,
+            }
+            sev = sev_map.get(ae["severity"], Severity.INFO)
+            ev = self.events.log(sol, ae["type"], ae["category"], ae["message"], sev)
+            tick_events.append(_event_to_dict(ev))
+
+        # ── Event generation ─────────────────────────────────────────
 
         # Starvation level-change events (emitted by CrewModel)
         for category, message, sev_str in self.crew.pending_events:
@@ -226,6 +240,7 @@ class SimulationEngine:
         self.crew = CrewModel()
         self.events = EventLog()
         self.scoring = ScoringModel()
+        self.autonomous_events.reset(random.Random(seed))
         self.agent_decisions = []
 
         # Apply difficulty modifiers
@@ -356,17 +371,20 @@ class SimulationEngine:
     # ------------------------------------------------------------------
 
     def sensor_readings(self) -> list[dict[str, Any]]:
-        """Generate realistic sensor readings from current state."""
+        """Generate sensor readings from current state, with active sensor noise injected."""
+        noise = self.autonomous_events.sensor_noise
         readings: list[dict[str, Any]] = []
         for zone_id, zone in self.climate.state.items():
+            temp_key = f"temp_{zone_id}"
+            co2_key = f"co2_{zone_id}"
             readings += [
                 {
                     "sensor_id": f"temp_{zone_id}_1",
                     "zone": zone_id,
                     "type": "temperature",
-                    "value": zone.temp_c,
+                    "value": noise.get(temp_key, zone.temp_c),
                     "unit": "celsius",
-                    "status": "ok",
+                    "status": "fault" if temp_key in noise else "ok",
                 },
                 {
                     "sensor_id": f"hum_{zone_id}_1",
@@ -380,9 +398,9 @@ class SimulationEngine:
                     "sensor_id": f"co2_{zone_id}_1",
                     "zone": zone_id,
                     "type": "co2",
-                    "value": round(zone.co2_ppm, 1),
+                    "value": noise.get(co2_key, round(zone.co2_ppm, 1)),
                     "unit": "ppm",
-                    "status": "ok",
+                    "status": "fault" if co2_key in noise else "ok",
                 },
                 {
                     "sensor_id": f"par_{zone_id}_1",
