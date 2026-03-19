@@ -162,12 +162,7 @@ class SimulationEngine:
         # ── Autonomous events (post-integration effects this sol) ─────
         tick_events: list[dict[str, Any]] = []
         for ae in self.autonomous_events.tick(sol, self):
-            sev_map = {
-                "info": Severity.INFO,
-                "warning": Severity.WARNING,
-                "critical": Severity.CRITICAL,
-            }
-            sev = sev_map.get(ae["severity"], Severity.INFO)
+            sev = Severity(ae["severity"])
             ev = self.events.log(sol, ae["type"], ae["category"], ae["message"], sev)
             tick_events.append(_event_to_dict(ev))
 
@@ -175,12 +170,7 @@ class SimulationEngine:
 
         # Starvation level-change events (emitted by CrewModel)
         for category, message, sev_str in self.crew.pending_events:
-            severity = (
-                Severity.INFO
-                if sev_str == "info"
-                else (Severity.WARNING if sev_str == "warning" else Severity.CRITICAL)
-            )
-            ev = self.events.log(sol, "alert", category, message, severity)
+            ev = self.events.log(sol, "alert", category, message, Severity(sev_str))
             tick_events.append(_event_to_dict(ev))
 
         # Dead crops

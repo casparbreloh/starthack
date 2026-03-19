@@ -718,6 +718,13 @@ export type components = {
       days_of_food_remaining: number
       /** Days Of Protein Remaining */
       days_of_protein_remaining: number
+      /**
+       * Food Inventory
+       * @default {}
+       */
+      food_inventory: {
+        [key: string]: components["schemas"]["FoodInventoryItemResponse"]
+      }
     }
     /** CrewNutritionTodayResponse */
     CrewNutritionTodayResponse: {
@@ -942,6 +949,17 @@ export type components = {
       fresh_harvest_protein_g: number
       /** Days Of Buffer */
       days_of_buffer: number
+    }
+    /** FoodInventoryItemResponse */
+    FoodInventoryItemResponse: {
+      /** Kg Remaining */
+      kg_remaining: number
+      /** Kcal Remaining */
+      kcal_remaining: number
+      /** Protein G Remaining */
+      protein_g_remaining: number
+      /** Pct Remaining */
+      pct_remaining: number
     }
     /** GreenhouseEnvironmentResponse */
     GreenhouseEnvironmentResponse: {

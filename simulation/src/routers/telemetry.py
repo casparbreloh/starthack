@@ -27,6 +27,7 @@ from src.constants import (
     FOOD_PROTEIN_G_PER_KG,
     INITIAL_FOOD_KG,
     MISSION_DURATION_SOLS,
+    TOTAL_GREENHOUSE_AREA_M2,
     ZONE_AREAS_M2,
 )
 from src.models.responses import (
@@ -143,7 +144,7 @@ def greenhouse_environment():
     w = engine.weather.current()
     return {
         "zones": zones,
-        "total_area_m2": sum(ZONE_AREAS_M2.values()),
+        "total_area_m2": TOTAL_GREENHOUSE_AREA_M2,
         "external_temp_c": w.avg_temp_c if w else None,
     }
 
@@ -421,20 +422,7 @@ def sensors_readings():
 @router.get("/events/log", response_model=EventsLogResponse)
 def events_log(since_sol: int = Query(default=0, ge=0)):
     events = engine.events.since(since_sol)
-    return {
-        "events": [
-            {
-                "sol": e.sol,
-                "type": e.type,
-                "category": e.category,
-                "message": e.message,
-                "severity": e.severity.value,
-                "zone": e.zone,
-                "data": e.data,
-            }
-            for e in events
-        ]
-    }
+    return {"events": [e.to_dict() for e in events]}
 
 
 @router.get("/events/active_crises", response_model=ActiveCrisesResponse)
@@ -462,19 +450,20 @@ def events_active_crises():
 # ──────────────────────────────────────────────────────────────────────────────
 
 
+def _scores_dict(snap) -> dict[str, float]:
+    return {
+        "survival": snap.survival,
+        "nutrition": snap.nutrition,
+        "resource_efficiency": snap.resource_efficiency,
+        "crisis_management": snap.crisis_management,
+        "overall_score": snap.overall_score,
+    }
+
+
 @router.get("/score/current", response_model=ScoreCurrentResponse)
 def score_current():
     snap = engine.scoring.snapshot
-    return {
-        "current_sol": snap.current_sol,
-        "scores": {
-            "survival": snap.survival,
-            "nutrition": snap.nutrition,
-            "resource_efficiency": snap.resource_efficiency,
-            "crisis_management": snap.crisis_management,
-            "overall_score": snap.overall_score,
-        },
-    }
+    return {"current_sol": snap.current_sol, "scores": _scores_dict(snap)}
 
 
 @router.get("/score/final", response_model=ScoreFinalResponse)
@@ -490,13 +479,7 @@ def score_final():
     return {
         "final_sol": snap.current_sol,
         "mission_phase": engine.mission_phase.value,
-        "final_scores": {
-            "survival": snap.survival,
-            "nutrition": snap.nutrition,
-            "resource_efficiency": snap.resource_efficiency,
-            "crisis_management": snap.crisis_management,
-            "overall_score": snap.overall_score,
-        },
+        "final_scores": _scores_dict(snap),
         "agent_decisions_logged": len(engine.agent_decisions),
     }
 

@@ -6,10 +6,18 @@ we use a plain list with automatic crisis detection each tick.
 """
 
 import uuid
+from collections import deque
 from dataclasses import dataclass
 from typing import Any
 
-from src.enums import CrisisType, Severity
+from src.constants import (
+    CRISIS_WATER_RESERVOIR_L,
+    HYDRATION_MODERATE_PCT,
+    RADIATION_CRITICAL_MSV,
+    RADIATION_WARNING_MSV,
+    WARNING_KCAL_DAYS,
+)
+from src.enums import CrisisType, DehydrationLevel, Severity, StarvationLevel
 
 
 @dataclass
@@ -21,6 +29,17 @@ class Event:
     severity: Severity = Severity.INFO
     zone: str | None = None
     data: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "sol": self.sol,
+            "type": self.type,
+            "category": self.category,
+            "message": self.message,
+            "severity": self.severity.value,
+            "zone": self.zone,
+            "data": self.data,
+        }
 
 
 @dataclass
@@ -40,7 +59,7 @@ class EventLog:
     MAX_EVENTS = 200
 
     def __init__(self) -> None:
-        self._events: list[Event] = []
+        self._events: deque[Event] = deque(maxlen=self.MAX_EVENTS)
         self._crises: dict[str, Crisis] = {}  # id → Crisis
 
     # ------------------------------------------------------------------
@@ -67,8 +86,6 @@ class EventLog:
             data=data,
         )
         self._events.append(ev)
-        if len(self._events) > self.MAX_EVENTS:
-            self._events.pop(0)
         return ev
 
     # ------------------------------------------------------------------
@@ -134,7 +151,8 @@ class EventLog:
         return [e for e in self._events if e.sol >= since_sol]
 
     def recent(self, n: int = 20) -> list[Event]:
-        return list(reversed(self._events[-n:]))
+        events = list(self._events)
+        return list(reversed(events[-n:]))
 
     def all_crises(self) -> list[Crisis]:
         return list(self._crises.values())
@@ -160,15 +178,6 @@ class EventLog:
         crew_starvation_level=None,
         cumulative_radiation_msv: float = 0.0,
     ) -> None:
-        from src.constants import (
-            CRISIS_WATER_RESERVOIR_L,
-            HYDRATION_MODERATE_PCT,
-            RADIATION_CRITICAL_MSV,
-            RADIATION_WARNING_MSV,
-            WARNING_KCAL_DAYS,
-        )
-        from src.enums import DehydrationLevel, StarvationLevel
-
         # Water recycling decline
         if water_recycling_pct < 85.0:
             sev = Severity.CRITICAL if water_recycling_pct < 70.0 else Severity.WARNING

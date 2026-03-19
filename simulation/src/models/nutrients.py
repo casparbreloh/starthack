@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from src.catalog import CROP_CATALOG
 from src.constants import (
     INITIAL_NUTRIENT_STOCK_PCT,
     NUTRIENT_RESTOCK_AMOUNT_PCT,
@@ -100,8 +101,6 @@ class NutrientModel:
 
     def calc_rates(self, crop_model: CropModel) -> None:
         """Compute per-zone nutrient uptake by crops each sol."""
-        from src.catalog import CROP_CATALOG
-
         zone_demand_n: dict[str, float] = {z: 0.0 for z in self.state}
         zone_demand_p: dict[str, float] = {z: 0.0 for z in self.state}
         zone_demand_k: dict[str, float] = {z: 0.0 for z in self.state}

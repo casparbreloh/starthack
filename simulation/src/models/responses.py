@@ -217,6 +217,13 @@ class CumulativeNutritionResponse(BaseModel):
     surplus_sols: int
 
 
+class FoodInventoryItemResponse(BaseModel):
+    kg_remaining: float
+    kcal_remaining: float
+    protein_g_remaining: float
+    pct_remaining: float
+
+
 class CrewNutritionResponse(BaseModel):
     current_sol: int
     today: CrewNutritionTodayResponse
@@ -227,6 +234,7 @@ class CrewNutritionResponse(BaseModel):
     micronutrients_sufficient: bool
     days_of_food_remaining: float
     days_of_protein_remaining: float
+    food_inventory: dict[str, FoodInventoryItemResponse] = {}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
