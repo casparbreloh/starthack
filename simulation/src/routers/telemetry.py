@@ -29,6 +29,7 @@ from src.constants import (
     MISSION_DURATION_SOLS,
     ZONE_AREAS_M2,
 )
+from src.enums import MissionPhase
 from src.models.responses import (
     ActiveCrisesResponse,
     CrewHealthResponse,
@@ -421,20 +422,7 @@ def sensors_readings():
 @router.get("/events/log", response_model=EventsLogResponse)
 def events_log(since_sol: int = Query(default=0, ge=0)):
     events = engine.events.since(since_sol)
-    return {
-        "events": [
-            {
-                "sol": e.sol,
-                "type": e.type,
-                "category": e.category,
-                "message": e.message,
-                "severity": e.severity.value,
-                "zone": e.zone,
-                "data": e.data,
-            }
-            for e in events
-        ]
-    }
+    return {"events": [e.to_dict() for e in events]}
 
 
 @router.get("/events/active_crises", response_model=ActiveCrisesResponse)
@@ -467,20 +455,12 @@ def score_current():
     snap = engine.scoring.snapshot
     return {
         "current_sol": snap.current_sol,
-        "scores": {
-            "survival": snap.survival,
-            "nutrition": snap.nutrition,
-            "resource_efficiency": snap.resource_efficiency,
-            "crisis_management": snap.crisis_management,
-            "overall_score": snap.overall_score,
-        },
+        "scores": _snapshot_to_scores(snap),
     }
 
 
 @router.get("/score/final", response_model=ScoreFinalResponse)
 def score_final():
-    from src.enums import MissionPhase
-
     if engine.mission_phase != MissionPhase.COMPLETE:
         raise HTTPException(
             400,
@@ -490,13 +470,7 @@ def score_final():
     return {
         "final_sol": snap.current_sol,
         "mission_phase": engine.mission_phase.value,
-        "final_scores": {
-            "survival": snap.survival,
-            "nutrition": snap.nutrition,
-            "resource_efficiency": snap.resource_efficiency,
-            "crisis_management": snap.crisis_management,
-            "overall_score": snap.overall_score,
-        },
+        "final_scores": _snapshot_to_scores(snap),
         "agent_decisions_logged": len(engine.agent_decisions),
     }
 
@@ -580,6 +554,16 @@ def sim_state():
 # ──────────────────────────────────────────────────────────────────────────────
 # Private helpers
 # ──────────────────────────────────────────────────────────────────────────────
+
+
+def _snapshot_to_scores(snap) -> dict[str, Any]:
+    return {
+        "survival": snap.survival,
+        "nutrition": snap.nutrition,
+        "resource_efficiency": snap.resource_efficiency,
+        "crisis_management": snap.crisis_management,
+        "overall_score": snap.overall_score,
+    }
 
 
 def _weather_to_dict(w) -> dict[str, Any]:
