@@ -139,7 +139,10 @@ def scenario_hvac_failure():
 @router.post("/api/admin/scenario/pathogen")
 def scenario_pathogen(req: PathogenRequest):
     try:
-        batch = engine.scenario_pathogen(req.crop_id)
+        # Trigger the pathogen scenario for the given crop; this mutates engine state.
+        engine.scenario_pathogen(req.crop_id)
+        # Retrieve the affected crop batch from the engine after injection.
+        batch = engine.crops[req.crop_id]
     except KeyError:
         raise HTTPException(404, f"Crop '{req.crop_id}' not found")
     return {
