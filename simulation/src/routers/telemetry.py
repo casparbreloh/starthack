@@ -466,7 +466,7 @@ def catalog_crops():
 
 
 @router.get("/sim/state")
-def api_state():
+def sim_state():
     """Full telemetry snapshot — convenience endpoint for the frontend."""
     return {
         "current_sol": engine.current_sol,

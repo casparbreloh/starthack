@@ -20,7 +20,7 @@ Deterministic Mars greenhouse simulation engine. FastAPI service with no interna
 
 ## Models
 
-7 sub-models in `models/`: climate, crew, crops, energy, events, nutrients, scoring, water, weather
+9 sub-models in `models/`: climate, crew, crops, energy, events, nutrients, scoring, water, weather
 
 ## Routers
 
