@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from src.enums import CrisisType, Severity
 
@@ -25,7 +25,7 @@ class Event:
     message: str
     severity: Severity = Severity.INFO
     zone: str | None = None
-    data: dict | None = None
+    data: dict[str, Any] | None = None
 
 
 @dataclass

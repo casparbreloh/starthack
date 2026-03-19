@@ -54,9 +54,9 @@ class ZoneNutrients:
 
 @dataclass
 class NutrientRates:
-    d_nitrogen: dict = field(default_factory=dict)
-    d_phosphorus: dict = field(default_factory=dict)
-    d_potassium: dict = field(default_factory=dict)
+    d_nitrogen: dict[str, float] = field(default_factory=dict)
+    d_phosphorus: dict[str, float] = field(default_factory=dict)
+    d_potassium: dict[str, float] = field(default_factory=dict)
 
 
 class NutrientModel:

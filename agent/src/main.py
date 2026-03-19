@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Any
 
 from bedrock_agentcore.runtime import BedrockAgentCoreApp, RequestContext
 from strands import Agent
@@ -17,7 +18,7 @@ app = BedrockAgentCoreApp()
 
 
 @app.entrypoint
-async def agent_handler(payload: dict, context: RequestContext):
+async def agent_handler(payload: dict[str, Any], context: RequestContext):
     prompt = payload.get("prompt", "Give me a status report on the greenhouse.")
 
     model = BedrockModel(

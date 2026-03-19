@@ -9,16 +9,14 @@ Mars weather prediction ML pipeline. Trains LSTM models on 4,586 sols of Curiosi
 - `mars_weather/` — Python package with all pipeline code
 - `models/` — Trained artifacts (.pt weights, .pkl scalers, _meta.json)
 - `mars_weather_data.csv` — Source data (4,586 sols, 2012–2026)
-- `requirements.txt` — Pinned dependencies (pandas, torch, scikit-learn, etc.)
+- `pyproject.toml` — Dependencies managed by uv (pandas, torch, scikit-learn, etc.)
 
 ## Running
 
-Requires the venv at `../.venv/`:
-
 ```bash
-../.venv/bin/python -m mars_weather.train     # Train all models
-../.venv/bin/python -m mars_weather.evaluate  # Evaluate on test set
-../.venv/bin/python -m mars_weather.predict   # Run predictions
+uv run python -m mars_weather.train     # Train all models
+uv run python -m mars_weather.evaluate  # Evaluate on test set
+uv run python -m mars_weather.predict   # Run predictions
 ```
 
 ## Key Design Decisions

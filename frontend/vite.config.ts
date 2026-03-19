@@ -7,18 +7,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      "/sim": "http://localhost:8000",
-      "/weather": "http://localhost:8000",
-      "/energy": "http://localhost:8000",
-      "/greenhouse": "http://localhost:8000",
-      "/water": "http://localhost:8000",
-      "/crops": "http://localhost:8000",
-      "/nutrients": "http://localhost:8000",
-      "/crew": "http://localhost:8000",
-      "/sensors": "http://localhost:8000",
-      "/events": "http://localhost:8000",
-      "/score": "http://localhost:8000",
-      "/agent": "http://localhost:8000",
+      "/simulation": {
+        target: "http://localhost:8080",
+        rewrite: (path) => path.replace(/^\/simulation/, ""),
+      },
     },
   },
 })

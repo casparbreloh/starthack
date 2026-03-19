@@ -67,8 +67,7 @@ class CropBatch:
     health: float = 1.0  # 0 – 1 (1 = perfect)
     age_days: int = 0  # sols since planting
     soil_moisture_pct: float = 60.0
-    is_bolting: bool = False  # lettuce only: once set, harvest yield → 10% (inedible)
-    stress_indicators: list = field(default_factory=list)  # list[StressIndicator]
+    stress_indicators: list[StressIndicator] = field(default_factory=list)
     # Internal water tracking
     _soil_water_L: float = field(default=0.0, repr=False)
 
@@ -105,8 +104,8 @@ class CropBatch:
 
 @dataclass
 class CropRates:
-    age_increment: dict = field(default_factory=dict)  # crop_id → 0 or 1
-    d_health: dict = field(default_factory=dict)  # crop_id → float
+    age_increment: dict[str, int] = field(default_factory=dict)
+    d_health: dict[str, float] = field(default_factory=dict)
 
 
 class CropModel:
