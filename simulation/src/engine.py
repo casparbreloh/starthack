@@ -173,8 +173,7 @@ class SimulationEngine:
 
         # Starvation level-change events (emitted by CrewModel)
         for category, message, sev_str in self.crew.pending_events:
-            severity = Severity(sev_str)
-            ev = self.events.log(sol, "alert", category, message, severity)
+            ev = self.events.log(sol, "alert", category, message, Severity(sev_str))
             tick_events.append(ev.to_dict())
 
         # Dead crops

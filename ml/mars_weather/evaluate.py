@@ -10,7 +10,7 @@ import torch
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from torch.utils.data import DataLoader
 
-from . import MODEL_DIR
+from . import MODEL_DIR, get_device
 from .data import prepare_dataset, TARGETS
 from .model import LSTMPredictor, MarsWeatherDataset, SeasonalBaseline
 
@@ -37,7 +37,7 @@ def evaluate_baseline(baseline, df):
 
 def evaluate_lstm(model, df, feature_cols, target_scaler, horizon=1):
     """Evaluate LSTM model on a dataset. Returns metrics in original scale."""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
     model = model.to(device)
     model.eval()
 
@@ -88,7 +88,7 @@ def detect_anomalies(actuals, preds, threshold_sigma=3):
 
 def load_lstm(horizon=1, model_dir=MODEL_DIR):
     """Load a saved LSTM model."""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
     with open(os.path.join(model_dir, f"lstm_h{horizon}_meta.json")) as f:
         meta = json.load(f)
 
