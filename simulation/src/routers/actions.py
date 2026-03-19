@@ -269,7 +269,7 @@ def nutrients_adjust(req: NutrientAdjustRequest):
     if req.zone_id not in engine.nutrients.state:
         raise HTTPException(404, f"Zone '{req.zone_id}' not found")
 
-    result = engine.nutrients.adjust(
+    engine.nutrients.adjust(
         zone_id=req.zone_id,
         target_ph=req.target_ph,
         target_ec_ms_cm=req.target_ec_ms_cm,
@@ -283,7 +283,7 @@ def nutrients_adjust(req: NutrientAdjustRequest):
             0.0, engine.water.state.reservoir_liters - 10.0
         )
     z = engine.nutrients.state[req.zone_id]
-    response = {
+    return {
         "status": "ok",
         "zone_id": req.zone_id,
         "solution_ph": z.solution_ph,
