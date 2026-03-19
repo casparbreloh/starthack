@@ -6,10 +6,6 @@ dependencies = [
     "bedrock-agentcore[strands-agents]>=1.4.7",
     "strands-agents>=1.30.0",
     "httpx>=0.28.0",
-    "torch>=2.10",
-    "scikit-learn>=1.8",
-    "pandas>=3.0",
-    "numpy>=2.0",
     "mcp>=1.0.0",
 ]
 
