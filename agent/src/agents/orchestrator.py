@@ -896,10 +896,16 @@ def run_consultation(
     sol = consultation.get("sol", 0)
     snapshot = consultation.get("snapshot", {})
 
-    # Weather context from snapshot data
+    # Fetch weather history via REST (snapshot only has current weather)
+    try:
+        weather_history = client.get_weather_history(last_n_sols=30)
+    except Exception:
+        logger.warning("Sol %d: failed to fetch weather history via REST", sol)
+        weather_history = []
+
     weather_context = weather_forecaster.get_full_context(
         sol,
-        weather_history=snapshot.get("weather_history", []),
+        weather_history=weather_history,
         current_weather=snapshot.get("weather_current"),
     )
     energy_projection = project_energy_budget(

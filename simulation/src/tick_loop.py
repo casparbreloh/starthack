@@ -139,6 +139,10 @@ async def _consult_agent(
             AGENT_TIMEOUT_S,
             session.id,
         )
+        # Advance so the loop doesn't immediately re-consult on the next tick
+        session.next_consultation_sol = (
+            session.engine.current_sol + session.next_checkin
+        )
         return
 
     # Execute pending actions under lock

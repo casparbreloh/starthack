@@ -96,8 +96,10 @@ const MAX_RECONNECT_RETRIES = 5
 const BASE_RECONNECT_DELAY_MS = 1000
 
 function buildWsUrl(): string {
+  const envUrl = import.meta.env.VITE_SIM_WS_URL as string | undefined
+  if (envUrl) return envUrl
   const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  return `${wsProtocol}//${window.location.hostname}:8080/ws`
+  return `${wsProtocol}//${window.location.host}/ws`
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
@@ -171,12 +173,19 @@ export function useWebSocket(): WebSocketState {
       retriesRef.current = 0
       // Register as frontend
       ws.send(JSON.stringify({ type: "register", payload: { role: "frontend" } }))
-      // Re-join existing session after reconnect
+      // Re-join existing session or auto-create a new one
       if (sessionIdRef.current) {
         ws.send(
           JSON.stringify({
             type: "join_session",
             payload: { session_id: sessionIdRef.current },
+          }),
+        )
+      } else {
+        ws.send(
+          JSON.stringify({
+            type: "create_session",
+            payload: { tick_delay_ms: 100 },
           }),
         )
       }

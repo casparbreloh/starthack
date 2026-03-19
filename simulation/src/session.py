@@ -17,6 +17,7 @@ from fastapi import HTTPException
 
 from src.connection import ConnectionManager
 from src.engine import SimulationEngine
+from src.enums import Difficulty
 
 
 @dataclass
@@ -37,6 +38,18 @@ class Session:
         self.config: SessionConfig = config or SessionConfig()
         self.engine: SimulationEngine = SimulationEngine()
         self.created_at: datetime = datetime.now(UTC)
+
+        # Apply config to engine
+        difficulty = Difficulty(self.config.difficulty.upper())
+        if self.config.seed is not None:
+            import random
+
+            self.engine.autonomous_events.rng = random.Random(self.config.seed)
+        if difficulty != Difficulty.NORMAL or self.config.starting_reserves:
+            self.engine.reset(
+                difficulty=difficulty,
+                starting_reserves=self.config.starting_reserves or None,
+            )
         self.lock: asyncio.Lock = asyncio.Lock()
 
         # WebSocket connection management

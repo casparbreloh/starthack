@@ -18,6 +18,7 @@ from typing import Any
 from fastapi import APIRouter
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from src.engine import AgentDecision
 from src.session import SessionConfig
 from src.state import session_manager
 
@@ -164,12 +165,23 @@ async def _handle_join_session(
 async def _handle_agent_actions(
     session_id: str | None, payload: dict[str, Any]
 ) -> None:
-    """Store pending actions and signal the tick loop."""
+    """Store pending actions, log decision, and signal the tick loop."""
     if session_id is None:
         return
     session = session_manager.get(session_id)
     session.pending_actions = payload.get("actions", [])
     session.next_checkin = payload.get("next_checkin", 1)
+
+    # Record agent decision telemetry if provided
+    log_decision = payload.get("log_decision")
+    if log_decision:
+        decision = AgentDecision(
+            sol=session.engine.current_sol,
+            decisions=session.pending_actions,
+            risk_assessment=log_decision.get("risk_assessment", "nominal"),
+        )
+        session.engine.log_agent_decision(decision)
+
     session.agent_response_event.set()
 
 
@@ -202,24 +214,28 @@ async def _handle_inject_crisis(
     engine = session.engine
     method = getattr(engine, method_name)
 
-    # Some scenarios need extra args
-    if scenario == "pathogen":
-        crop_id = payload.get("crop_id")
-        if not crop_id:
-            await ws.send_json(
-                {"type": "error", "payload": {"message": "pathogen requires crop_id"}}
-            )
-            return
-        method(crop_id)
-    elif scenario == "dust_storm":
-        duration = payload.get("duration_sols", 10)
-        method(duration)
-    else:
-        method()
+    # Some scenarios need extra args — mutate engine under lock
+    async with session.lock:
+        if scenario == "pathogen":
+            crop_id = payload.get("crop_id")
+            if not crop_id:
+                await ws.send_json(
+                    {
+                        "type": "error",
+                        "payload": {"message": "pathogen requires crop_id"},
+                    }
+                )
+                return
+            method(crop_id)
+        elif scenario == "dust_storm":
+            duration = payload.get("duration_sols", 10)
+            method(duration)
+        else:
+            method()
 
-    # Trigger agent consultation on next tick
-    session.next_consultation_sol = engine.current_sol
-    session.crisis_interrupt_pending = True
+        # Trigger agent consultation on next tick
+        session.next_consultation_sol = engine.current_sol
+        session.crisis_interrupt_pending = True
 
     await ws.send_json(
         {
@@ -263,6 +279,7 @@ async def _handle_pause(ws: WebSocket, session_id: str | None) -> None:
 
     session = session_manager.get(session_id)
     session.paused = True
+    session.engine.paused = True
     await ws.send_json({"type": "paused", "session_id": session_id, "payload": {}})
 
 
@@ -276,4 +293,5 @@ async def _handle_resume(ws: WebSocket, session_id: str | None) -> None:
 
     session = session_manager.get(session_id)
     session.paused = False
+    session.engine.paused = False
     await ws.send_json({"type": "resumed", "session_id": session_id, "payload": {}})
