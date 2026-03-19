@@ -1,15 +1,9 @@
 import { motion } from "framer-motion"
 
-import type { ScoreCurrent } from "@/types/game"
-
-interface YieldTrendProps {
-  score: ScoreCurrent
-}
-
 // Simple sparkline showing a mock yield trend
 const MOCK_YIELD_DATA = [12, 15, 14, 18, 22, 20, 25, 28, 26, 30, 32, 35]
 
-export function YieldTrend({ score }: YieldTrendProps) {
+export function YieldTrend() {
   const max = Math.max(...MOCK_YIELD_DATA)
   const min = Math.min(...MOCK_YIELD_DATA)
   const range = max - min || 1

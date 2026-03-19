@@ -4,7 +4,6 @@ import type { EventLogEntry } from "@/types/game"
 
 interface EventLogPanelProps {
   events: EventLogEntry[]
-  currentSol: number
 }
 
 function severityColor(severity: string): string {
@@ -13,7 +12,7 @@ function severityColor(severity: string): string {
   return "text-muted-foreground"
 }
 
-export function EventLogPanel({ events, currentSol }: EventLogPanelProps) {
+export function EventLogPanel({ events }: EventLogPanelProps) {
   const recent = events.slice(-5).reverse()
 
   return (
