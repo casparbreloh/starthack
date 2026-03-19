@@ -115,7 +115,7 @@ class SimulationEngine:
         self.water.integrate()
         self.nutrients.integrate()
         dead_crops = self.crops.integrate()
-        self.crew.integrate()
+        self.crew.integrate(current_sol=sol)
 
         # ── Event generation ─────────────────────────────────────────
         tick_events: list[dict[str, Any]] = []

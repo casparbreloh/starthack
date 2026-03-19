@@ -368,6 +368,13 @@ def crew_health():
             "consecutive_deficit_sols": h.consecutive_micronutrient_deficit_sols,
             "health_penalty_pct": h.micronutrient_health_penalty,
         },
+        "illness": {
+            "active": h.illness.active,
+            "sick_member_name": h.illness.sick_member_name,
+            "duration_remaining_sols": h.illness.duration_remaining_sols,
+            "kcal_multiplier": h.illness.kcal_multiplier,
+            "protein_multiplier": h.illness.protein_multiplier,
+        },
     }
 
 

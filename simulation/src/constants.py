@@ -214,6 +214,15 @@ TARGET_K_PPM = 180.0
 TARGET_CA_PPM = 120.0
 TARGET_DO_PPM = 7.0  # dissolved O₂
 
+# ── Crew illness model ────────────────────────────────────────────────────────
+# Illness occurs ~2 times per 450-sol mission (random per-sol check, no second
+# illness while one is already active).
+ILLNESS_PROBABILITY_PER_SOL: float = 2 / 450  # ≈0.44 % chance each sol
+ILLNESS_MIN_DURATION_SOLS: int = 3
+ILLNESS_MAX_DURATION_SOLS: int = 5
+ILLNESS_KCAL_MULTIPLIER: float = 1.15    # +15 % caloric need while ill
+ILLNESS_PROTEIN_MULTIPLIER: float = 1.20  # +20 % protein need while ill
+
 # ── Scoring ───────────────────────────────────────────────────────────────────
 WARNING_KCAL_DAYS = 5  # warn when < N days of food left
 WARNING_WATER_DAYS = 3
