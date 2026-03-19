@@ -86,6 +86,56 @@ async def agent_handler(payload: dict[str, Any], context: RequestContext):
                 )
             }
 
+    elif action == "join_mission":
+        config = payload.get("config", {})
+        session_id = config.get("session_id")
+        if not session_id:
+            yield {
+                "data": json.dumps({"error": "join_mission requires config.session_id"})
+            }
+            return
+
+        from .agents.orchestrator import join_mission
+        from .config import SIM_WS_URL
+
+        ws_url = config.get("ws_url", SIM_WS_URL)
+
+        yield {
+            "data": json.dumps(
+                {
+                    "event": "join_mission_start",
+                    "session_id": session_id,
+                    "ws_url": ws_url,
+                }
+            )
+        }
+
+        try:
+            result = await join_mission(ws_url=ws_url, session_id=session_id)
+
+            yield {
+                "data": json.dumps(
+                    {
+                        "event": "mission_complete",
+                        "run_id": result["run_id"],
+                        "final_score": result["final_score"],
+                        "mission_phase": result["mission_phase"],
+                        "total_crises": result["total_crises"],
+                    }
+                )
+            }
+
+        except Exception as exc:
+            logger.error("Join mission failed: %s", exc)
+            yield {
+                "data": json.dumps(
+                    {
+                        "event": "mission_error",
+                        "error": str(exc),
+                    }
+                )
+            }
+
     else:
         # query mode: interactive single-prompt response
         prompt = payload.get("prompt", "Give me a status report on the greenhouse.")

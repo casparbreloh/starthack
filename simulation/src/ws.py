@@ -12,13 +12,16 @@ Provides a single /ws endpoint that handles:
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 from typing import Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, ValidationError
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from src.agent_bridge import invoke_agent
 from src.constants import MISSION_DURATION_SOLS
 from src.engine import AgentDecision
 from src.session import SessionConfig
@@ -26,6 +29,9 @@ from src.snapshots import build_state_snapshot
 from src.state import session_manager
 
 logger = logging.getLogger(__name__)
+
+AGENT_URL: str | None = os.environ.get("AGENT_URL", "http://localhost:9090")
+SIM_WS_URL: str = os.environ.get("SIM_WS_URL", "ws://localhost:8080/ws")
 
 router = APIRouter()
 
@@ -215,6 +221,14 @@ async def _handle_create_session(
     await ws.send_json({"type": "tick", "payload": snapshot})
 
     logger.info("Session %s created (paused=%s) via WS", session.id, session.paused)
+
+    # Auto-invoke agent if configured
+    if AGENT_URL:
+        asyncio.create_task(
+            invoke_agent(AGENT_URL, session.id, SIM_WS_URL),
+            name=f"invoke-agent-{session.id[:8]}",
+        )
+
     return session.id
 
 
@@ -237,6 +251,10 @@ async def _handle_join_session(
     # Send current state so reconnects get immediate data
     snapshot = build_state_snapshot(session.engine)
     await ws.send_json({"type": "tick", "payload": snapshot})
+
+    # When agent joins, trigger immediate consultation on next tick
+    if role == "agent":
+        session.next_consultation_sol = session.engine.current_sol
 
     logger.info("WebSocket re-joined session %s as %s", session.id, role)
     return session.id
