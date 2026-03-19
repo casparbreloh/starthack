@@ -17,6 +17,7 @@ const empty: SimulationData = {
   crops: null,
   nutrients: null,
   crew: null,
+  crewMembers: null,
   crises: null,
   score: null,
   loading: true,
@@ -35,7 +36,7 @@ export function useSimulation(): SimulationControls {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [status, weather, energy, greenhouse, water, crops, nutrients, crew, crises, score] =
+      const [status, weather, energy, greenhouse, water, crops, nutrients, crew, crewMembers, crises, score] =
         await Promise.allSettled([
           api.getStatus(),
           api.getWeather(),
@@ -45,6 +46,7 @@ export function useSimulation(): SimulationControls {
           api.getCrops(),
           api.getNutrients(),
           api.getCrew(),
+          api.getCrewMembers(),
           api.getCrises(),
           api.getScore(),
         ])
@@ -61,6 +63,7 @@ export function useSimulation(): SimulationControls {
         crops: resolve(crops),
         nutrients: resolve(nutrients),
         crew: resolve(crew),
+        crewMembers: resolve(crewMembers),
         crises: resolve(crises),
         score: resolve(score),
         loading: false,
