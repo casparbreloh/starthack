@@ -70,6 +70,9 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             if msg_type == "create_session":
                 session_id = await _handle_create_session(ws, role, payload)
 
+            elif msg_type == "join_session":
+                session_id = await _handle_join_session(ws, role, payload)
+
             elif msg_type == "agent_actions":
                 await _handle_agent_actions(msg_session_id, payload)
 
@@ -136,6 +139,25 @@ async def _handle_create_session(
         }
     )
     logger.info("Session %s created and started via WS", session.id)
+    return session.id
+
+
+async def _handle_join_session(
+    ws: WebSocket, role: str | None, payload: dict[str, Any]
+) -> str:
+    """Re-register a WebSocket with an existing session (e.g. after reconnect)."""
+    target_id = payload.get("session_id", "")
+    session = session_manager.get(target_id)
+    session.connections.register(ws, role or "frontend")
+
+    await ws.send_json(
+        {
+            "type": "session_joined",
+            "session_id": session.id,
+            "payload": {"session_id": session.id},
+        }
+    )
+    logger.info("WebSocket re-joined session %s as %s", session.id, role)
     return session.id
 
 

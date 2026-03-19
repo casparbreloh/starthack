@@ -696,6 +696,12 @@ export type components = {
         [key: string]: number
       }
     }
+    /** CreateSessionResponse */
+    CreateSessionResponse: {
+      /** Session Id */
+      session_id: string
+      config: components["schemas"]["SessionConfigResponse"]
+    }
     /** CrewHealthResponse */
     CrewHealthResponse: {
       /** Current Sol */
@@ -1039,6 +1045,11 @@ export type components = {
       /** Protein Multiplier */
       protein_multiplier: number
     }
+    /** ListSessionsResponse */
+    ListSessionsResponse: {
+      /** Sessions */
+      sessions: components["schemas"]["SessionSummaryResponse"][]
+    }
     /** MicronutrientsResponse */
     MicronutrientsResponse: {
       /** Sufficient Today */
@@ -1204,6 +1215,28 @@ export type components = {
       timestamp_sol: number
       /** Readings */
       readings: components["schemas"]["SensorReadingResponse"][]
+    }
+    /** SessionConfigResponse */
+    SessionConfigResponse: {
+      /** Seed */
+      seed: number | null
+      /** Difficulty */
+      difficulty: string
+      /** Tick Delay Ms */
+      tick_delay_ms: number
+      /** Starting Reserves */
+      starting_reserves: {
+        [key: string]: number
+      }
+    }
+    /** SessionSummaryResponse */
+    SessionSummaryResponse: {
+      /** Id */
+      id: string
+      /** Created At */
+      created_at: string
+      /** Current Sol */
+      current_sol: number
     }
     /** SetEnvironmentRequest */
     SetEnvironmentRequest: {
@@ -2399,7 +2432,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          "application/json": unknown
+          "application/json": components["schemas"]["ListSessionsResponse"]
         }
       }
     }
@@ -2423,7 +2456,7 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          "application/json": unknown
+          "application/json": components["schemas"]["CreateSessionResponse"]
         }
       }
       /** @description Validation Error */

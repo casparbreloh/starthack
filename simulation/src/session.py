@@ -58,7 +58,7 @@ class Session:
 
         from src.tick_loop import run_session_loop
 
-        self.tick_task = asyncio.get_event_loop().create_task(
+        self.tick_task = asyncio.get_running_loop().create_task(
             run_session_loop(self), name=f"tick-{self.id[:8]}"
         )
 
@@ -96,11 +96,12 @@ class SessionManager:
         return self.get(session_id)
 
     def destroy(self, session_id: str) -> None:
-        """Remove a session from the registry."""
+        """Stop the tick loop and remove a session from the registry."""
         if session_id not in self._sessions:
             raise HTTPException(404, f"Session '{session_id}' not found")
         if session_id == self._default_session.id:
             raise HTTPException(400, "Cannot destroy the default session")
+        self._sessions[session_id].stop()
         del self._sessions[session_id]
 
     def list_sessions(self) -> list[Session]:

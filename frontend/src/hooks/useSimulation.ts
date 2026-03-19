@@ -1,20 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 
 import { api } from "../api/client"
-import type {
-  SimulationData,
-  SimStatus,
-  WeatherCurrent,
-  EnergyStatus,
-  GreenhouseEnvironment,
-  WaterStatus,
-  CropsStatus,
-  NutrientsStatus,
-  CrewNutrition,
-  CrewMembers,
-  ActiveCrises,
-  ScoreData,
-} from "../types/simulation"
+import type { SimulationData, CrewMembers } from "../types/simulation"
 import { useWebSocket } from "./useWebSocket"
 import type { WebSocketState } from "./useWebSocket"
 
@@ -49,17 +36,17 @@ function mapSnapshotToData(
   prevCrewMembers: CrewMembers | null,
 ): SimulationData {
   return {
-    status: state.sim_status as unknown as SimStatus,
-    weather: state.weather_current as unknown as WeatherCurrent | null,
-    energy: state.energy_status as unknown as EnergyStatus,
-    greenhouse: state.greenhouse_environment as unknown as GreenhouseEnvironment,
-    water: state.water_status as unknown as WaterStatus,
-    crops: state.crops_status as unknown as CropsStatus,
-    nutrients: state.nutrients_status as unknown as NutrientsStatus,
-    crew: state.crew_nutrition as unknown as CrewNutrition,
+    status: state.sim_status,
+    weather: state.weather_current,
+    energy: state.energy_status,
+    greenhouse: state.greenhouse_environment,
+    water: state.water_status,
+    crops: state.crops_status,
+    nutrients: state.nutrients_status,
+    crew: state.crew_nutrition,
     crewMembers: prevCrewMembers,
-    crises: state.active_crises as unknown as ActiveCrises,
-    score: state.score_current as unknown as ScoreData,
+    crises: state.active_crises,
+    score: state.score_current,
     loading: false,
     error: null,
   }

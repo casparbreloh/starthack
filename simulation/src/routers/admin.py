@@ -16,7 +16,11 @@ from pydantic import BaseModel, Field
 
 from src.engine import AgentDecision, SimulationEngine
 from src.enums import Difficulty, MissionPhase
-from src.models.responses import SimAdvanceResponse
+from src.models.responses import (
+    CreateSessionResponse,
+    ListSessionsResponse,
+    SimAdvanceResponse,
+)
 from src.session import SessionConfig
 from src.state import session_manager
 
@@ -105,7 +109,7 @@ def sim_reset(
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-@router.post("/sessions")
+@router.post("/sessions", response_model=CreateSessionResponse)
 def create_session(req: CreateSessionRequest):
     config = SessionConfig(
         seed=req.seed,
@@ -125,7 +129,7 @@ def create_session(req: CreateSessionRequest):
     }
 
 
-@router.get("/sessions")
+@router.get("/sessions", response_model=ListSessionsResponse)
 def list_sessions():
     sessions = session_manager.list_sessions()
     return {

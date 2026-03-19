@@ -1081,8 +1081,12 @@ async def run_mission_ws(
                 ]
                 total_crises_seen += len(crisis_interrupts)
 
-                # Run the consultation
-                actions, next_checkin, reasoning = run_consultation(
+                # Run the consultation in a thread to avoid blocking
+                # the event loop (LLM calls and retries are synchronous)
+                import asyncio as _asyncio
+
+                actions, next_checkin, reasoning = await _asyncio.to_thread(
+                    run_consultation,
                     consultation,
                     rest_client,
                     weather_forecaster,

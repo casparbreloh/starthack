@@ -10,6 +10,9 @@ import type {
   CrewMembers,
   ActiveCrises,
   ScoreData,
+  CreateSessionRequest,
+  CreateSessionResponse,
+  ListSessionsResponse,
 } from "../types/simulation"
 
 const BASE = "/simulation"
@@ -28,33 +31,6 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
   })
   if (!res.ok) throw new Error(`${path} → ${res.status}`)
   return res.json() as Promise<T>
-}
-
-// ── Session types ────────────────────────────────────────────────────────────
-
-export interface CreateSessionRequest {
-  seed?: number
-  difficulty?: string
-  tick_delay_ms?: number
-  starting_reserves?: Record<string, number>
-}
-
-export interface CreateSessionResponse {
-  session_id: string
-  config: {
-    seed: number | null
-    difficulty: string
-    tick_delay_ms: number
-    starting_reserves: Record<string, number>
-  }
-}
-
-export interface ListSessionsResponse {
-  sessions: Array<{
-    id: string
-    created_at: string
-    current_sol: number
-  }>
 }
 
 // ── API client ───────────────────────────────────────────────────────────────
