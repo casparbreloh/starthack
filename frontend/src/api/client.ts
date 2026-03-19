@@ -8,6 +8,7 @@ import type {
   CropsStatus,
   NutrientsStatus,
   CrewNutrition,
+  CrewMembers,
   ActiveCrises,
   ScoreData,
 } from "../types/simulation"
@@ -40,6 +41,7 @@ export const api = {
   getCrops: () => get<CropsStatus>("/crops/status"),
   getNutrients: () => get<NutrientsStatus>("/nutrients/status"),
   getCrew: () => get<CrewNutrition>("/crew/nutrition"),
+  getCrewMembers: () => get<CrewMembers>("/crew/members"),
   getCrises: () => get<ActiveCrises>("/events/active_crises"),
   getScore: () => get<ScoreData>("/score/current"),
 }

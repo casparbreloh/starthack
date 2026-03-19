@@ -17,6 +17,7 @@ const empty: SimulationData = {
   crops: null,
   nutrients: null,
   crew: null,
+  crewMembers: null,
   crises: null,
   score: null,
   loading: true,
@@ -35,19 +36,31 @@ export function useSimulation(): SimulationControls {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [status, weather, energy, greenhouse, water, crops, nutrients, crew, crises, score] =
-        await Promise.allSettled([
-          api.getStatus(),
-          api.getWeather(),
-          api.getEnergy(),
-          api.getGreenhouse(),
-          api.getWater(),
-          api.getCrops(),
-          api.getNutrients(),
-          api.getCrew(),
-          api.getCrises(),
-          api.getScore(),
-        ])
+      const [
+        status,
+        weather,
+        energy,
+        greenhouse,
+        water,
+        crops,
+        nutrients,
+        crew,
+        crewMembers,
+        crises,
+        score,
+      ] = await Promise.allSettled([
+        api.getStatus(),
+        api.getWeather(),
+        api.getEnergy(),
+        api.getGreenhouse(),
+        api.getWater(),
+        api.getCrops(),
+        api.getNutrients(),
+        api.getCrew(),
+        api.getCrewMembers(),
+        api.getCrises(),
+        api.getScore(),
+      ])
 
       const resolve = <T>(r: PromiseSettledResult<T>): T | null =>
         r.status === "fulfilled" ? r.value : null
@@ -61,6 +74,7 @@ export function useSimulation(): SimulationControls {
         crops: resolve(crops),
         nutrients: resolve(nutrients),
         crew: resolve(crew),
+        crewMembers: resolve(crewMembers),
         crises: resolve(crises),
         score: resolve(score),
         loading: false,

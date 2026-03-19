@@ -23,10 +23,42 @@ CREW_DAILY_PROTEIN_G = 400  # 100 g/person/day (1.5 g/kg for 70 kg astronaut)
 # Total for crew of 4 = 12.0 L/sol
 CREW_DAILY_WATER_L = 12.0
 
+# ── Initial food rations (per food type, kg — freeze-dried/dehydrated equivalent)
+# Potato: caloric backbone (77 kcal/100g × 1200 kg = 924 000 kcal)
+# Beans:  protein source  (100 kcal/100g ×  250 kg = 250 000 kcal, 90 g prot/100g)
+# Lettuce: micronutrient supplement (15 kcal/100g × 30 kg)
+# Radish:  fast-cycle emergency buffer (16 kcal/100g × 15 kg)
+# Herbs:   crew morale / flavour (40 kcal/100g × 10 kg)
+INITIAL_FOOD_KG: dict[str, float] = {
+    "potato": 1200.0,
+    "beans": 250.0,
+    "lettuce": 30.0,
+    "radish": 15.0,
+    "herbs": 10.0,
+}
+# Caloric and protein density per kg (matches CROP_CATALOG values × 10)
+FOOD_KCAL_PER_KG: dict[str, float] = {
+    "potato": 770.0,
+    "beans": 1000.0,
+    "lettuce": 150.0,
+    "radish": 160.0,
+    "herbs": 400.0,
+}
+FOOD_PROTEIN_G_PER_KG: dict[str, float] = {
+    "potato": 20.0,
+    "beans": 90.0,
+    "lettuce": 13.0,
+    "radish": 7.0,
+    "herbs": 30.0,
+}
+
 # ── Initial stores (NORMAL difficulty) ───────────────────────────────────────
-INITIAL_STORED_KCAL = 1_200_000  # ~100-sol buffer
-INITIAL_STORED_PROTEIN_G = 45_000
-INITIAL_WATER_RESERVOIR_L = 500.0
+# Derived from INITIAL_FOOD_KG × FOOD_KCAL_PER_KG / FOOD_PROTEIN_G_PER_KG
+# potato 924 000 + beans 250 000 + lettuce 4 500 + radish 2 400 + herbs 4 000
+INITIAL_STORED_KCAL = 1_184_900  # ~99-sol buffer
+# potato 24 000 + beans 22 500 + lettuce 390 + radish 105 + herbs 300
+INITIAL_STORED_PROTEIN_G = 47_295
+INITIAL_WATER_RESERVOIR_L = 600.0  # +100 L added as mission starting ration
 INITIAL_BATTERY_WH = 12_000.0
 INITIAL_NUTRIENT_STOCK_PCT = 100.0
 
@@ -96,14 +128,37 @@ CREW_TEMP_CRITICAL_HIGH_C = 45.0  # Rapid hyperthermia onset
 
 # ── Starvation model ──────────────────────────────────────────────────────────
 # Source: WHO TRS 724 (1985), Minnesota Starvation Study (Keys 1950)
-STARVATION_ONSET_DEFICIT_SOLS = (
-    3  # Health effects start after 3 consecutive severe-deficit sols
-)
-STARVATION_SEVERE_DEFICIT_SOLS = 14  # Significant muscle catabolism at 14+ sols
+# Thresholds for consecutive-deficit-sol counter → level transitions
+STARVATION_ONSET_DEFICIT_SOLS = 3  # FED → UNDERFED   (sols 0–2 = FED)
+STARVATION_SEVERE_DEFICIT_SOLS = 7  # UNDERFED → MALNOURISHED (sols 3–6)
 STARVATION_CRITICAL_DEFICIT_SOLS = (
-    45  # Death range: 30–70 sols without food (WHO TRS 724)
+    11  # MALNOURISHED → STARVING (sols 7–10); death ~18 sols
 )
-STARVATION_CALORIC_THRESHOLD_PCT = 0.6  # <60% of daily kcal target = severe-deficit sol
+
+# Caloric thresholds governing counter movement (asymmetric recovery)
+STARVATION_FULL_RECOVERY_THRESHOLD_PCT = 1.0  # ≥100 % kcal → counter −3
+STARVATION_DEFICIT_THRESHOLD_PCT = (
+    0.8  # < 80 % kcal → counter +1; 80–100 % → counter −1
+)
+
+# Health penalty applied per sol at each starvation level (accumulates cumulatively)
+STARVATION_PENALTY_UNDERFED_PER_SOL = 2.0  # max 8 pts over 4 UNDERFED sols
+STARVATION_PENALTY_MALNOURISHED_PER_SOL = 5.0  # max 20 pts over 4 MALNOURISHED sols
+STARVATION_PENALTY_STARVING_PER_SOL = 10.0  # 10 pts/sol → death ~8 STARVING sols
+
+# Legacy alias kept for any external callers
+STARVATION_CALORIC_THRESHOLD_PCT = STARVATION_DEFICIT_THRESHOLD_PCT
+
+# ── Micronutrient model ───────────────────────────────────────────────────────
+# Source: NASA-STD-3001 Vol.2 Rev.B §6.2.4; IOM Dietary Reference Intakes 2006
+# Micronutrients (vitamins A, C, K, folate, minerals) come only from fresh crops
+# (e.g. lettuce). Stored food lacks these after processing. Without a fresh
+# source, subclinical deficiency begins within ~7 days; clinical symptoms emerge
+# around 3 weeks (scurvy onset, immune dysfunction, bone loss).
+MICRONUTRIENT_ONSET_DEFICIT_SOLS = 7  # ADEQUATE → DEFICIENT (subclinical)
+MICRONUTRIENT_SEVERE_DEFICIT_SOLS = 21  # DEFICIENT → DEPLETED (clinical symptoms)
+MICRONUTRIENT_PENALTY_DEFICIENT_PER_SOL = 1.0  # max 14 pts over 14 DEFICIENT sols
+MICRONUTRIENT_PENALTY_DEPLETED_PER_SOL = 3.0  # 3 pts/sol → death ~50 DEPLETED sols
 
 # ── Nutrient system ───────────────────────────────────────────────────────────
 NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL = 0.08  # stock depletion rate
@@ -136,6 +191,32 @@ STRESS_CO2_LOW_PPM = 500.0
 STRESS_HUMIDITY_HIGH_PCT = 85.0
 STRESS_HUMIDITY_LOW_PCT = 30.0
 
+# ── Light (PAR) stress ────────────────────────────────────────────────────────
+# Source: Taiz & Zeiger "Plant Physiology" 5th ed.; Bugbee & Salisbury 1988
+STRESS_PAR_CRITICAL_LOW = 50.0  # µmol/m²/s — growth stalls + severe health loss
+STRESS_PAR_LOW = 100.0  # µmol/m²/s — sub-optimal light, mild health loss
+STRESS_PAR_HIGH = 500.0  # µmol/m²/s — photoinhibition onset
+
+# ── Potassium deficiency ──────────────────────────────────────────────────────
+STRESS_K_DEFICIENCY_PPM = 30.0  # K below this → crop stress (weak stems, poor yield)
+
+# ── Salinity / EC thresholds ─────────────────────────────────────────────────
+# Source: Ayers & Westcot FAO Irrigation & Drainage Paper 29 Rev.1
+STRESS_EC_MODERATE = 2.5  # mS/cm — moderate salinity stress begins
+STRESS_EC_SEVERE = 3.5  # mS/cm — severe salinity stress (20–50% biomass loss)
+
+# ── pH crop stress ────────────────────────────────────────────────────────────
+# Optimal hydroponic pH 5.5–6.5; outside this → nutrient lockout
+STRESS_PH_OPTIMAL_LOW = 5.5
+STRESS_PH_OPTIMAL_HIGH = 6.5
+STRESS_PH_CRITICAL_LOW = 5.0  # below → Fe/Mn toxicity risk
+STRESS_PH_CRITICAL_HIGH = 7.0  # above → Fe/P precipitation, severe lockout
+
+# ── Nutrient solution chemistry dynamics ─────────────────────────────────────
+# Plant nutrient uptake acidifies solution (cation > anion uptake)
+SALT_ACCUMULATION_PPM_PER_SOL = 1.5  # ppm/sol — passive mineral residue from water
+PH_ACIDIFICATION_PER_SOL = 0.02  # pH units/sol drop when crops actively growing
+
 # Nutrient solution targets
 TARGET_PH = 5.8
 TARGET_EC = 1.6  # mS/cm
@@ -144,6 +225,15 @@ TARGET_P_PPM = 40.0
 TARGET_K_PPM = 180.0
 TARGET_CA_PPM = 120.0
 TARGET_DO_PPM = 7.0  # dissolved O₂
+
+# ── Crew illness model ────────────────────────────────────────────────────────
+# Illness occurs ~2 times per 450-sol mission (random per-sol check, no second
+# illness while one is already active).
+ILLNESS_PROBABILITY_PER_SOL: float = 2 / 450  # ≈0.44 % chance each sol
+ILLNESS_MIN_DURATION_SOLS: int = 3
+ILLNESS_MAX_DURATION_SOLS: int = 5
+ILLNESS_KCAL_MULTIPLIER: float = 1.15  # +15 % caloric need while ill
+ILLNESS_PROTEIN_MULTIPLIER: float = 1.20  # +20 % protein need while ill
 
 # ── Scoring ───────────────────────────────────────────────────────────────────
 WARNING_KCAL_DAYS = 5  # warn when < N days of food left

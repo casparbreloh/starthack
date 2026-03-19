@@ -47,6 +47,17 @@ class StarvationLevel(StrEnum):
     STARVING = "starving"  # > 45 deficit sols: critical, life-threatening
 
 
+class MicronutrientLevel(StrEnum):
+    """
+    Micronutrient status based on consecutive sols without fresh crop intake.
+    Source: NASA-STD-3001 Vol.2 Rev.B §6.2.4; IOM Dietary Reference Intakes 2006.
+    """
+
+    ADEQUATE = "adequate"  # < 7 sols: no deficit
+    DEFICIENT = "deficient"  # 7–20 sols: subclinical — fatigue, immune decline
+    DEPLETED = "depleted"  # ≥ 21 sols: clinical — scurvy, bone loss, organ stress
+
+
 class Severity(StrEnum):
     INFO = "info"
     WARNING = "warning"

@@ -15,6 +15,7 @@ unit-tested in isolation.
 from __future__ import annotations
 
 import math
+import random
 from collections import deque
 from dataclasses import dataclass
 from typing import Any
@@ -27,6 +28,7 @@ from src.constants import (
     MISSION_DURATION_SOLS,
 )
 from src.enums import CrisisType, Difficulty, MissionPhase, Severity
+from src.models.autonomous_events import AutonomousEventSystem
 from src.models.climate import ClimateModel
 from src.models.crew import CrewModel
 from src.models.crops import CropModel
@@ -50,7 +52,7 @@ class SimulationEngine:
     """
     Central state machine for the Mars greenhouse simulation.
 
-    All state lives here; routers only read/write through this object.
+    All state lives here; routers only read/write through this object.yeah
     """
 
     def __init__(self) -> None:
@@ -68,6 +70,7 @@ class SimulationEngine:
         self.crew = CrewModel()
         self.events = EventLog()
         self.scoring = ScoringModel()
+        self.autonomous_events = AutonomousEventSystem(random.Random(42))
 
         # Agent decision log
         self.agent_decisions: deque[AgentDecision] = deque(maxlen=500)
@@ -154,10 +157,31 @@ class SimulationEngine:
         self.water.integrate()
         self.nutrients.integrate()
         dead_crops = self.crops.integrate()
-        self.crew.integrate()
+        self.crew.integrate(current_sol=sol)
+
+        # ── Autonomous events (post-integration effects this sol) ─────
+        tick_events: list[dict[str, Any]] = []
+        for ae in self.autonomous_events.tick(sol, self):
+            sev_map = {
+                "info": Severity.INFO,
+                "warning": Severity.WARNING,
+                "critical": Severity.CRITICAL,
+            }
+            sev = sev_map.get(ae["severity"], Severity.INFO)
+            ev = self.events.log(sol, ae["type"], ae["category"], ae["message"], sev)
+            tick_events.append(_event_to_dict(ev))
 
         # ── Event generation ─────────────────────────────────────────
-        tick_events: list[dict[str, Any]] = []
+
+        # Starvation level-change events (emitted by CrewModel)
+        for category, message, sev_str in self.crew.pending_events:
+            severity = (
+                Severity.INFO
+                if sev_str == "info"
+                else (Severity.WARNING if sev_str == "warning" else Severity.CRITICAL)
+            )
+            ev = self.events.log(sol, "alert", category, message, severity)
+            tick_events.append(_event_to_dict(ev))
 
         # Dead crops
         for crop_id in dead_crops:
@@ -395,17 +419,20 @@ class SimulationEngine:
     # ------------------------------------------------------------------
 
     def sensor_readings(self) -> list[dict[str, Any]]:
-        """Generate realistic sensor readings from current state."""
+        """Generate sensor readings from current state, with active sensor noise injected."""
+        noise = self.autonomous_events.sensor_noise
         readings: list[dict[str, Any]] = []
         for zone_id, zone in self.climate.state.items():
+            temp_key = f"temp_{zone_id}"
+            co2_key = f"co2_{zone_id}"
             readings += [
                 {
                     "sensor_id": f"temp_{zone_id}_1",
                     "zone": zone_id,
                     "type": "temperature",
-                    "value": zone.temp_c,
+                    "value": noise.get(temp_key, zone.temp_c),
                     "unit": "celsius",
-                    "status": "ok",
+                    "status": "fault" if temp_key in noise else "ok",
                 },
                 {
                     "sensor_id": f"hum_{zone_id}_1",
@@ -419,9 +446,9 @@ class SimulationEngine:
                     "sensor_id": f"co2_{zone_id}_1",
                     "zone": zone_id,
                     "type": "co2",
-                    "value": round(zone.co2_ppm, 1),
+                    "value": noise.get(co2_key, round(zone.co2_ppm, 1)),
                     "unit": "ppm",
-                    "status": "ok",
+                    "status": "fault" if co2_key in noise else "ok",
                 },
                 {
                     "sensor_id": f"par_{zone_id}_1",
