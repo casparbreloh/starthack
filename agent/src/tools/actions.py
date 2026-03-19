@@ -168,6 +168,43 @@ def create_action_tools(
         return _queue("water/maintenance", {"action": "clean_filters"})
 
     @tool
+    def mine_ice() -> str:
+        """Extract water from subsurface ice deposits using a drill.
+
+        Extracts 6-15 liters of water per operation (yield scales linearly
+        with drill health from 10% to 100%). Costs 800 Wh of energy from
+        the battery. Maximum one mining operation per sol.
+
+        Mining fails if:
+        - Already mined this sol
+        - Battery has less than 800 Wh available
+        - Drill health is below 10%
+
+        This call records a preventive action in the simulation scoring
+        system automatically.
+
+        Returns:
+            JSON string confirming the action was queued.
+        """
+        return _queue("water/mine_ice", {})
+
+    @tool
+    def maintain_drill() -> str:
+        """Restore ice mining drill health by 20%.
+
+        Recommended when drill_health_pct < 50%. Takes 6 hours of downtime.
+        Drill health degrades by 5% per mining operation. Mining fails
+        entirely when drill_health_pct drops below 10%.
+
+        This call records a preventive action in the simulation scoring
+        system automatically.
+
+        Returns:
+            JSON string confirming the action was queued.
+        """
+        return _queue("water/maintenance", {"action": "maintain_drill"})
+
+    @tool
     def plant_crop(
         crop_type: str,
         zone_id: str,
@@ -266,6 +303,8 @@ def create_action_tools(
         "set_zone_environment": set_zone_environment,
         "set_irrigation": set_irrigation,
         "clean_water_filters": clean_water_filters,
+        "mine_ice": mine_ice,
+        "maintain_drill": maintain_drill,
         "plant_crop": plant_crop,
         "harvest_crop": harvest_crop,
         "remove_crop": remove_crop,

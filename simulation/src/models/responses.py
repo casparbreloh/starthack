@@ -121,6 +121,10 @@ class WaterStatusResponse(BaseModel):
     days_until_critical: float
     filter_health_pct: float
     irrigation_settings: dict[str, float]
+    drill_health_pct: float
+    last_mining_sol: int
+    daily_mined_liters: float
+    total_mined_liters: float
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -145,6 +149,7 @@ class CropBatchResponse(BaseModel):
     growth_pct: float
     health: float
     is_ready: bool
+    is_bolting: bool
     stress_indicators: list[StressIndicatorResponse]
     area_m2: float
     soil_moisture_pct: float
@@ -168,6 +173,7 @@ class ZoneNutrientsResponse(BaseModel):
     zone_id: str
     solution_ph: float
     solution_ec_ms_cm: float
+    base_salt_ppm: float
     solution_temp_c: float
     dissolved_o2_ppm: float
     nitrogen_ppm: float

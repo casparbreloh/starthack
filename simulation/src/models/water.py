@@ -15,6 +15,13 @@ from src.constants import (
     FILTER_DEGRADATION_RATE_PCT_PER_SOL,
     FILTER_HEALTH_MAINTENANCE_RESTORE,
     FILTER_HEALTH_MIN_EFFICIENCY_FACTOR,
+    ICE_MINING_BASE_YIELD_L,
+    ICE_MINING_DRILL_DEGRADATION_PCT,
+    ICE_MINING_DRILL_INITIAL_HEALTH_PCT,
+    ICE_MINING_DRILL_MAINTENANCE_RESTORE_PCT,
+    ICE_MINING_DRILL_MIN_HEALTH_PCT,
+    ICE_MINING_ENERGY_COST_WH,
+    ICE_MINING_MIN_YIELD_L,
     INITIAL_WATER_RESERVOIR_L,
     PLANT_TRANSPIRATION_RECOVERY_PCT,
     WATER_RECYCLING_NOMINAL_PCT,
@@ -41,6 +48,11 @@ class WaterState:
     irrigation_settings: dict[str, float] = field(
         default_factory=lambda: {z: 5.0 for z in ZONE_AREAS_M2}
     )
+    # Ice mining state
+    drill_health_pct: float = ICE_MINING_DRILL_INITIAL_HEALTH_PCT
+    last_mining_sol: int = -1
+    daily_mined_liters: float = 0.0
+    total_mined_liters: float = 0.0
 
 
 @dataclass
@@ -151,13 +163,10 @@ class WaterModel:
         self._update_recycling_efficiency()
 
         # Estimate days until critical (50 L)
-        if self.rates.d_reservoir < 0:
+        net_loss = abs(self.rates.d_reservoir)
+        if self.rates.d_reservoir < 0 and net_loss >= 0.01:
             self.state.days_until_critical = round(
-                max(
-                    0.0,
-                    (self.state.reservoir_liters - 50.0) / abs(self.rates.d_reservoir),
-                ),
-                1,
+                max(0.0, (self.state.reservoir_liters - 50.0) / net_loss), 1
             )
         else:
             self.state.days_until_critical = 999.0
@@ -168,6 +177,57 @@ class WaterModel:
 
     def set_irrigation(self, zone_id: str, liters_per_sol: float) -> None:
         self.state.irrigation_settings[zone_id] = max(0.0, liters_per_sol)
+
+    def mine_ice(self, current_sol: int, battery_wh: float) -> dict:
+        """Extract water from Martian ice deposits using a drill.
+
+        Degrades drill health; limited to once per sol.
+        Reset daily_mined_liters at the top of every call.
+        """
+        # Always reset daily counter at the start of every mine_ice call
+        self.state.daily_mined_liters = 0.0
+
+        # Guard 1: Can only mine once per sol
+        if current_sol == self.state.last_mining_sol:
+            return {"result": "failed", "reason": "already_mined_this_sol"}
+
+        # Guard 2: Require sufficient energy
+        if battery_wh < ICE_MINING_ENERGY_COST_WH:
+            return {"result": "failed", "reason": "insufficient_energy"}
+
+        # Guard 3: Drill must be above minimum health threshold
+        if self.state.drill_health_pct < ICE_MINING_DRILL_MIN_HEALTH_PCT:
+            return {"result": "failed", "reason": "drill_too_damaged"}
+
+        # Calculate yield based on drill health (linear interpolation)
+        liters = (
+            ICE_MINING_MIN_YIELD_L
+            + (ICE_MINING_BASE_YIELD_L - ICE_MINING_MIN_YIELD_L)
+            * self.state.drill_health_pct
+            / 100.0
+        )
+
+        # Clamp to reservoir capacity
+        liters = min(liters, WATER_RESERVOIR_CAPACITY_L - self.state.reservoir_liters)
+
+        # Update state
+        self.state.reservoir_liters = round(
+            min(WATER_RESERVOIR_CAPACITY_L, self.state.reservoir_liters + liters), 2
+        )
+        self.state.drill_health_pct = round(
+            max(0.0, self.state.drill_health_pct - ICE_MINING_DRILL_DEGRADATION_PCT), 2
+        )
+        self.state.last_mining_sol = current_sol
+        self.state.daily_mined_liters = round(liters, 2)
+        self.state.total_mined_liters = round(self.state.total_mined_liters + liters, 2)
+
+        return {
+            "result": "success",
+            "liters_extracted": round(liters, 2),
+            "energy_cost_wh": ICE_MINING_ENERGY_COST_WH,
+            "new_drill_health_pct": round(self.state.drill_health_pct, 2),
+            "new_reservoir_liters": round(self.state.reservoir_liters, 2),
+        }
 
     def maintenance(self, action: str) -> dict:
         if action == "clean_filters":
@@ -185,5 +245,18 @@ class WaterModel:
                 "new_efficiency_pct": self.state.recycling_efficiency_pct,
                 "new_filter_health_pct": self.state.filter_health_pct,
                 "downtime_hours": 4,
+            }
+        elif action == "maintain_drill":
+            restored = min(
+                100.0 - self.state.drill_health_pct,
+                ICE_MINING_DRILL_MAINTENANCE_RESTORE_PCT,
+            )
+            self.state.drill_health_pct = round(
+                min(100.0, self.state.drill_health_pct + restored), 2
+            )
+            return {
+                "result": "success",
+                "new_drill_health_pct": self.state.drill_health_pct,
+                "downtime_hours": 6,
             }
         return {"result": "unknown_action"}

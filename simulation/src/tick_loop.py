@@ -11,7 +11,7 @@ import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
-from src.enums import CropType, MissionPhase
+from src.enums import CropType, MissionPhase, Severity
 from src.interrupts import detect_interrupts
 from src.snapshots import build_consultation_snapshot, build_state_snapshot
 
@@ -56,13 +56,20 @@ async def run_session_loop(session: Session) -> None:
             }
             previous_phase = engine.mission_phase
 
-            # Advance one sol under lock
+            # Advance one sol under lock; also snapshot crisis_interrupt_pending
             async with session.lock:
                 tick_events = engine.advance(1)
+                crisis_pending = session.crisis_interrupt_pending
+                session.crisis_interrupt_pending = False
 
             # Detect interrupts (read-only, no lock needed)
             interrupts = detect_interrupts(
-                engine, pre_crisis_ids, pre_ready_crops, tick_events, previous_phase
+                engine,
+                pre_crisis_ids,
+                pre_ready_crops,
+                tick_events,
+                previous_phase,
+                last_interrupt_sols=session.last_interrupt_sols,
             )
 
             # Build snapshot and broadcast (read-only, no lock needed)
@@ -75,16 +82,11 @@ async def run_session_loop(session: Session) -> None:
             should_consult = session.connections.agent is not None and (
                 engine.current_sol >= session.next_consultation_sol
                 or interrupts
-                or session.crisis_interrupt_pending
+                or crisis_pending
             )
 
             if should_consult:
-                reason = (
-                    "interrupt"
-                    if interrupts or session.crisis_interrupt_pending
-                    else "scheduled"
-                )
-                session.crisis_interrupt_pending = False
+                reason = "interrupt" if interrupts or crisis_pending else "scheduled"
                 await _consult_agent(session, snapshot, interrupts, reason)
 
             # Check if mission ended
@@ -105,6 +107,12 @@ async def run_session_loop(session: Session) -> None:
         logger.info("Tick loop cancelled for session %s", session.id)
     except Exception:
         logger.exception("Tick loop error for session %s", session.id)
+        try:
+            await session.connections.broadcast(
+                {"type": "error", "payload": {"message": "Simulation crashed"}}
+            )
+        except Exception:
+            pass
 
 
 async def _consult_agent(
@@ -213,6 +221,37 @@ def _dispatch_action(
         result = engine.water.maintenance(action_name)
         if result.get("result") == "success":
             engine.scoring.record_preventive_action()
+        return result
+
+    if endpoint == "water/mine_ice":
+        result = engine.water.mine_ice(
+            current_sol=engine.current_sol,
+            battery_wh=engine.energy.state.battery_level_wh,
+        )
+        if result["result"] == "success":
+            # Deduct energy from battery
+            engine.energy.state.battery_level_wh = max(
+                0.0, engine.energy.state.battery_level_wh - result["energy_cost_wh"]
+            )
+            # Record preventive action
+            engine.scoring.record_preventive_action()
+            # Log success event
+            engine.events.log(
+                engine.current_sol,
+                "action",
+                "water",
+                f"Ice mining: extracted {result['liters_extracted']} L (drill health: {result['new_drill_health_pct']}%)",
+                Severity.INFO,
+            )
+        else:
+            # Log failure event
+            engine.events.log(
+                engine.current_sol,
+                "action",
+                "water",
+                f"Ice mining failed: {result.get('reason', 'unknown')}",
+                Severity.WARNING,
+            )
         return result
 
     if endpoint == "crops/plant":

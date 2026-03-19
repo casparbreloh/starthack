@@ -186,6 +186,10 @@ def water_status(session_id: str | None = Query(default=None)):
         "days_until_critical": s.days_until_critical,
         "filter_health_pct": s.filter_health_pct,
         "irrigation_settings": s.irrigation_settings,
+        "drill_health_pct": s.drill_health_pct,
+        "last_mining_sol": s.last_mining_sol,
+        "daily_mined_liters": s.daily_mined_liters,
+        "total_mined_liters": s.total_mined_liters,
     }
 
 
