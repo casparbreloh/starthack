@@ -1,13 +1,8 @@
 """Action @tool functions for the Mars greenhouse agent.
 
-Each function wraps a SimClient POST endpoint. These tools allow the LLM
-to directly control the greenhouse simulation.
-
-Note: advance_simulation is a plain function (NO @tool decorator). It is
-called programmatically by run_sol only, NEVER given to specialist agents.
-
-Tool functions are created via create_action_tools() which binds a specific
-SimClient instance, ensuring all tools use the same simulation URL.
+Each function returns a queued confirmation dict. The actual execution
+happens server-side when the simulation receives the agent_actions
+WebSocket message and calls _dispatch_action() in tick_loop.py.
 """
 
 from __future__ import annotations
@@ -16,14 +11,11 @@ import json
 
 from strands import tool
 
-from ..sim_client import SimClient
 
+def create_action_tools() -> dict:
+    """Create action tool functions that return intent dicts.
 
-def create_action_tools(client: SimClient) -> dict:
-    """Create action tool functions bound to the given SimClient.
-
-    Returns a dict with keys matching the tool function names, so the
-    orchestrator can reference them by name.
+    Returns a dict with keys matching the tool function names.
     """
 
     @tool
@@ -54,16 +46,19 @@ def create_action_tools(client: SimClient) -> dict:
             reserve_pct: Percentage held in reserve for safety buffer (0-100)
 
         Returns:
-            JSON string with the new energy allocation confirmation.
+            JSON string confirming the action was queued.
         """
-        result = client.allocate_energy(
-            heating_pct=heating_pct,
-            lighting_pct=lighting_pct,
-            water_recycling_pct=water_recycling_pct,
-            nutrient_pumps_pct=nutrient_pumps_pct,
-            reserve_pct=reserve_pct,
+        return json.dumps(
+            {
+                "status": "queued",
+                "action": "energy/allocate",
+                "heating_pct": heating_pct,
+                "lighting_pct": lighting_pct,
+                "water_recycling_pct": water_recycling_pct,
+                "nutrient_pumps_pct": nutrient_pumps_pct,
+                "reserve_pct": reserve_pct,
+            }
         )
-        return json.dumps(result, indent=2)
 
     @tool
     def set_zone_environment(
@@ -88,37 +83,42 @@ def create_action_tools(client: SimClient) -> dict:
             photoperiod_hours: Hours of lighting per sol (optional)
 
         Returns:
-            JSON string with the new environment setpoints confirmation.
+            JSON string confirming the action was queued.
         """
-        result = client.set_environment(
-            zone_id=zone_id,
-            target_temp_c=target_temp_c,
-            target_humidity_pct=target_humidity_pct,
-            target_co2_ppm=target_co2_ppm,
-            par_umol_m2s=par_umol_m2s,
-            photoperiod_hours=photoperiod_hours,
+        params: dict = {"zone_id": zone_id}
+        if target_temp_c is not None:
+            params["target_temp_c"] = target_temp_c
+        if target_humidity_pct is not None:
+            params["target_humidity_pct"] = target_humidity_pct
+        if target_co2_ppm is not None:
+            params["target_co2_ppm"] = target_co2_ppm
+        if par_umol_m2s is not None:
+            params["par_umol_m2s"] = par_umol_m2s
+        if photoperiod_hours is not None:
+            params["photoperiod_hours"] = photoperiod_hours
+        return json.dumps(
+            {"status": "queued", "action": "greenhouse/set_environment", **params}
         )
-        return json.dumps(result, indent=2)
 
     @tool
     def set_irrigation(zone_id: str, irrigation_liters_per_sol: float) -> str:
         """Set the daily irrigation rate for a greenhouse zone.
-
-        The simulation also accepts an optional irrigation_frequency field
-        (default: 'continuous'). The default is appropriate for all scenarios.
 
         Args:
             zone_id: Zone identifier ('A', 'B', or 'C')
             irrigation_liters_per_sol: Daily water allocation in liters per sol
 
         Returns:
-            JSON string confirming the new irrigation setting.
+            JSON string confirming the action was queued.
         """
-        result = client.set_irrigation(
-            zone_id=zone_id,
-            irrigation_liters_per_sol=irrigation_liters_per_sol,
+        return json.dumps(
+            {
+                "status": "queued",
+                "action": "water/set_irrigation",
+                "zone_id": zone_id,
+                "irrigation_liters_per_sol": irrigation_liters_per_sol,
+            }
         )
-        return json.dumps(result, indent=2)
 
     @tool
     def clean_water_filters() -> str:
@@ -131,10 +131,15 @@ def create_action_tools(client: SimClient) -> dict:
         system automatically.
 
         Returns:
-            JSON string confirming the maintenance action.
+            JSON string confirming the action was queued.
         """
-        result = client.water_maintenance(action="clean_filters")
-        return json.dumps(result, indent=2)
+        return json.dumps(
+            {
+                "status": "queued",
+                "action": "water/maintenance",
+                "action_name": "clean_filters",
+            }
+        )
 
     @tool
     def plant_crop(
@@ -155,15 +160,12 @@ def create_action_tools(client: SimClient) -> dict:
             batch_name: Optional name for tracking this planting batch
 
         Returns:
-            JSON string with the new crop record including crop_id.
+            JSON string confirming the action was queued.
         """
-        result = client.plant_crop(
-            crop_type=crop_type,
-            zone_id=zone_id,
-            area_m2=area_m2,
-            batch_name=batch_name,
-        )
-        return json.dumps(result, indent=2)
+        params: dict = {"type": crop_type, "zone_id": zone_id, "area_m2": area_m2}
+        if batch_name is not None:
+            params["batch_name"] = batch_name
+        return json.dumps({"status": "queued", "action": "crops/plant", **params})
 
     @tool
     def harvest_crop(crop_id: str) -> str:
@@ -176,10 +178,11 @@ def create_action_tools(client: SimClient) -> dict:
             crop_id: The unique identifier of the crop to harvest
 
         Returns:
-            JSON string with harvest yield data (kg, kcal, protein_g).
+            JSON string confirming the action was queued.
         """
-        result = client.harvest_crop(crop_id=crop_id)
-        return json.dumps(result, indent=2)
+        return json.dumps(
+            {"status": "queued", "action": "crops/harvest", "crop_id": crop_id}
+        )
 
     @tool
     def remove_crop(crop_id: str, reason: str = "") -> str:
@@ -193,10 +196,16 @@ def create_action_tools(client: SimClient) -> dict:
             reason: Human-readable reason for removal (for decision logging)
 
         Returns:
-            JSON string confirming removal and freed area.
+            JSON string confirming the action was queued.
         """
-        result = client.remove_crop(crop_id=crop_id, reason=reason)
-        return json.dumps(result, indent=2)
+        return json.dumps(
+            {
+                "status": "queued",
+                "action": "crops/remove",
+                "crop_id": crop_id,
+                "reason": reason,
+            }
+        )
 
     @tool
     def adjust_nutrients(
@@ -222,30 +231,18 @@ def create_action_tools(client: SimClient) -> dict:
             potassium_boost: Apply potassium supplementation if True
 
         Returns:
-            JSON string with updated nutrient readings after adjustment.
+            JSON string confirming the action was queued.
         """
-        result = client.adjust_nutrients(
-            zone_id=zone_id,
-            target_ph=target_ph,
-            target_ec_ms_cm=target_ec_ms_cm,
-            nitrogen_boost=nitrogen_boost,
-            potassium_boost=potassium_boost,
-        )
-        return json.dumps(result, indent=2)
-
-    def advance_simulation(sols: int = 1) -> dict:
-        """Advance the simulation by N sols (plain function — NOT a @tool).
-
-        This function is called programmatically by run_sol ONLY.
-        It is NEVER given as a tool to any LLM agent (orchestrator or specialist).
-
-        Args:
-            sols: Number of sols to advance (default 1)
-
-        Returns:
-            The advance response dict containing new_sol, mission_phase, and events.
-        """
-        return client.advance(sols=sols)
+        params: dict = {
+            "zone_id": zone_id,
+            "nitrogen_boost": nitrogen_boost,
+            "potassium_boost": potassium_boost,
+        }
+        if target_ph is not None:
+            params["target_ph"] = target_ph
+        if target_ec_ms_cm is not None:
+            params["target_ec_ms_cm"] = target_ec_ms_cm
+        return json.dumps({"status": "queued", "action": "nutrients/adjust", **params})
 
     return {
         "allocate_energy": allocate_energy,
@@ -256,5 +253,4 @@ def create_action_tools(client: SimClient) -> dict:
         "harvest_crop": harvest_crop,
         "remove_crop": remove_crop,
         "adjust_nutrients": adjust_nutrients,
-        "advance_simulation": advance_simulation,
     }

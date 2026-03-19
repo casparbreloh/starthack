@@ -1,6 +1,5 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 
-import { api } from "../api/client"
 import type {
   SimulationData,
   SimStatus,
@@ -70,62 +69,6 @@ export function useSimulation(): SimulationControls {
   const [running, setRunning] = useState(true)
 
   const ws = useWebSocket()
-
-  // Initial REST fetch as fallback before WS connects
-  useEffect(() => {
-    void fetchAll()
-  }, [])
-
-  const fetchAll = useCallback(async () => {
-    try {
-      const [
-        status,
-        weather,
-        energy,
-        greenhouse,
-        water,
-        crops,
-        nutrients,
-        crew,
-        crewMembers,
-        crises,
-        score,
-      ] = await Promise.allSettled([
-        api.getStatus(),
-        api.getWeather(),
-        api.getEnergy(),
-        api.getGreenhouse(),
-        api.getWater(),
-        api.getCrops(),
-        api.getNutrients(),
-        api.getCrew(),
-        api.getCrewMembers(),
-        api.getCrises(),
-        api.getScore(),
-      ])
-
-      const resolve = <T>(r: PromiseSettledResult<T>): T | null =>
-        r.status === "fulfilled" ? r.value : null
-
-      setData({
-        status: resolve(status),
-        weather: resolve(weather),
-        energy: resolve(energy),
-        greenhouse: resolve(greenhouse),
-        water: resolve(water),
-        crops: resolve(crops),
-        nutrients: resolve(nutrients),
-        crew: resolve(crew),
-        crewMembers: resolve(crewMembers),
-        crises: resolve(crises),
-        score: resolve(score),
-        loading: false,
-        error: null,
-      })
-    } catch {
-      setData((prev) => ({ ...prev, loading: false, error: "Simulation offline" }))
-    }
-  }, [])
 
   // When WS receives a tick, map it to SimulationData
   useEffect(() => {

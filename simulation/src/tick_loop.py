@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from src.enums import CropType, MissionPhase
 from src.interrupts import detect_interrupts
-from src.snapshots import build_state_snapshot
+from src.snapshots import build_consultation_snapshot, build_state_snapshot
 
 if TYPE_CHECKING:
     from src.session import Session
@@ -116,6 +116,14 @@ async def _consult_agent(
     """Pause the tick loop and wait for agent actions."""
     session.agent_response_event.clear()
 
+    # Build enriched consultation snapshot (includes weather history,
+    # forecast, crop catalog, events log, sensors — everything the
+    # agent needs without REST calls)
+    consultation_snapshot = build_consultation_snapshot(session.engine)
+    # Carry over events and interrupts from the tick
+    consultation_snapshot["events"] = snapshot.get("events", [])
+    consultation_snapshot["interrupts"] = interrupts
+
     await session.connections.send_to_agent(
         {
             "type": "consultation",
@@ -124,7 +132,7 @@ async def _consult_agent(
                 "sol": session.engine.current_sol,
                 "reason": reason,
                 "interrupts": interrupts,
-                "snapshot": snapshot,
+                "snapshot": consultation_snapshot,
             },
         }
     )

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.catalog import CROP_CATALOG
 from src.constants import (
     CREW_DAILY_KCAL,
     FOOD_KCAL_PER_KG,
@@ -34,6 +35,61 @@ def build_state_snapshot(engine: SimulationEngine) -> dict[str, Any]:
         "crew_nutrition": _crew_nutrition(engine),
         "active_crises": _active_crises(engine),
         "score_current": _score_current(engine),
+    }
+
+
+def build_consultation_snapshot(engine: SimulationEngine) -> dict[str, Any]:
+    """Build an enriched snapshot for agent consultations.
+
+    Extends build_state_snapshot() with data the agent needs that isn't
+    in the tick broadcast: weather history, forecast, crop catalog,
+    events log, and sensor readings.
+    """
+    snapshot = build_state_snapshot(engine)
+
+    # Weather history (last 30 sols)
+    weather_to_dict = _weather_to_dict
+    snapshot["weather_history"] = [
+        weather_to_dict(w) for w in engine.weather.history(30)
+    ]
+
+    # Weather forecast (7 sols)
+    snapshot["weather_forecast"] = [
+        {**weather_to_dict(w), "confidence": round(max(0.5, 1.0 - i * 0.05), 2)}
+        for i, w in enumerate(engine.weather.forecast(engine.current_sol, 7))
+    ]
+
+    # Crop catalog (static)
+    snapshot["crop_catalog"] = {
+        crop_type.value: {**info} for crop_type, info in CROP_CATALOG.items()
+    }
+
+    # Events log (last 50 sols)
+    since_sol = max(0, engine.current_sol - 50)
+    snapshot["events_log"] = [e.to_dict() for e in engine.events.since(since_sol)]
+
+    # Sensor readings
+    snapshot["sensors_readings"] = {
+        "timestamp_sol": engine.current_sol + 0.5,
+        "readings": engine.sensor_readings(),
+    }
+
+    return snapshot
+
+
+def _weather_to_dict(w: Any) -> dict[str, Any]:
+    """Convert a WeatherState to a plain dict (matches telemetry router shape)."""
+    return {
+        "sol": w.sol,
+        "min_temp_c": w.min_temp_c,
+        "max_temp_c": w.max_temp_c,
+        "avg_temp_c": w.avg_temp_c,
+        "pressure_pa": w.pressure_pa,
+        "solar_irradiance_wm2": w.solar_irradiance_wm2,
+        "dust_opacity": w.dust_opacity,
+        "season": w.season,
+        "ls": w.ls,
+        "sol_in_year": w.sol_in_year,
     }
 
 

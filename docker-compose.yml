@@ -1,0 +1,19 @@
+services:
+  simulation:
+    build: ./simulation
+    ports:
+      - "8080:8080"
+
+  agent:
+    build: ./agent
+    environment:
+      - SIM_BASE_URL=http://simulation:8080
+      - SIM_WS_URL=ws://simulation:8080/ws
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - AWS_REGION=us-west-2
+    volumes:
+      - ~/.aws:/root/.aws:ro
+    depends_on:
+      - simulation
