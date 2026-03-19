@@ -1,18 +1,31 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 
+import type {
+  SimStatus,
+  WeatherCurrent,
+  EnergyStatus,
+  GreenhouseEnvironment,
+  WaterStatus,
+  CropsStatus,
+  NutrientsStatus,
+  CrewNutrition,
+  ActiveCrises,
+  ScoreData,
+} from "../types/simulation"
+
 // ── WebSocket message types ──────────────────────────────────────────────────
 
 interface TickPayload {
-  sim_status: Record<string, unknown>
-  weather_current: Record<string, unknown> | null
-  energy_status: Record<string, unknown>
-  greenhouse_environment: Record<string, unknown>
-  water_status: Record<string, unknown>
-  crops_status: Record<string, unknown>
-  nutrients_status: Record<string, unknown>
-  crew_nutrition: Record<string, unknown>
-  active_crises: Record<string, unknown>
-  score_current: Record<string, unknown>
+  sim_status: SimStatus
+  weather_current: WeatherCurrent | null
+  energy_status: EnergyStatus
+  greenhouse_environment: GreenhouseEnvironment
+  water_status: WaterStatus
+  crops_status: CropsStatus
+  nutrients_status: NutrientsStatus
+  crew_nutrition: CrewNutrition
+  active_crises: ActiveCrises
+  score_current: ScoreData
   events: unknown[]
   interrupts: unknown[]
 }
@@ -32,6 +45,11 @@ type WsIncoming =
         final_sol: number
         snapshot: TickPayload
       }
+    }
+  | {
+      type: "session_joined"
+      session_id: string
+      payload: { session_id: string }
     }
   | { type: "paused"; session_id: string; payload: Record<string, never> }
   | { type: "resumed"; session_id: string; payload: Record<string, never> }
@@ -55,12 +73,8 @@ interface WsOutgoing {
 
 // ── Session config for create_session ────────────────────────────────────────
 
-export interface CreateSessionConfig {
-  seed?: number
-  difficulty?: string
-  tick_delay_ms?: number
-  starting_reserves?: Record<string, number>
-}
+import type { CreateSessionRequest } from "../types/simulation"
+export type CreateSessionConfig = CreateSessionRequest
 
 // ── Hook return type ─────────────────────────────────────────────────────────
 
@@ -82,8 +96,10 @@ const MAX_RECONNECT_RETRIES = 5
 const BASE_RECONNECT_DELAY_MS = 1000
 
 function buildWsUrl(): string {
+  const envUrl = import.meta.env.VITE_SIM_WS_URL as string | undefined
+  if (envUrl) return envUrl
   const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  return `${wsProtocol}//${window.location.hostname}:8080/ws`
+  return `${wsProtocol}//${window.location.host}/ws`
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
@@ -135,6 +151,7 @@ export function useWebSocket(): WebSocketState {
         break
 
       case "registered":
+      case "session_joined":
       case "paused":
       case "resumed":
       case "crisis_injected":
@@ -156,6 +173,22 @@ export function useWebSocket(): WebSocketState {
       retriesRef.current = 0
       // Register as frontend
       ws.send(JSON.stringify({ type: "register", payload: { role: "frontend" } }))
+      // Re-join existing session or auto-create a new one
+      if (sessionIdRef.current) {
+        ws.send(
+          JSON.stringify({
+            type: "join_session",
+            payload: { session_id: sessionIdRef.current },
+          }),
+        )
+      } else {
+        ws.send(
+          JSON.stringify({
+            type: "create_session",
+            payload: { tick_delay_ms: 100 },
+          }),
+        )
+      }
     }
 
     ws.onmessage = handleMessage

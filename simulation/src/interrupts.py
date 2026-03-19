@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.constants import CRISIS_BATTERY_PCT, CRISIS_WATER_RESERVOIR_L
 from src.engine import SimulationEngine
 from src.enums import MissionPhase
 
@@ -85,8 +86,8 @@ def detect_interrupts(
             }
         )
 
-    # Water critical (< 50L)
-    if engine.water.state.reservoir_liters < 50:
+    # Water critical
+    if engine.water.state.reservoir_liters < CRISIS_WATER_RESERVOIR_L:
         interrupts.append(
             {
                 "type": "water_critical",
@@ -96,8 +97,8 @@ def detect_interrupts(
             }
         )
 
-    # Battery critical (< 5%)
-    if engine.energy.battery_pct < 5:
+    # Battery critical
+    if engine.energy.battery_pct < CRISIS_BATTERY_PCT:
         interrupts.append(
             {
                 "type": "battery_critical",

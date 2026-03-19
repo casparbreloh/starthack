@@ -237,3 +237,4 @@ WARNING_KCAL_DAYS = 5  # warn when < N days of food left
 WARNING_WATER_DAYS = 3
 CRISIS_WATER_RESERVOIR_L = 50.0
 CRISIS_BATTERY_WH = 2_000.0
+CRISIS_BATTERY_PCT = 5.0  # Battery below 5 % triggers interrupt

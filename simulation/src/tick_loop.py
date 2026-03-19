@@ -147,6 +147,10 @@ async def _consult_agent(
             AGENT_TIMEOUT_S,
             session.id,
         )
+        # Advance so the loop doesn't immediately re-consult on the next tick
+        session.next_consultation_sol = (
+            session.engine.current_sol + session.next_checkin
+        )
         return
 
     # Execute pending actions under lock
@@ -193,8 +197,9 @@ def _dispatch_action(
         return {"allocation": engine.energy.state.allocation}
 
     if endpoint == "greenhouse/set_environment":
-        zone_id = body.pop("zone_id", body.get("zone_id"))
-        zone = engine.climate.set_zone(zone_id=zone_id, **body)
+        zone_id = body.get("zone_id")
+        zone_body = {k: v for k, v in body.items() if k != "zone_id"}
+        zone = engine.climate.set_zone(zone_id=zone_id, **zone_body)
         return {"zone_id": zone.zone_id, "target_temp_c": zone.target_temp_c}
 
     if endpoint == "water/set_irrigation":
