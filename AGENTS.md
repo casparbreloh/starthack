@@ -71,12 +71,13 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 
 Frontend TypeScript types are auto-generated from the simulation's OpenAPI schema:
 
-1. Pydantic response models in `simulation/src/models/responses.py` define the API contract
-2. `simulation/scripts/export_openapi.py` extracts the OpenAPI JSON without starting a server
-3. `openapi-typescript` generates `frontend/src/contracts/simulation.d.ts` from the schema
-4. `frontend/src/types/simulation.ts` re-exports generated types under stable names
+1. Pydantic response models in `simulation/src/models/responses.py` define the data contract
+2. REST routers in `simulation/src/routers/` reference these models (kept for schema generation only — not mounted in the running app)
+3. `simulation/scripts/export_openapi.py` creates a schema-only FastAPI app with routers to extract OpenAPI JSON
+4. `openapi-typescript` generates `frontend/src/contracts/simulation.d.ts` from the schema
+5. `frontend/src/types/simulation.ts` re-exports generated types under stable names
 
-When changing an API response shape: update the Pydantic model in `responses.py`, run `make codegen`, and the frontend types update automatically. CI runs `make check-codegen` to enforce types stay in sync.
+When changing a data shape: update the Pydantic model in `responses.py`, run `make codegen`, and the frontend types update automatically. CI runs `make check-codegen` to enforce types stay in sync.
 
 ## Pre-Commit Checks
 
