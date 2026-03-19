@@ -9,7 +9,7 @@ weather unless a scenario has been injected.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from src.constants import (
     MARS_ECCENTRICITY,
@@ -26,10 +26,10 @@ class WeatherState:
     max_temp_c: float
     avg_temp_c: float
     pressure_pa: float
-    solar_irradiance_wm2: float    # top-of-atmosphere
-    dust_opacity: float            # optical depth τ (0.1 = clear, 3.0 = severe storm)
+    solar_irradiance_wm2: float  # top-of-atmosphere
+    dust_opacity: float  # optical depth τ (0.1 = clear, 3.0 = severe storm)
     season: str
-    ls: float                      # solar longitude 0–360°
+    ls: float  # solar longitude 0–360°
     sol_in_year: int
 
 
@@ -43,7 +43,7 @@ class MarsWeatherModel:
     """
 
     def __init__(self) -> None:
-        self._store: dict[int, WeatherState] = {}   # sol → WeatherState
+        self._store: dict[int, WeatherState] = {}  # sol → WeatherState
 
     # ------------------------------------------------------------------
     # Public API
@@ -67,9 +67,7 @@ class MarsWeatherModel:
         min_sol = min(self._store)
         start_sol = max(min_sol, max_sol - last_n_sols + 1)
         return [
-            self._store[s]
-            for s in range(start_sol, max_sol + 1)
-            if s in self._store
+            self._store[s] for s in range(start_sol, max_sol + 1) if s in self._store
         ]
 
     def forecast(self, current_sol: int, horizon: int = 7) -> list[WeatherState]:
@@ -87,7 +85,8 @@ class MarsWeatherModel:
 
         # Mars–Sun distance (AU): perihelion at Ls ≈ 250° (southern summer)
         r = (
-            MARS_SEMIMAJOR_AXIS_AU * (1 - MARS_ECCENTRICITY**2)
+            MARS_SEMIMAJOR_AXIS_AU
+            * (1 - MARS_ECCENTRICITY**2)
             / (1 + MARS_ECCENTRICITY * math.cos(ls_rad - math.radians(250.0)))
         )
 

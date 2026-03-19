@@ -8,24 +8,24 @@ we use a plain list with automatic crisis detection each tick.
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from src.enums import CrisisType, Severity
 
 if TYPE_CHECKING:
-    pass   # avoid circular; engine passes primitive snapshots
+    pass  # avoid circular; engine passes primitive snapshots
 
 
 @dataclass
 class Event:
     sol: int
-    type: str                      # "alert" | "harvest" | "crisis" | "action" | "info"
-    category: str                  # "temperature" | "water" | "energy" | "crop" | …
+    type: str  # "alert" | "harvest" | "crisis" | "action" | "info"
+    category: str  # "temperature" | "water" | "energy" | "crop" | …
     message: str
     severity: Severity = Severity.INFO
-    zone: Optional[str] = None
-    data: Optional[dict] = None
+    zone: str | None = None
+    data: dict | None = None
 
 
 @dataclass
@@ -38,7 +38,7 @@ class Crisis:
     current_value: float
     threshold: float
     resolved: bool = False
-    resolved_sol: Optional[int] = None
+    resolved_sol: int | None = None
 
 
 class EventLog:
@@ -46,7 +46,7 @@ class EventLog:
 
     def __init__(self) -> None:
         self._events: list[Event] = []
-        self._crises: dict[str, Crisis] = {}   # id → Crisis
+        self._crises: dict[str, Crisis] = {}  # id → Crisis
 
     # ------------------------------------------------------------------
     # Logging
@@ -59,11 +59,18 @@ class EventLog:
         category: str,
         message: str,
         severity: Severity = Severity.INFO,
-        zone: Optional[str] = None,
-        data: Optional[dict] = None,
+        zone: str | None = None,
+        data: dict | None = None,
     ) -> Event:
-        ev = Event(sol=sol, type=type_, category=category, message=message,
-                   severity=severity, zone=zone, data=data)
+        ev = Event(
+            sol=sol,
+            type=type_,
+            category=category,
+            message=message,
+            severity=severity,
+            zone=zone,
+            data=data,
+        )
         self._events.append(ev)
         if len(self._events) > self.MAX_EVENTS:
             self._events.pop(0)
@@ -98,8 +105,14 @@ class EventLog:
             threshold=threshold,
         )
         self._crises[crisis.id] = crisis
-        self.log(sol, "crisis", crisis_type.value, message, severity,
-                 data={"crisis_id": crisis.id})
+        self.log(
+            sol,
+            "crisis",
+            crisis_type.value,
+            message,
+            severity,
+            data={"crisis_id": crisis.id},
+        )
         return crisis
 
     def resolve_crisis(self, crisis_type: CrisisType, sol: int) -> None:
@@ -107,8 +120,13 @@ class EventLog:
             if c.type == crisis_type and not c.resolved:
                 c.resolved = True
                 c.resolved_sol = sol
-                self.log(sol, "info", crisis_type.value,
-                         f"Crisis '{crisis_type.value}' resolved.", Severity.INFO)
+                self.log(
+                    sol,
+                    "info",
+                    crisis_type.value,
+                    f"Crisis '{crisis_type.value}' resolved.",
+                    Severity.INFO,
+                )
 
     def resolve_by_id(self, crisis_id: str, sol: int) -> bool:
         if crisis_id in self._crises:
@@ -150,66 +168,106 @@ class EventLog:
         nutrient_stock_pct: float,
         crew_kcal: float,
         crew_daily_kcal: float,
-    ) -> None:
+    ) -> list[Event]:
         from src.constants import (
-            CRISIS_BATTERY_WH,
             CRISIS_WATER_RESERVOIR_L,
             WARNING_KCAL_DAYS,
         )
 
+        events_before = len(self._events)
+
         # Water recycling decline
         if water_recycling_pct < 85.0:
             sev = Severity.CRITICAL if water_recycling_pct < 70.0 else Severity.WARNING
-            self.open_crisis(sol, CrisisType.WATER_RECYCLING_DECLINE, sev,
-                             f"Recycling efficiency dropped to {water_recycling_pct:.1f}%",
-                             water_recycling_pct, 85.0)
+            self.open_crisis(
+                sol,
+                CrisisType.WATER_RECYCLING_DECLINE,
+                sev,
+                f"Recycling efficiency dropped to {water_recycling_pct:.1f}%",
+                water_recycling_pct,
+                85.0,
+            )
         else:
             self.resolve_crisis(CrisisType.WATER_RECYCLING_DECLINE, sol)
 
         # Water shortage
         if water_reservoir_L < CRISIS_WATER_RESERVOIR_L:
-            self.open_crisis(sol, CrisisType.WATER_SHORTAGE, Severity.CRITICAL,
-                             f"Water reservoir critically low: {water_reservoir_L:.0f}L",
-                             water_reservoir_L, CRISIS_WATER_RESERVOIR_L)
+            self.open_crisis(
+                sol,
+                CrisisType.WATER_SHORTAGE,
+                Severity.CRITICAL,
+                f"Water reservoir critically low: {water_reservoir_L:.0f}L",
+                water_reservoir_L,
+                CRISIS_WATER_RESERVOIR_L,
+            )
         else:
             self.resolve_crisis(CrisisType.WATER_SHORTAGE, sol)
 
         # Energy disruption
         battery_pct = battery_wh / battery_capacity_wh * 100.0
         if battery_pct < 10.0:
-            self.open_crisis(sol, CrisisType.ENERGY_DISRUPTION, Severity.CRITICAL,
-                             f"Battery critically low: {battery_pct:.1f}%",
-                             battery_pct, 10.0)
+            self.open_crisis(
+                sol,
+                CrisisType.ENERGY_DISRUPTION,
+                Severity.CRITICAL,
+                f"Battery critically low: {battery_pct:.1f}%",
+                battery_pct,
+                10.0,
+            )
         elif battery_pct < 20.0:
-            self.open_crisis(sol, CrisisType.ENERGY_DISRUPTION, Severity.WARNING,
-                             f"Battery low: {battery_pct:.1f}%",
-                             battery_pct, 20.0)
+            self.open_crisis(
+                sol,
+                CrisisType.ENERGY_DISRUPTION,
+                Severity.WARNING,
+                f"Battery low: {battery_pct:.1f}%",
+                battery_pct,
+                20.0,
+            )
         else:
             self.resolve_crisis(CrisisType.ENERGY_DISRUPTION, sol)
 
         # Temperature failure
         if avg_temp_c < 15.0 or avg_temp_c > 28.0:
-            sev = Severity.CRITICAL if (avg_temp_c < 5.0 or avg_temp_c > 35.0) else Severity.WARNING
-            self.open_crisis(sol, CrisisType.TEMPERATURE_FAILURE, sev,
-                             f"Temperature out of safe range: {avg_temp_c:.1f}°C",
-                             avg_temp_c, 15.0)
+            sev = (
+                Severity.CRITICAL
+                if (avg_temp_c < 5.0 or avg_temp_c > 35.0)
+                else Severity.WARNING
+            )
+            self.open_crisis(
+                sol,
+                CrisisType.TEMPERATURE_FAILURE,
+                sev,
+                f"Temperature out of safe range: {avg_temp_c:.1f}°C",
+                avg_temp_c,
+                15.0,
+            )
         else:
             self.resolve_crisis(CrisisType.TEMPERATURE_FAILURE, sol)
 
         # CO2 imbalance
         if co2_ppm < 500.0 or co2_ppm > 2000.0:
-            self.open_crisis(sol, CrisisType.CO2_IMBALANCE, Severity.WARNING,
-                             f"CO2 outside safe range: {co2_ppm:.0f} ppm",
-                             co2_ppm, 800.0)
+            self.open_crisis(
+                sol,
+                CrisisType.CO2_IMBALANCE,
+                Severity.WARNING,
+                f"CO2 outside safe range: {co2_ppm:.0f} ppm",
+                co2_ppm,
+                800.0,
+            )
         else:
             self.resolve_crisis(CrisisType.CO2_IMBALANCE, sol)
 
         # Nutrient depletion
         if nutrient_stock_pct < 15.0:
             sev = Severity.CRITICAL if nutrient_stock_pct < 5.0 else Severity.WARNING
-            self.open_crisis(sol, CrisisType.NUTRIENT_DEPLETION, sev,
-                             f"Nutrient stock critically low: {nutrient_stock_pct:.1f}%",
-                             nutrient_stock_pct, 15.0)
+            self.open_crisis(
+                sol,
+                CrisisType.NUTRIENT_DEPLETION,
+                sev,
+                f"Nutrient stock critically low: {nutrient_stock_pct:.1f}%",
+                nutrient_stock_pct,
+                15.0,
+            )
         else:
             self.resolve_crisis(CrisisType.NUTRIENT_DEPLETION, sol)
 
@@ -217,8 +275,15 @@ class EventLog:
         days_of_food = crew_kcal / crew_daily_kcal if crew_daily_kcal > 0 else 999
         if days_of_food < WARNING_KCAL_DAYS:
             sev = Severity.CRITICAL if days_of_food < 2.0 else Severity.WARNING
-            self.open_crisis(sol, CrisisType.FOOD_SHORTAGE, sev,
-                             f"Food reserves low: {days_of_food:.1f} sols remaining",
-                             days_of_food, float(WARNING_KCAL_DAYS))
+            self.open_crisis(
+                sol,
+                CrisisType.FOOD_SHORTAGE,
+                sev,
+                f"Food reserves low: {days_of_food:.1f} sols remaining",
+                days_of_food,
+                float(WARNING_KCAL_DAYS),
+            )
         else:
             self.resolve_crisis(CrisisType.FOOD_SHORTAGE, sol)
+
+        return self._events[events_before:]

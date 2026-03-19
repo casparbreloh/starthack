@@ -14,31 +14,22 @@ unit-tested in isolation.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
-from src.catalog import CROP_CATALOG
 from src.constants import (
     BATTERY_CAPACITY_WH,
     CREW_DAILY_KCAL,
-    CREW_DAILY_WATER_L,
-    INITIAL_BATTERY_WH,
-    INITIAL_NUTRIENT_STOCK_PCT,
-    INITIAL_STORED_KCAL,
-    INITIAL_STORED_PROTEIN_G,
-    INITIAL_WATER_RESERVOIR_L,
     MISSION_DURATION_SOLS,
-    ZONE_AREAS_M2,
 )
 from src.enums import CrisisType, Difficulty, MissionPhase, Severity
 from src.models.climate import ClimateModel
-from src.models.crew import CrewModel, CrewState
+from src.models.crew import CrewModel
 from src.models.crops import CropModel
-from src.models.energy import EnergyModel, EnergyState
+from src.models.energy import EnergyModel
 from src.models.events import EventLog
 from src.models.nutrients import NutrientModel
 from src.models.scoring import ScoringModel
-from src.models.water import WaterModel, WaterState
+from src.models.water import WaterModel
 from src.models.weather import MarsWeatherModel
 
 
@@ -46,7 +37,7 @@ from src.models.weather import MarsWeatherModel
 class AgentDecision:
     sol: int
     decisions: list
-    weather_forecast_used: Optional[dict] = None
+    weather_forecast_used: dict | None = None
     risk_assessment: str = "nominal"
 
 
@@ -127,7 +118,9 @@ class SimulationEngine:
         # Dead crops
         for crop_id in dead_crops:
             ev = self.events.log(
-                sol, "alert", "crop",
+                sol,
+                "alert",
+                "crop",
                 f"Crop '{crop_id}' died (health reached 0)",
                 Severity.CRITICAL,
             )
@@ -148,9 +141,7 @@ class SimulationEngine:
             crew_kcal=self.crew.total_kcal,
             crew_daily_kcal=CREW_DAILY_KCAL,
         )
-        if crisis_events:
-            for ev in crisis_events:
-                tick_events.append(_event_to_dict(ev))
+        tick_events.extend(_event_to_dict(ev) for ev in crisis_events)
 
         # Scoring update
         self.scoring.update(
@@ -188,7 +179,7 @@ class SimulationEngine:
         self,
         seed: int = 0,
         difficulty: Difficulty = Difficulty.NORMAL,
-        starting_reserves: Optional[dict] = None,
+        starting_reserves: dict | None = None,
     ) -> None:
         """Reset simulation to sol 0 with optional config overrides."""
         self.current_sol = 0
@@ -213,11 +204,17 @@ class SimulationEngine:
         # Apply override reserves
         if starting_reserves:
             if "water_liters" in starting_reserves:
-                self.water.state.reservoir_liters = float(starting_reserves["water_liters"])
+                self.water.state.reservoir_liters = float(
+                    starting_reserves["water_liters"]
+                )
             if "food_buffer_kcal" in starting_reserves:
-                self.crew.state.fresh_buffer_kcal = float(starting_reserves["food_buffer_kcal"])
+                self.crew.state.fresh_buffer_kcal = float(
+                    starting_reserves["food_buffer_kcal"]
+                )
             if "battery_wh" in starting_reserves:
-                self.energy.state.battery_level_wh = float(starting_reserves["battery_wh"])
+                self.energy.state.battery_level_wh = float(
+                    starting_reserves["battery_wh"]
+                )
 
         self.weather.advance(0)
 
@@ -230,13 +227,19 @@ class SimulationEngine:
         self.water.state.filter_health_pct = 30.0
         self.water.state.recycling_efficiency_pct = 70.0
         self.events.log(
-            self.current_sol, "crisis", "water",
+            self.current_sol,
+            "crisis",
+            "water",
             "SCENARIO: Water leak — recycling efficiency dropped to 70%",
             Severity.CRITICAL,
         )
         self.events.open_crisis(
-            self.current_sol, CrisisType.WATER_RECYCLING_DECLINE, Severity.CRITICAL,
-            "Water leak scenario injected", 70.0, 85.0,
+            self.current_sol,
+            CrisisType.WATER_RECYCLING_DECLINE,
+            Severity.CRITICAL,
+            "Water leak scenario injected",
+            70.0,
+            85.0,
         )
 
     def scenario_hvac_failure(self) -> None:
@@ -245,34 +248,48 @@ class SimulationEngine:
             zone.temp_c = -10.0
             zone.target_temp_c = -10.0
         self.events.log(
-            self.current_sol, "crisis", "temperature",
+            self.current_sol,
+            "crisis",
+            "temperature",
             "SCENARIO: HVAC failure — all zones dropped to -10°C",
             Severity.CRITICAL,
         )
         self.events.open_crisis(
-            self.current_sol, CrisisType.TEMPERATURE_FAILURE, Severity.CRITICAL,
-            "HVAC failure scenario injected", -10.0, 15.0,
+            self.current_sol,
+            CrisisType.TEMPERATURE_FAILURE,
+            Severity.CRITICAL,
+            "HVAC failure scenario injected",
+            -10.0,
+            15.0,
         )
 
     def scenario_pathogen(self, crop_id: str):
         """Drop a specific crop's health to 10%."""
         crop_batch = self.crops.inject_pathogen(crop_id)
         self.events.log(
-            self.current_sol, "crisis", "crop",
+            self.current_sol,
+            "crisis",
+            "crop",
             f"SCENARIO: Pathogen outbreak in crop '{crop_id}' — health → 10%",
             Severity.CRITICAL,
             data={"crop_id": crop_id},
         )
         self.events.open_crisis(
-            self.current_sol, CrisisType.PATHOGEN_OUTBREAK, Severity.CRITICAL,
-            f"Pathogen outbreak in {crop_id}", 0.10, 0.50,
+            self.current_sol,
+            CrisisType.PATHOGEN_OUTBREAK,
+            Severity.CRITICAL,
+            f"Pathogen outbreak in {crop_id}",
+            0.10,
+            0.50,
         )
         return crop_batch
 
     def scenario_dust_storm(self, duration_sols: int = 10) -> None:
         """Simulates a dust storm by setting low solar irradiance for N sols (logged only)."""
         self.events.log(
-            self.current_sol, "crisis", "energy",
+            self.current_sol,
+            "crisis",
+            "energy",
             f"SCENARIO: Dust storm beginning — reduced solar for ~{duration_sols} sols",
             Severity.WARNING,
         )
@@ -281,14 +298,19 @@ class SimulationEngine:
         """Drop battery to 10% of capacity."""
         self.energy.state.battery_level_wh = BATTERY_CAPACITY_WH * 0.10
         self.events.log(
-            self.current_sol, "crisis", "energy",
+            self.current_sol,
+            "crisis",
+            "energy",
             "SCENARIO: Energy disruption — battery dropped to 10%",
             Severity.CRITICAL,
         )
         self.events.open_crisis(
-            self.current_sol, CrisisType.ENERGY_DISRUPTION, Severity.CRITICAL,
+            self.current_sol,
+            CrisisType.ENERGY_DISRUPTION,
+            Severity.CRITICAL,
             "Energy disruption scenario injected",
-            self.energy.battery_pct, 10.0,
+            self.energy.battery_pct,
+            10.0,
         )
 
     # ------------------------------------------------------------------
@@ -307,42 +329,89 @@ class SimulationEngine:
     def sensor_readings(self) -> list[dict]:
         """Generate realistic sensor readings from current state."""
         readings: list[dict] = []
-        sol_frac = (self.current_sol % 1) + 0.5   # mid-sol
         for zone_id, zone in self.climate.state.items():
             readings += [
-                {"sensor_id": f"temp_{zone_id}_1", "zone": zone_id, "type": "temperature",
-                 "value": zone.temp_c, "unit": "celsius", "status": "ok"},
-                {"sensor_id": f"hum_{zone_id}_1", "zone": zone_id, "type": "humidity",
-                 "value": zone.humidity_pct, "unit": "percent", "status": "ok"},
-                {"sensor_id": f"co2_{zone_id}_1", "zone": zone_id, "type": "co2",
-                 "value": round(zone.co2_ppm, 1), "unit": "ppm", "status": "ok"},
-                {"sensor_id": f"par_{zone_id}_1", "zone": zone_id, "type": "par",
-                 "value": zone.par_umol_m2s, "unit": "umol/m2/s", "status": "ok"},
+                {
+                    "sensor_id": f"temp_{zone_id}_1",
+                    "zone": zone_id,
+                    "type": "temperature",
+                    "value": zone.temp_c,
+                    "unit": "celsius",
+                    "status": "ok",
+                },
+                {
+                    "sensor_id": f"hum_{zone_id}_1",
+                    "zone": zone_id,
+                    "type": "humidity",
+                    "value": zone.humidity_pct,
+                    "unit": "percent",
+                    "status": "ok",
+                },
+                {
+                    "sensor_id": f"co2_{zone_id}_1",
+                    "zone": zone_id,
+                    "type": "co2",
+                    "value": round(zone.co2_ppm, 1),
+                    "unit": "ppm",
+                    "status": "ok",
+                },
+                {
+                    "sensor_id": f"par_{zone_id}_1",
+                    "zone": zone_id,
+                    "type": "par",
+                    "value": zone.par_umol_m2s,
+                    "unit": "umol/m2/s",
+                    "status": "ok",
+                },
             ]
             nutr = self.nutrients.state.get(zone_id)
             if nutr:
                 readings += [
-                    {"sensor_id": f"ph_{zone_id}_1", "zone": zone_id, "type": "ph",
-                     "value": nutr.solution_ph, "unit": "ph", "status": "ok"},
-                    {"sensor_id": f"ec_{zone_id}_1", "zone": zone_id, "type": "ec",
-                     "value": nutr.solution_ec_ms_cm, "unit": "mS/cm", "status": "ok"},
-                    {"sensor_id": f"do_{zone_id}_1", "zone": zone_id, "type": "dissolved_oxygen",
-                     "value": nutr.dissolved_o2_ppm, "unit": "ppm", "status": "ok"},
+                    {
+                        "sensor_id": f"ph_{zone_id}_1",
+                        "zone": zone_id,
+                        "type": "ph",
+                        "value": nutr.solution_ph,
+                        "unit": "ph",
+                        "status": "ok",
+                    },
+                    {
+                        "sensor_id": f"ec_{zone_id}_1",
+                        "zone": zone_id,
+                        "type": "ec",
+                        "value": nutr.solution_ec_ms_cm,
+                        "unit": "mS/cm",
+                        "status": "ok",
+                    },
+                    {
+                        "sensor_id": f"do_{zone_id}_1",
+                        "zone": zone_id,
+                        "type": "dissolved_oxygen",
+                        "value": nutr.dissolved_o2_ppm,
+                        "unit": "ppm",
+                        "status": "ok",
+                    },
                 ]
         # External temperature
         w = self.weather.current()
         if w:
-            readings.append({
-                "sensor_id": "temp_external", "zone": "external",
-                "type": "temperature", "value": w.avg_temp_c,
-                "unit": "celsius", "status": "ok",
-            })
+            readings.append(
+                {
+                    "sensor_id": "temp_external",
+                    "zone": "external",
+                    "type": "temperature",
+                    "value": w.avg_temp_c,
+                    "unit": "celsius",
+                    "status": "ok",
+                }
+            )
         return readings
 
 
 # ------------------------------------------------------------------
 # Private helpers
 # ------------------------------------------------------------------
+
 
 def _apply_difficulty(engine: SimulationEngine, difficulty: Difficulty) -> None:
     if difficulty == Difficulty.EASY:

@@ -31,6 +31,8 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 - `make dev-agent` — run agent only
 - `make dev-simulation` — run simulation only
 - `make dev-frontend` — run frontend only
+- `make check` — lint, format-check, and type-check all projects
+- `make check-fix` — auto-fix lint and format issues in all projects
 - `cd ml && ../.venv/bin/python -m mars_weather.train` — train ML models
 - `cd ml && ../.venv/bin/python -m mars_weather.evaluate` — evaluate on test set
 - `cd ml && ../.venv/bin/python -m mars_weather.predict` — run predictions

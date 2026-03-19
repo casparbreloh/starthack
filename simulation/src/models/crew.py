@@ -8,12 +8,11 @@ nutrition performance.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from src.constants import (
     CREW_DAILY_KCAL,
     CREW_DAILY_PROTEIN_G,
-    CREW_DAILY_WATER_L,
     INITIAL_STORED_KCAL,
     INITIAL_STORED_PROTEIN_G,
 )
@@ -83,17 +82,31 @@ class CrewModel:
         """Apply consumption, update cumulative metrics."""
         # Consume from fresh buffer
         fresh_kcal_used = min(self.state.fresh_buffer_kcal, CREW_DAILY_KCAL)
-        fresh_protein_used = min(self.state.fresh_buffer_protein_g, CREW_DAILY_PROTEIN_G)
-        self.state.fresh_buffer_kcal = max(0.0, self.state.fresh_buffer_kcal - fresh_kcal_used)
-        self.state.fresh_buffer_protein_g = max(0.0, self.state.fresh_buffer_protein_g - fresh_protein_used)
+        fresh_protein_used = min(
+            self.state.fresh_buffer_protein_g, CREW_DAILY_PROTEIN_G
+        )
+        self.state.fresh_buffer_kcal = max(
+            0.0, self.state.fresh_buffer_kcal - fresh_kcal_used
+        )
+        self.state.fresh_buffer_protein_g = max(
+            0.0, self.state.fresh_buffer_protein_g - fresh_protein_used
+        )
 
         # Draw remainder from stored supplies
-        self.state.stored_kcal = max(0.0, self.state.stored_kcal + self.rates.d_stored_kcal)
-        self.state.stored_protein_g = max(0.0, self.state.stored_protein_g + self.rates.d_stored_protein_g)
+        self.state.stored_kcal = max(
+            0.0, self.state.stored_kcal + self.rates.d_stored_kcal
+        )
+        self.state.stored_protein_g = max(
+            0.0, self.state.stored_protein_g + self.rates.d_stored_protein_g
+        )
 
         # Today's intake
-        actual_kcal = fresh_kcal_used + min(self.state.stored_kcal, -self.rates.d_stored_kcal)
-        actual_protein = fresh_protein_used + min(self.state.stored_protein_g, -self.rates.d_stored_protein_g)
+        actual_kcal = fresh_kcal_used + min(
+            self.state.stored_kcal, -self.rates.d_stored_kcal
+        )
+        actual_protein = fresh_protein_used + min(
+            self.state.stored_protein_g, -self.rates.d_stored_protein_g
+        )
         self.state.today_kcal_consumed = round(actual_kcal, 1)
         self.state.today_protein_consumed_g = round(actual_protein, 1)
 
@@ -125,7 +138,9 @@ class CrewModel:
     # Harvest callback
     # ------------------------------------------------------------------
 
-    def add_harvest(self, kcal: float, protein_g: float, has_micronutrients: bool) -> None:
+    def add_harvest(
+        self, kcal: float, protein_g: float, has_micronutrients: bool
+    ) -> None:
         """Called by engine after a successful harvest."""
         self.state.fresh_buffer_kcal += kcal
         self.state.fresh_buffer_protein_g += protein_g

@@ -10,8 +10,6 @@ Admin / simulation control router.
   POST /agent/log_decision     — agent reasoning log
 """
 
-from typing import Optional
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -26,6 +24,7 @@ router = APIRouter()
 # Request schemas
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class AdvanceRequest(BaseModel):
     sols: int = Field(default=1, ge=1, le=450)
 
@@ -33,7 +32,7 @@ class AdvanceRequest(BaseModel):
 class ResetRequest(BaseModel):
     seed: int = 0
     difficulty: Difficulty = Difficulty.NORMAL
-    starting_reserves: Optional[dict] = None
+    starting_reserves: dict | None = None
 
 
 class PathogenRequest(BaseModel):
@@ -43,7 +42,7 @@ class PathogenRequest(BaseModel):
 class AgentDecisionRequest(BaseModel):
     sol: int
     decisions: list
-    weather_forecast_used: Optional[dict] = None
+    weather_forecast_used: dict | None = None
     risk_assessment: str = "nominal"
 
 
@@ -51,11 +50,15 @@ class AgentDecisionRequest(BaseModel):
 # Core simulation control
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.post("/sim/advance")
 def sim_advance(req: AdvanceRequest):
     from src.enums import MissionPhase
+
     if engine.mission_phase != MissionPhase.ACTIVE:
-        raise HTTPException(400, f"Mission is {engine.mission_phase.value}, cannot advance")
+        raise HTTPException(
+            400, f"Mission is {engine.mission_phase.value}, cannot advance"
+        )
 
     events = engine.advance(req.sols)
     return {
@@ -83,10 +86,12 @@ def sim_reset(req: ResetRequest):
 # Legacy /admin/* endpoints
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.post("/api/admin/tick")
 def admin_tick():
     """Advance by exactly 1 sol (legacy)."""
     from src.enums import MissionPhase
+
     if engine.mission_phase != MissionPhase.ACTIVE:
         raise HTTPException(400, "Mission complete or failed")
     events = engine.advance(1)
@@ -97,6 +102,7 @@ def admin_tick():
 def admin_tick_bulk(days: int = 1):
     """Advance by N sols (legacy)."""
     from src.enums import MissionPhase
+
     if days < 1 or days > 450:
         raise HTTPException(400, "days must be 1–450")
     if engine.mission_phase != MissionPhase.ACTIVE:
@@ -114,6 +120,7 @@ def admin_reset():
 # ──────────────────────────────────────────────────────────────────────────────
 # Scenario injection
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.post("/api/admin/scenario/water_leak")
 def scenario_water_leak():
@@ -142,9 +149,9 @@ def scenario_pathogen(req: PathogenRequest):
         # Trigger the pathogen scenario for the given crop; this mutates engine state.
         engine.scenario_pathogen(req.crop_id)
         # Retrieve the affected crop batch from the engine after injection.
-        batch = engine.crops[req.crop_id]
+        batch = engine.crops.batches[req.crop_id]
     except KeyError:
-        raise HTTPException(404, f"Crop '{req.crop_id}' not found")
+        raise HTTPException(404, f"Crop '{req.crop_id}' not found") from None
     return {
         "status": "ok",
         "scenario": "pathogen",
@@ -172,6 +179,7 @@ def scenario_energy_disruption():
 # ──────────────────────────────────────────────────────────────────────────────
 # Agent decision log
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.post("/agent/log_decision")
 def agent_log_decision(req: AgentDecisionRequest):

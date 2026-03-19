@@ -6,7 +6,7 @@ IDE auto-complete and package-level introspection only.
 
 from src.catalog import CROP_CATALOG
 from src.constants import CREW_SIZE, MISSION_DURATION_SOLS
-from src.enums import CropType, CrewStatus
+from src.enums import CrewStatus, CropType
 from src.state import engine
 
 __all__ = [

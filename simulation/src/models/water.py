@@ -61,7 +61,7 @@ class WaterModel:
     # PCSE lifecycle
     # ------------------------------------------------------------------
 
-    def calc_rates(self, crop_model: "CropModel") -> None:
+    def calc_rates(self, crop_model: CropModel) -> None:
         """Compute net water change this sol."""
         # Crop water demand: sum of (zone irrigation setting) L/sol
         total_irrigation = sum(self.state.irrigation_settings.values())
@@ -83,20 +83,30 @@ class WaterModel:
     def integrate(self) -> None:
         """Apply rates and degrade filter."""
         self.state.reservoir_liters = round(
-            max(0.0, min(WATER_RESERVOIR_CAPACITY_L,
-                         self.state.reservoir_liters + self.rates.d_reservoir)), 2
+            max(
+                0.0,
+                min(
+                    WATER_RESERVOIR_CAPACITY_L,
+                    self.state.reservoir_liters + self.rates.d_reservoir,
+                ),
+            ),
+            2,
         )
 
         # Filter degradation (passive)
         self.state.filter_health_pct = round(
-            max(0.0, self.state.filter_health_pct - FILTER_DEGRADATION_RATE_PCT_PER_SOL), 2
+            max(
+                0.0, self.state.filter_health_pct - FILTER_DEGRADATION_RATE_PCT_PER_SOL
+            ),
+            2,
         )
 
         # Recycling efficiency scales with filter health
         health_factor = (
             FILTER_HEALTH_MIN_EFFICIENCY_FACTOR
             + (1.0 - FILTER_HEALTH_MIN_EFFICIENCY_FACTOR)
-            * self.state.filter_health_pct / 100.0
+            * self.state.filter_health_pct
+            / 100.0
         )
         self.state.recycling_efficiency_pct = round(
             WATER_RECYCLING_NOMINAL_PCT * health_factor, 2
@@ -105,7 +115,11 @@ class WaterModel:
         # Estimate days until critical (50 L)
         if self.rates.d_reservoir < 0:
             self.state.days_until_critical = round(
-                max(0.0, (self.state.reservoir_liters - 50.0) / abs(self.rates.d_reservoir)), 1
+                max(
+                    0.0,
+                    (self.state.reservoir_liters - 50.0) / abs(self.rates.d_reservoir),
+                ),
+                1,
             )
         else:
             self.state.days_until_critical = 999.0
@@ -130,7 +144,8 @@ class WaterModel:
             health_factor = (
                 FILTER_HEALTH_MIN_EFFICIENCY_FACTOR
                 + (1.0 - FILTER_HEALTH_MIN_EFFICIENCY_FACTOR)
-                * self.state.filter_health_pct / 100.0
+                * self.state.filter_health_pct
+                / 100.0
             )
             self.state.recycling_efficiency_pct = round(
                 WATER_RECYCLING_NOMINAL_PCT * health_factor, 2

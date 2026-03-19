@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class CropType(str, Enum):
+class CropType(StrEnum):
     LETTUCE = "lettuce"
     POTATO = "potato"
     RADISH = "radish"
@@ -9,38 +9,38 @@ class CropType(str, Enum):
     HERBS = "herbs"
 
 
-class MissionPhase(str, Enum):
+class MissionPhase(StrEnum):
     ACTIVE = "active"
     COMPLETE = "complete"
     FAILED = "failed"
 
 
-class CrewStatus(str, Enum):
+class CrewStatus(StrEnum):
     NOMINAL = "nominal"
     WARNING = "warning"
     CRITICAL = "critical"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"
 
 
-class SensorStatus(str, Enum):
+class SensorStatus(StrEnum):
     OK = "ok"
     DEGRADED = "degraded"
     ERROR = "error"
     OFFLINE = "offline"
 
 
-class Difficulty(str, Enum):
+class Difficulty(StrEnum):
     EASY = "easy"
     NORMAL = "normal"
     HARD = "hard"
 
 
-class CrisisType(str, Enum):
+class CrisisType(StrEnum):
     WATER_RECYCLING_DECLINE = "water_recycling_decline"
     ENERGY_DISRUPTION = "energy_disruption"
     PATHOGEN_OUTBREAK = "pathogen_outbreak"
