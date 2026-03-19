@@ -1,5 +1,5 @@
 import { motion } from "framer-motion"
-import { ArrowLeft, Heart, Droplets, Radiation, Utensils } from "lucide-react"
+import { ArrowLeft, Heart, Droplets, Radiation } from "lucide-react"
 
 import crewHabitat from "@/assets/crew-habitat.png"
 import type { CrewMember, CrewNutrition, CrewHealth } from "@/types/game"

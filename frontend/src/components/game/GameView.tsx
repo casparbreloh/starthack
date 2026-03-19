@@ -7,8 +7,6 @@ import { MarsOverview } from "@/components/game/MarsOverview"
 import {
   useSimStatus,
   useWeather,
-  useEnergy,
-  useWater,
   useCrops,
   useCrewMembers,
   useCrewNutrition,
@@ -24,8 +22,6 @@ export function GameView() {
 
   const { data: sim } = useSimStatus()
   const { data: weather } = useWeather()
-  const { data: energy } = useEnergy()
-  const { data: water } = useWater()
   const { data: crops } = useCrops()
   const { data: crew } = useCrewMembers()
   const { data: nutrition } = useCrewNutrition()

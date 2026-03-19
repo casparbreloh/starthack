@@ -52,15 +52,6 @@ export function GreenhouseDetailView({
   const apiZoneId = zoneId.replace("zone_", "").toUpperCase()
   const zoneCrops = crops.filter((c) => c.zone_id === apiZoneId)
   const label = apiZoneId
-  const totalArea = zoneCrops.reduce((s, c) => s + c.area_m2, 0).toFixed(1)
-  const avgHealth =
-    zoneCrops.length > 0
-      ? Math.round(zoneCrops.reduce((s, c) => s + c.health_pct, 0) / zoneCrops.length)
-      : 0
-  const avgGrowth =
-    zoneCrops.length > 0
-      ? Math.round(zoneCrops.reduce((s, c) => s + c.growth_pct, 0) / zoneCrops.length)
-      : 0
   const totalYieldKg = zoneCrops.reduce((s, c) => s + c.yield_estimate_kg, 0).toFixed(1)
 
   return (
