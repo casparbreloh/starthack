@@ -12,11 +12,23 @@ import json
 from strands import tool
 
 
-def create_action_tools() -> dict:
+def create_action_tools(
+    action_accumulator: list[dict] | None = None,
+) -> dict:
     """Create action tool functions that return intent dicts.
+
+    If action_accumulator is provided, each tool call also appends its
+    action dict (endpoint + body) to the list. This allows the caller
+    to collect all actions after the agent finishes.
 
     Returns a dict with keys matching the tool function names.
     """
+    _acc = action_accumulator if action_accumulator is not None else []
+
+    def _queue(endpoint: str, body: dict) -> str:
+        """Append to accumulator and return JSON confirmation."""
+        _acc.append({"endpoint": endpoint, "body": body})
+        return json.dumps({"status": "queued", "action": endpoint, **body})
 
     @tool
     def allocate_energy(
@@ -48,16 +60,15 @@ def create_action_tools() -> dict:
         Returns:
             JSON string confirming the action was queued.
         """
-        return json.dumps(
+        return _queue(
+            "energy/allocate",
             {
-                "status": "queued",
-                "action": "energy/allocate",
                 "heating_pct": heating_pct,
                 "lighting_pct": lighting_pct,
                 "water_recycling_pct": water_recycling_pct,
                 "nutrient_pumps_pct": nutrient_pumps_pct,
                 "reserve_pct": reserve_pct,
-            }
+            },
         )
 
     @tool
@@ -96,9 +107,7 @@ def create_action_tools() -> dict:
             params["par_umol_m2s"] = par_umol_m2s
         if photoperiod_hours is not None:
             params["photoperiod_hours"] = photoperiod_hours
-        return json.dumps(
-            {"status": "queued", "action": "greenhouse/set_environment", **params}
-        )
+        return _queue("greenhouse/set_environment", params)
 
     @tool
     def set_irrigation(zone_id: str, irrigation_liters_per_sol: float) -> str:
@@ -111,13 +120,12 @@ def create_action_tools() -> dict:
         Returns:
             JSON string confirming the action was queued.
         """
-        return json.dumps(
+        return _queue(
+            "water/set_irrigation",
             {
-                "status": "queued",
-                "action": "water/set_irrigation",
                 "zone_id": zone_id,
                 "irrigation_liters_per_sol": irrigation_liters_per_sol,
-            }
+            },
         )
 
     @tool
@@ -133,13 +141,7 @@ def create_action_tools() -> dict:
         Returns:
             JSON string confirming the action was queued.
         """
-        return json.dumps(
-            {
-                "status": "queued",
-                "action": "water/maintenance",
-                "action_name": "clean_filters",
-            }
-        )
+        return _queue("water/maintenance", {"action": "clean_filters"})
 
     @tool
     def plant_crop(
@@ -165,7 +167,7 @@ def create_action_tools() -> dict:
         params: dict = {"type": crop_type, "zone_id": zone_id, "area_m2": area_m2}
         if batch_name is not None:
             params["batch_name"] = batch_name
-        return json.dumps({"status": "queued", "action": "crops/plant", **params})
+        return _queue("crops/plant", params)
 
     @tool
     def harvest_crop(crop_id: str) -> str:
@@ -180,9 +182,7 @@ def create_action_tools() -> dict:
         Returns:
             JSON string confirming the action was queued.
         """
-        return json.dumps(
-            {"status": "queued", "action": "crops/harvest", "crop_id": crop_id}
-        )
+        return _queue("crops/harvest", {"crop_id": crop_id})
 
     @tool
     def remove_crop(crop_id: str, reason: str = "") -> str:
@@ -198,14 +198,7 @@ def create_action_tools() -> dict:
         Returns:
             JSON string confirming the action was queued.
         """
-        return json.dumps(
-            {
-                "status": "queued",
-                "action": "crops/remove",
-                "crop_id": crop_id,
-                "reason": reason,
-            }
-        )
+        return _queue("crops/remove", {"crop_id": crop_id, "reason": reason})
 
     @tool
     def adjust_nutrients(
@@ -242,7 +235,7 @@ def create_action_tools() -> dict:
             params["target_ph"] = target_ph
         if target_ec_ms_cm is not None:
             params["target_ec_ms_cm"] = target_ec_ms_cm
-        return json.dumps({"status": "queued", "action": "nutrients/adjust", **params})
+        return _queue("nutrients/adjust", params)
 
     return {
         "allocate_energy": allocate_energy,

@@ -66,7 +66,7 @@ class SimWebSocketClient:
         Args:
             url: WebSocket URL, e.g. ``ws://localhost:8080/ws``
         """
-        self._ws = await websockets.connect(url)
+        self._ws = await websockets.connect(url, ping_interval=30, ping_timeout=120)
         logger.info("WebSocket connected to %s", url)
 
         # Register as agent

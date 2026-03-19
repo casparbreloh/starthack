@@ -69,6 +69,7 @@ def create_orchestrator(
     kb_tools: list | None = None,
     session_manager: AgentCoreMemorySessionManager | None = None,
     extra_tools: list | None = None,
+    action_accumulator: list[dict] | None = None,
 ) -> Agent:
     """Create an orchestrator Agent with tools reading from a snapshot.
 
@@ -78,6 +79,7 @@ def create_orchestrator(
         kb_tools: MCP KB tool objects from AgentCore gateway.
         session_manager: AgentCoreMemorySessionManager for context management.
         extra_tools: Additional @tool functions to include.
+        action_accumulator: Mutable list that action tools append to when called.
 
     Returns:
         Agent instance ready for a single consultation.
@@ -98,7 +100,7 @@ def create_orchestrator(
         system_prompt = system_prompt + "\n\n" + MEMORY_PROMPT_SECTION
 
     telemetry_tools = create_telemetry_tools(snapshot)
-    action_tools = create_action_tools()
+    action_tools = create_action_tools(action_accumulator=action_accumulator)
 
     tools = [
         telemetry_tools["read_all_telemetry"],
@@ -124,18 +126,6 @@ def create_orchestrator(
         tools=tools,
     )
 
-
-# Tool function name -> simulation action endpoint mapping
-_TOOL_TO_ENDPOINT: dict[str, str] = {
-    "allocate_energy": "energy/allocate",
-    "set_zone_environment": "greenhouse/set_environment",
-    "set_irrigation": "water/set_irrigation",
-    "clean_water_filters": "water/maintenance",
-    "plant_crop": "crops/plant",
-    "harvest_crop": "crops/harvest",
-    "remove_crop": "crops/remove",
-    "adjust_nutrients": "nutrients/adjust",
-}
 
 
 def _extract_key_stats(snapshot: dict[str, Any]) -> str:
@@ -261,12 +251,8 @@ def run_consultation(
     sol = consultation.get("sol", 0)
     snapshot = consultation.get("snapshot", {})
 
-    # Fetch weather history via REST (snapshot only has current weather)
-    try:
-        weather_history = client.get_weather_history(last_n_sols=30)
-    except Exception:
-        logger.warning("Sol %d: failed to fetch weather history via REST", sol)
-        weather_history = []
+    # Weather history is included in the consultation snapshot
+    weather_history = snapshot.get("weather_history", [])
 
     weather_context = weather_forecaster.get_full_context(
         sol,
@@ -285,8 +271,15 @@ def run_consultation(
         consultation, weather_context, energy_summary, journal
     )
 
-    # Create fresh orchestrator with consultation snapshot
-    orchestrator = create_orchestrator(snapshot, cross_session_context, kb_tools)
+    # Create fresh orchestrator with consultation snapshot.
+    # The action accumulator collects actions as tools are called by the LLM.
+    action_accumulator: list[dict[str, Any]] = []
+    orchestrator = create_orchestrator(
+        snapshot,
+        cross_session_context,
+        kb_tools,
+        action_accumulator=action_accumulator,
+    )
 
     # Run LLM with retry
     result = None
@@ -306,26 +299,18 @@ def run_consultation(
                 exc2,
             )
 
-    # Extract actions and reasoning from LLM response
-    actions_list: list[dict[str, Any]] = []
+    # Actions are collected via the accumulator as tools execute
+    actions_list = action_accumulator
     reasoning = ""
     next_checkin = 1
 
     if result is not None:
+        # Extract reasoning text from the final message
         try:
             content = result.message.get("content", [])
             for block in content:
-                if isinstance(block, dict):
-                    if block.get("type") == "tool_use":
-                        tool_name = block["name"]  # type: ignore[typeddict-item]
-                        tool_input = block.get("input", {})
-                        endpoint = _TOOL_TO_ENDPOINT.get(tool_name)
-                        if endpoint is not None:
-                            actions_list.append(
-                                {"endpoint": endpoint, "body": tool_input}
-                            )
-                    elif block.get("type") == "text":
-                        reasoning += block.get("text", "")
+                if isinstance(block, dict) and block.get("type") == "text":
+                    reasoning += block.get("text", "")
         except (AttributeError, TypeError, KeyError):
             reasoning = str(result.message) if result else ""
 
