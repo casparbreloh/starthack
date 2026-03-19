@@ -1,8 +1,13 @@
-import type { Config } from "tailwindcss";
+import type { Config } from "tailwindcss"
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -14,8 +19,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        mono: ['"Geist Mono"', '"SF Mono"', '"Fira Code"', 'monospace'],
-        body: ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
+        mono: ['"Geist Mono"', '"SF Mono"', '"Fira Code"', "monospace"],
+        body: ['"IBM Plex Sans"', "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -70,26 +75,6 @@ export default {
           DEFAULT: "hsl(var(--surface))",
           elevated: "hsl(var(--surface-elevated))",
         },
-        // Void theme — gamification dashboard
-        "void-bg": "var(--void-bg)",
-        "void-surface": "var(--void-surface)",
-        "void-surface-elevated": "var(--void-surface-elevated)",
-        "void-surface-hover": "var(--void-surface-hover)",
-        "void-border": "var(--void-border)",
-        "void-border-subtle": "var(--void-border-subtle)",
-        "void-text-primary": "var(--void-text-primary)",
-        "void-text-secondary": "var(--void-text-secondary)",
-        "void-text-tertiary": "var(--void-text-tertiary)",
-        "void-text-muted": "var(--void-text-muted)",
-        "void-accent": "var(--void-accent)",
-        "void-accent-dim": "var(--void-accent-dim)",
-        "void-accent-muted": "var(--void-accent-muted)",
-        "void-ok": "var(--void-ok)",
-        "void-ok-dim": "var(--void-ok-dim)",
-        "void-warn": "var(--void-warn)",
-        "void-warn-dim": "var(--void-warn-dim)",
-        "void-critical": "var(--void-critical)",
-        "void-critical-dim": "var(--void-critical-dim)",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -118,4 +103,4 @@ export default {
     },
   },
   plugins: [require("tailwindcss-animate")],
-} satisfies Config;
+} satisfies Config

@@ -1,10 +1,11 @@
 """
-Singleton simulation engine instance.
+Singleton session manager instance.
 
-Import `engine` from this module wherever you need access to the running
-simulation state. There is exactly one instance per process.
+Import `session_manager` from this module wherever you need access to
+simulation sessions. There is exactly one SessionManager per process,
+with a default session created on init so bare REST calls keep working.
 """
 
-from src.engine import SimulationEngine
+from src.session import SessionManager
 
-engine = SimulationEngine()
+session_manager = SessionManager()

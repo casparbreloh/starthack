@@ -1,7 +1,7 @@
 """Mars Greenhouse Agent — BedrockAgentCoreApp entry point.
 
-Supports two modes: [R5-M6, R7-M1]
-  1. run_mission: Run the full 450-sol greenhouse management loop
+Supports two modes:
+  1. run_mission: Run the full 450-sol greenhouse management loop (WebSocket)
   2. query: Interactive single-prompt query mode (for hackathon demo)
 """
 
@@ -22,29 +22,10 @@ app = BedrockAgentCoreApp()
 
 @app.entrypoint
 async def agent_handler(payload: dict[str, Any], context: RequestContext):
-    """Handle incoming agent requests.
-
-    Supports two modes based on payload 'action' field:
-      - "run_mission": Run the full mission loop (yields start/complete/error events)
-      - "query" (or no action): Answer a single question about the greenhouse
-
-    Payload schema:
-        {
-            "action": "run_mission" | "query",  # optional, default "query"
-            "prompt": "...",                      # for query mode
-            "config": {                           # for run_mission mode
-                "seed": 0,
-                "difficulty": "normal",           # validated against VALID_DIFFICULTIES
-                "sols": 450
-            }
-        }
-
-    Yields mission_start, mission_complete/mission_error, or query_response events.
-    """
+    """Handle incoming agent requests."""
     action = payload.get("action", "query")
 
     if action == "run_mission":
-        # [C-6] Validate difficulty before starting mission
         config = payload.get("config", {})
         difficulty = config.get("difficulty", "normal")
         if difficulty not in VALID_DIFFICULTIES:
@@ -71,19 +52,12 @@ async def agent_handler(payload: dict[str, Any], context: RequestContext):
             )
         }
 
-        # Lazy import to avoid loading ML/Strands deps at startup time
         from .agents.orchestrator import run_mission
-        from .config import SIM_BASE_URL
-        from .sim_client import SimClient
-
-        client = SimClient(SIM_BASE_URL)
+        from .config import SIM_WS_URL
 
         try:
-            # Run mission with progress streaming [MEDIUM-8]
-            # We wrap run_mission in a simple loop that yields progress events
-            # run_mission handles the full sol loop internally
-            result = run_mission(
-                client,
+            result = await run_mission(
+                ws_url=SIM_WS_URL,
                 seed=seed,
                 difficulty=difficulty,
                 mission_sols=mission_sols,
@@ -113,24 +87,19 @@ async def agent_handler(payload: dict[str, Any], context: RequestContext):
             }
 
     else:
-        # query mode: interactive single-prompt response for hackathon demo
+        # query mode: interactive single-prompt response
         prompt = payload.get("prompt", "Give me a status report on the greenhouse.")
 
         from strands import Agent
         from strands.models.bedrock import BedrockModel
 
-        from .config import AGENT_TEMPERATURE, MODEL_ID, SIM_BASE_URL
+        from .config import AGENT_TEMPERATURE, MODEL_ID
         from .prompts import ORCHESTRATOR_SYSTEM_PROMPT
-        from .sim_client import SimClient
-        from .tools._state import set_client
         from .tools.actions import create_action_tools
         from .tools.telemetry import create_telemetry_tools
 
-        query_client = SimClient(SIM_BASE_URL)
-        set_client(query_client)
-        telemetry_tools = create_telemetry_tools(query_client)
-        action_tools = create_action_tools(query_client)
-        action_tools.pop("advance_simulation")  # not for query mode
+        telemetry_tools = create_telemetry_tools({})
+        action_tools = create_action_tools()
 
         model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
         agent = Agent(

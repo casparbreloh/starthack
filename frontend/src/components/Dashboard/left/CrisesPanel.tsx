@@ -43,7 +43,7 @@ export default function CrisesPanel({ crises }: CrisesPanelProps) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline justify-between gap-2">
                   <span
-                    className="text-xs font-bold tracking-wider uppercase"
+                    className="text-xs font-bold uppercase tracking-wider"
                     style={{ color: `var(--color-void-${mapSeverity(crisis.severity)})` }}
                   >
                     {crisis.type.replace(/_/g, " ")}

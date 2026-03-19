@@ -93,7 +93,7 @@ function BedImage({ crop, index }: { crop: Crop | null; index: number }) {
       />
       {crop && (
         <div
-          className="absolute top-1/2 left-1/2 z-10 min-w-[100px] -translate-x-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1.5 text-center backdrop-blur-md"
+          className="absolute left-1/2 top-1/2 z-10 min-w-[100px] -translate-x-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1.5 text-center backdrop-blur-md"
           style={{
             background: "rgba(8, 9, 10, 0.82)",
             border: "1px solid var(--color-void-border)",
@@ -101,7 +101,7 @@ function BedImage({ crop, index }: { crop: Crop | null; index: number }) {
         >
           {/* Crop name */}
           <div
-            className="mb-1 font-mono text-[9px] leading-none font-semibold tracking-[0.12em] uppercase"
+            className="mb-1 font-mono text-[9px] font-semibold uppercase leading-none tracking-[0.12em]"
             style={{ color: "var(--color-void-text-secondary)" }}
           >
             {crop.type}
@@ -195,7 +195,7 @@ function ZoneTabs({
           <button
             key={z}
             onClick={() => onSelect(z)}
-            className="cursor-pointer rounded px-3.5 py-1.5 font-mono text-[11px] font-semibold tracking-[0.14em] uppercase transition-colors"
+            className="cursor-pointer rounded px-3.5 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors"
             style={{
               background: isActive ? "var(--color-void-surface-elevated)" : "transparent",
               color: isActive
@@ -267,7 +267,7 @@ export default function GreenhouseMap({ crops }: GreenhouseMapProps) {
   const label = formatZoneLabel(effectiveZone)
 
   return (
-    <div className="flex h-full w-full flex-col items-center px-4 pt-10 pb-4">
+    <div className="flex h-full w-full flex-col items-center px-4 pb-4 pt-10">
       {/* Zone tabs — pinned to top center */}
       {zones.length > 1 && (
         <ZoneTabs zones={zones} active={effectiveZone} onSelect={(z) => setActiveZone(z)} />
@@ -279,7 +279,7 @@ export default function GreenhouseMap({ crops }: GreenhouseMapProps) {
       {/* Zone label — just above the grid */}
       <div className="mb-4 text-center">
         <span
-          className="font-mono text-xs font-semibold tracking-[0.2em] uppercase"
+          className="font-mono text-xs font-semibold uppercase tracking-[0.2em]"
           style={{ color: "var(--color-void-text-muted)" }}
         >
           {label}
@@ -307,11 +307,17 @@ export default function GreenhouseMap({ crops }: GreenhouseMapProps) {
               <BedImage crop={beds[1]} index={1} />
             </div>
             {/* Right */}
-            <div className="absolute" style={{ left: ISO_STEP_X * 2, top: ISO_STEP_Y + ISO_VERTICAL_SPREAD }}>
+            <div
+              className="absolute"
+              style={{ left: ISO_STEP_X * 2, top: ISO_STEP_Y + ISO_VERTICAL_SPREAD }}
+            >
               <BedImage crop={beds[2]} index={2} />
             </div>
             {/* Bottom */}
-            <div className="absolute" style={{ left: ISO_STEP_X, top: ISO_STEP_Y * 2 + ISO_VERTICAL_SPREAD * 2 }}>
+            <div
+              className="absolute"
+              style={{ left: ISO_STEP_X, top: ISO_STEP_Y * 2 + ISO_VERTICAL_SPREAD * 2 }}
+            >
               <BedImage crop={beds[3]} index={3} />
             </div>
           </motion.div>

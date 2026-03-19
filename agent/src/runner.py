@@ -8,11 +8,12 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import asyncio
 import logging
 import os
 import sys
 
-from .config import SIM_BASE_URL, VALID_DIFFICULTIES
+from .config import SIM_WS_URL, VALID_DIFFICULTIES
 
 
 def main() -> None:
@@ -30,14 +31,8 @@ def main() -> None:
         "--difficulty",
         type=str,
         default="normal",
-        choices=VALID_DIFFICULTIES,  # [C-6] validated against Difficulty str enum
+        choices=VALID_DIFFICULTIES,
         help="Simulation difficulty: easy, normal, or hard (default: normal)",
-    )
-    parser.add_argument(
-        "--sim-url",
-        type=str,
-        default=SIM_BASE_URL,
-        help=f"Simulation API base URL (default: {SIM_BASE_URL})",
     )
     parser.add_argument(
         "--sols",
@@ -53,6 +48,12 @@ def main() -> None:
         help="Logging level (default: INFO)",
     )
     parser.add_argument(
+        "--ws-url",
+        type=str,
+        default=SIM_WS_URL,
+        help=f"Simulation WebSocket URL (default: {SIM_WS_URL})",
+    )
+    parser.add_argument(
         "--no-memory",
         action="store_true",
         default=False,
@@ -65,9 +66,6 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Apply --no-memory: clear env var AND patch the already-imported config module
-    # (config.py is imported at module level for SIM_BASE_URL/VALID_DIFFICULTIES,
-    # so memory_enabled was already computed — we must patch it directly)
     if args.no_memory:
         os.environ.pop("BEDROCK_AGENTCORE_MEMORY_ID", None)
         from . import config as _cfg
@@ -75,7 +73,6 @@ def main() -> None:
         _cfg.MEMORY_ID = ""
         _cfg.memory_enabled = False
 
-    # Configure logging with sol numbers in format
     logging.basicConfig(
         level=getattr(logging, args.log_level),
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -88,27 +85,24 @@ def main() -> None:
             "--no-memory flag set: using legacy file-based cross-session learning."
         )
 
-    # Lazy import to avoid loading torch/strands at import time
     from .agents.orchestrator import run_mission
 
-    client_url = args.sim_url
-    from .sim_client import SimClient
-
-    client = SimClient(client_url)
-
     logger.info(
-        "Starting Mars Greenhouse Mission: seed=%d, difficulty=%s, sols=%d",
+        "Starting Mars Greenhouse Mission: seed=%d, difficulty=%s, sols=%d, ws_url=%s",
         args.seed,
         args.difficulty,
         args.sols,
+        args.ws_url,
     )
 
     try:
-        result = run_mission(
-            client,
-            seed=args.seed,
-            difficulty=args.difficulty,
-            mission_sols=args.sols,
+        result = asyncio.run(
+            run_mission(
+                ws_url=args.ws_url,
+                seed=args.seed,
+                difficulty=args.difficulty,
+                mission_sols=args.sols,
+            )
         )
 
         print("\n" + "=" * 60)
@@ -121,13 +115,8 @@ def main() -> None:
         print("=" * 60)
 
     except KeyboardInterrupt:
-        logger.info("Mission interrupted by user. Fetching current score...")
-        try:
-            current = client.get_score_current()
-            score = current.get("scores", {}).get("overall_score", 0.0)
-            print(f"\nInterrupted. Current score: {score:.2f}")
-        except Exception:
-            print("\nInterrupted. Could not fetch current score.")
+        logger.info("Mission interrupted by user.")
+        print("\nInterrupted.")
         sys.exit(0)
 
 

@@ -35,7 +35,7 @@ export default function CrewHealthPanel({ crewMembers }: CrewHealthPanelProps) {
           const severity = m.alive ? healthSeverity(m.health_pct) : "critical"
           return (
             <div key={m.member_id} className="flex flex-col">
-              <span className="text-void-text-secondary mb-2 text-xs font-bold tracking-wider uppercase">
+              <span className="text-void-text-secondary mb-2 text-xs font-bold uppercase tracking-wider">
                 {m.name}
               </span>
 

@@ -31,7 +31,7 @@ export default function CrewSurvivalPanel({ crewHealth }: CrewSurvivalPanelProps
         <span className="text-void-text-secondary text-sm font-semibold">
           {crewHealth.alive ? "ALIVE" : "DECEASED"}
         </span>
-        <span className="text-void-text-primary font-mono text-2xl leading-none font-light">
+        <span className="text-void-text-primary font-mono text-2xl font-light leading-none">
           {crewHealth.overall_health_pct}
           <span className="text-void-text-tertiary text-sm">%</span>
         </span>

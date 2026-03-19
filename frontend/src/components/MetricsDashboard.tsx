@@ -69,7 +69,7 @@ function TopBar({
       {/* Left: phase + score */}
       <div className="flex items-center gap-4">
         {status?.mission_phase && (
-          <span className="text-void-text-muted text-sm font-semibold tracking-[0.15em] uppercase">
+          <span className="text-void-text-muted text-sm font-semibold uppercase tracking-[0.15em]">
             {status.mission_phase}
           </span>
         )}
@@ -83,7 +83,7 @@ function TopBar({
       {/* Center: SOL title */}
       <div className="pointer-events-none absolute inset-x-0 flex justify-center">
         <div className="flex items-baseline gap-2">
-          <span className="text-void-text-primary font-mono text-5xl leading-none font-extralight tracking-tight">
+          <span className="text-void-text-primary font-mono text-5xl font-extralight leading-none tracking-tight">
             {status?.current_sol ?? "\u2014"}
           </span>
           <span className="text-void-text-tertiary font-mono text-base leading-none">
@@ -96,7 +96,7 @@ function TopBar({
       <div className="ml-auto flex items-center gap-3">
         <button
           onClick={toggleRunning}
-          className="text-void-text-tertiary hover:text-void-text-secondary cursor-pointer font-mono text-sm font-semibold tracking-[0.15em] uppercase transition-colors"
+          className="text-void-text-tertiary hover:text-void-text-secondary cursor-pointer font-mono text-sm font-semibold uppercase tracking-[0.15em] transition-colors"
         >
           {running ? "Pause" : "Run"}
         </button>

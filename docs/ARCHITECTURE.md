@@ -7,44 +7,58 @@ Autonomous AI agent manages a Martian greenhouse simulation for a 4-person crew 
 ## System Architecture
 
 ```
-┌─────────────┐     WebSocket (AG-UI)      ┌──────────────────┐
-│   Frontend   │◄──────────────────────────►│   Agent (AWS     │
-│   React/TS   │                            │   AgentCore)     │
+┌──────────────┐                            ┌──────────────────┐
+│   Frontend   │         WebSocket          │   Agent (AWS     │
+│   React/TS   │◄─────────(tick)───────────►│   AgentCore)     │
 │              │                            │                  │
 │  - Crop field│                            │  - Reads state   │
-│    visual    │     REST API (read-only)   │  - Decides       │
-│  - Weather   │◄──────────────────────────►│  - Executes      │
-│    dashboard │     (frontend polls sim)   │  - Logs          │
+│    visual    │                            │  - Decides       │
+│  - Weather   │                            │  - Executes      │
+│    dashboard │                            │  - Logs          │
 │  - Crew      │                            │                  │
 │    health    │                            │  Syngenta KB     │
 │  - Crisis    │                            │  (via AgentCore) │
 │    injection │                            │                  │
-│  - Agent feed│                            │  Weather Model   │
-└──────────────┘                            │  (LSTM, 7-sol)   │
-                                            └────────┬─────────┘
-                                                     │
-                                              REST API calls
-                                                     │
-                                                     ▼
-                                            ┌──────────────────┐
-                                            │   Simulation     │
-                                            │   FastAPI        │
-                                            │                  │
-                                            │  State Engine    │
-                                            │  (all subsystems)│
-                                            │                  │
-                                            │  Event Generator │
-                                            │  (crises, random)│
-                                            │                  │
-                                            │  Scoring Engine  │
-                                            └──────────────────┘
+│  - Sim       │                            │  Weather Model   │
+│    controls  │                            │  (LSTM, 7-sol)   │
+└──────┬───────┘                            └────────┬─────────┘
+       │                                             │
+       │  WebSocket (/ws)                            │  WebSocket (/ws)
+       │  - register (role=frontend)                 │  - register (role=agent)
+       │  - create_session                           │  - create_session
+       │  - inject_crisis                            │  - agent_actions
+       │  - set_tick_delay                           │  - consultation (recv)
+       │  - pause / resume                           │  - tick (recv, ignored)
+       │  - tick (recv)                              │  - mission_end (recv)
+       │  - mission_end (recv)                       │
+       │                                             │  REST (read-only during
+       │                                             │   consultation pause)
+       ▼                                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     Simulation (FastAPI)                     │
+│                                                             │
+│  ┌─────────────┐   ┌────────────┐   ┌────────────────────┐ │
+│  │  Session     │   │  Tick Loop │   │  Connection        │ │
+│  │  Manager     │──►│  (async    │──►│  Manager           │ │
+│  │              │   │   task)    │   │  (agent+frontends) │ │
+│  └─────────────┘   └────────────┘   └────────────────────┘ │
+│                                                             │
+│  ┌─────────────┐   ┌────────────┐   ┌────────────────────┐ │
+│  │  Simulation  │   │  Interrupt │   │  Snapshot          │ │
+│  │  Engine      │   │  Detector  │   │  Builder           │ │
+│  │  (all subs)  │   │            │   │  (telemetry dict)  │ │
+│  └─────────────┘   └────────────┘   └────────────────────┘ │
+│                                                             │
+│  State Engine  │  Event Generator  │  Scoring Engine        │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 **Data flow:**
-- Agent → Simulation: REST calls (read state, execute actions, advance time)
-- Agent → Frontend: WebSocket via AG-UI protocol (real-time decision stream)
-- Frontend → Simulation: REST calls (read-only state for dashboards + crisis injection)
-- Frontend does NOT execute agent actions — only the agent does
+- Simulation → Frontend: WebSocket tick broadcasts (real-time state on every sol)
+- Simulation → Agent: WebSocket consultation requests (when interrupts detected)
+- Agent → Simulation: WebSocket actions response + REST reads during consultation
+- Frontend → Simulation: WebSocket commands (create session, inject crisis, pause/resume)
+- The simulation self-ticks — neither the agent nor the frontend drives time advancement
 
 ---
 
@@ -73,9 +87,58 @@ class SimulationState:
     rng: Random                 # seeded RNG for reproducibility
 ```
 
+### Self-Ticking Loop
+
+The simulation runs as an autonomous asyncio task. Each session has its own tick loop that advances one sol per iteration without waiting for external calls. The loop:
+
+1. Respects pause state (blocks while `session.paused` is true)
+2. Applies tick delay (`tick_delay_ms` for pacing control)
+3. Captures pre-tick state (active crises, harvest-ready crops, mission phase)
+4. Advances the engine one sol under an async lock
+5. Detects interrupts by comparing pre/post tick state
+6. Builds a full state snapshot and broadcasts it to all connected WebSocket clients
+7. If interrupts exist and an agent is connected, pauses for agent consultation
+8. Resumes ticking after the agent responds (or times out after 300s)
+
+### Agent Consultation Flow
+
+When the tick loop detects interrupts (new crises, crop deaths, harvest readiness, critical resources, or mission phase changes), it pauses and sends a `consultation` message to the agent:
+
+```
+Tick Loop                  Agent
+    │                        │
+    │── consultation ───────►│  (sol, interrupts, full snapshot)
+    │   (loop paused)        │
+    │                        │── LLM reasoning ──►
+    │                        │◄── actions ────────
+    │◄── agent_actions ──────│  (actions, next_checkin)
+    │                        │
+    │   (execute actions)    │
+    │   (resume ticking)     │
+    │                        │
+    │   ... next_checkin     │
+    │   sols pass without    │
+    │   consulting agent ... │
+```
+
+The agent specifies `next_checkin` (1-10 sols) to control how many sols pass before the next consultation. During stable periods the agent requests longer intervals; during crises it requests every-sol check-ins.
+
+### Interrupt Triggers
+
+The interrupt detector (`interrupts.py`) fires on:
+
+| Interrupt Type | Condition |
+|----------------|-----------|
+| `new_crisis` | A crisis appeared that was not active before the tick |
+| `crop_death` | A tick event contains a crop death alert |
+| `harvest_ready` | A crop became harvest-ready this tick |
+| `water_critical` | Reservoir fell below 50L |
+| `battery_critical` | Battery dropped below 5% |
+| `mission_phase_change` | Mission phase changed (e.g. active → complete) |
+
 ### Sol Advance Logic
 
-When the agent calls `POST /sim/advance`, the simulation:
+Each tick advances the engine one sol. The engine performs:
 
 ```
 1. weather.tick(sol)          → generate next sol's weather from data/model
@@ -190,6 +253,39 @@ zone_temp += (heat_input - heat_loss) / thermal_mass * dt
 
 Crisis types: `water_recycling_decline`, `energy_disruption`, `pathogen_outbreak`, `temperature_failure`, `co2_imbalance`, `pipe_burst`
 
+### WebSocket Protocol
+
+A single `/ws` endpoint handles all real-time communication. Clients must send a `register` message first to identify their role.
+
+#### Client → Server Messages
+
+| Type | Sender | Payload | Purpose |
+|------|--------|---------|---------|
+| `register` | both | `{role: "agent"\|"frontend"}` | Identify connection role |
+| `create_session` | both | `{seed?, difficulty?, tick_delay_ms?, starting_reserves?}` | Create and start a session |
+| `agent_actions` | agent | `{actions: [...], next_checkin: N}` | Submit actions during consultation |
+| `inject_crisis` | frontend | `{scenario: "water_leak"\|"hvac_failure"\|"pathogen"\|"dust_storm"\|"energy_disruption", ...}` | Trigger a crisis scenario |
+| `set_tick_delay` | frontend | `{tick_delay_ms: N}` | Change tick pacing |
+| `pause` | frontend | `{}` | Pause the tick loop |
+| `resume` | frontend | `{}` | Resume the tick loop |
+
+#### Server → Client Messages
+
+| Type | Recipient | Payload | Purpose |
+|------|-----------|---------|---------|
+| `registered` | sender | `{role}` | Registration acknowledged |
+| `session_created` | sender | `{session_id, config}` | Session created and ticking |
+| `tick` | all | Full state snapshot + events + interrupts | Broadcast every sol |
+| `consultation` | agent | `{sol, interrupts, snapshot}` | Request agent decisions (loop paused) |
+| `mission_end` | all | `{mission_phase, final_sol, snapshot}` | Mission complete |
+| `crisis_injected` | sender | `{scenario, sol}` | Crisis injection confirmed |
+| `tick_delay_set` | sender | `{tick_delay_ms}` | Delay change confirmed |
+| `paused` | sender | `{}` | Pause confirmed |
+| `resumed` | sender | `{}` | Resume confirmed |
+| `error` | sender | `{message}` | Error response |
+
+The tick payload contains the full simulation state snapshot with keys: `sim_status`, `weather_current`, `energy_status`, `greenhouse_environment`, `water_status`, `crops_status`, `nutrients_status`, `crew_nutrition`, `active_crises`, `score_current`, plus `events` and `interrupts` arrays.
+
 ### Simulation Config (at reset)
 
 ```json
@@ -216,48 +312,33 @@ Difficulty presets override individual values (easy/normal/hard).
 
 ## Agent (AWS AgentCore)
 
-### Core Loop (per sol)
+### Operating Modes
+
+The agent exposes two entrypoints:
+
+1. **BedrockAgentCore app** (`make dev-agent` or `uv run uvicorn src.main:app --reload --port 9090`): serves the hackathon/demo runtime entrypoint. Requests can trigger `run_mission` or ad-hoc query handling.
+
+2. **Standalone mission runner** (`uv run mars-agent`): connects directly to the simulation WebSocket and runs the autonomous mission loop locally.
+
+### WebSocket Consultation Loop
+
+In the standalone mission runner, the agent waits for consultation requests rather than driving time:
 
 ```python
-async def run_sol(sim_client, kb_client, journal, weather_model):
-    # 1. Read all state
-    state = await sim_client.read_all_state()
+async with SimWebSocketClient() as ws_client:
+    await ws_client.connect("ws://localhost:8080/ws")
+    session_id = await ws_client.create_session(config)
 
-    # 2. Weather prediction (our LSTM model, not sim forecast)
-    forecast_7d = weather_model.predict(state.weather_history)
-    seasonal_outlook = weather_model.seasonal_baseline(state.sol)
+    while True:
+        consultation = await ws_client.wait_for_consultation()
+        if consultation is None:
+            break  # mission ended
 
-    # 3. Energy budget projection
-    energy_forecast = project_energy(forecast_7d, state.energy, state.greenhouse)
-
-    # 4. Decide (single LLM call with structured output)
-    decisions = await decide(
-        current_state=state,
-        energy_forecast=energy_forecast,
-        forecast_7d=forecast_7d,
-        seasonal_outlook=seasonal_outlook,
-        journal_recent=journal.last_n(30),       # last 30 sols of decisions
-        lessons_learned=journal.cross_session(),  # summaries from prev runs
-        kb_context=await kb_client.query(state),  # Syngenta knowledge base
-    )
-
-    # 5. Execute actions
-    for action in decisions.actions:
-        await sim_client.execute(action)
-
-    # 6. Log reasoning
-    journal.append(decisions)
-    await sim_client.log_decision(decisions)
-
-    # 7. Advance
-    events = await sim_client.advance(sols=1)
-
-    # 8. React to events (immediate crisis response if needed)
-    if any(e.type == "crisis" for e in events):
-        crisis_response = await decide_crisis(state, events, journal)
-        for action in crisis_response.actions:
-            await sim_client.execute(action)
-        journal.append(crisis_response)
+        # consultation contains: sol, interrupts, snapshot
+        actions, next_checkin, reasoning = run_consultation(
+            consultation, weather_forecaster, journal, ...
+        )
+        await ws_client.send_actions(actions, next_checkin)
 ```
 
 ### Decision Architecture
@@ -361,9 +442,10 @@ Loaded as context at the start of the next run.
 
 ### Data Sources
 
-- All dashboard data: polls simulation REST endpoints (1-2s interval or on sol advance)
-- Agent feed: WebSocket subscription via AG-UI protocol from AgentCore
-- Crisis injection: direct POST to simulation
+- All dashboard data: real-time WebSocket tick broadcasts from the simulation (every sol)
+- Crisis injection: WebSocket `inject_crisis` message to the simulation
+- Simulation controls (pause/resume, tick delay, session creation): WebSocket commands
+- The `useWebSocket` hook manages connection lifecycle, auto-reconnect with exponential backoff, and state updates from tick payloads
 
 ---
 

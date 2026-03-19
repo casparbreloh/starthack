@@ -26,10 +26,10 @@ from src.constants import (
     FOOD_KCAL_PER_KG,
     FOOD_PROTEIN_G_PER_KG,
     INITIAL_FOOD_KG,
-    MISSION_DURATION_SOLS,
     TOTAL_GREENHOUSE_AREA_M2,
     ZONE_AREAS_M2,
 )
+from src.engine import SimulationEngine
 from src.enums import MissionPhase
 from src.models.responses import (
     ActiveCrisesResponse,
@@ -49,9 +49,13 @@ from src.models.responses import (
     WeatherForecastResponse,
     WeatherResponse,
 )
-from src.state import engine
+from src.state import session_manager
 
 router = APIRouter()
+
+
+def _engine(session_id: str | None) -> SimulationEngine:
+    return session_manager.get_or_default(session_id).engine
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -60,10 +64,11 @@ router = APIRouter()
 
 
 @router.get("/sim/status", response_model=SimStatusResponse)
-def sim_status():
+def sim_status(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     return {
         "current_sol": engine.current_sol,
-        "total_sols": MISSION_DURATION_SOLS,
+        "total_sols": engine.mission_duration_sols,
         "mission_phase": engine.mission_phase.value,
         "paused": engine.paused,
     }
@@ -75,7 +80,8 @@ def sim_status():
 
 
 @router.get("/weather/current", response_model=WeatherResponse)
-def weather_current():
+def weather_current(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     w = engine.weather.current()
     if w is None:
         raise HTTPException(404, "No weather data yet — advance the simulation first")
@@ -83,12 +89,20 @@ def weather_current():
 
 
 @router.get("/weather/history", response_model=list[WeatherResponse])
-def weather_history(last_n_sols: int = Query(default=30, ge=1, le=450)):
+def weather_history(
+    last_n_sols: int = Query(default=30, ge=1, le=450),
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     return [_weather_to_dict(w) for w in engine.weather.history(last_n_sols)]
 
 
 @router.get("/weather/forecast", response_model=list[WeatherForecastResponse])
-def weather_forecast(horizon: int = Query(default=7, ge=1, le=30)):
+def weather_forecast(
+    horizon: int = Query(default=7, ge=1, le=30),
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     return [
         {**_weather_to_dict(w), "confidence": round(max(0.5, 1.0 - i * 0.05), 2)}
         for i, w in enumerate(engine.weather.forecast(engine.current_sol, horizon))
@@ -101,7 +115,8 @@ def weather_forecast(horizon: int = Query(default=7, ge=1, le=30)):
 
 
 @router.get("/energy/status", response_model=EnergyStatusResponse)
-def energy_status():
+def energy_status(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     s = engine.energy.state
     return {
         "solar_generation_wh": s.solar_generation_wh,
@@ -122,7 +137,8 @@ def energy_status():
 
 
 @router.get("/greenhouse/environment", response_model=GreenhouseEnvironmentResponse)
-def greenhouse_environment():
+def greenhouse_environment(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     zones = [
         {
             "zone_id": z.zone_id,
@@ -156,7 +172,8 @@ def greenhouse_environment():
 
 
 @router.get("/water/status", response_model=WaterStatusResponse)
-def water_status():
+def water_status(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     s = engine.water.state
     return {
         "reservoir_liters": s.reservoir_liters,
@@ -178,7 +195,8 @@ def water_status():
 
 
 @router.get("/crops/status", response_model=CropsStatusResponse)
-def crops_status():
+def crops_status(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     crops = []
     for batch in engine.crops.batches.values():
         crops.append(
@@ -226,7 +244,8 @@ def crops_status():
 
 
 @router.get("/nutrients/status", response_model=NutrientsStatusResponse)
-def nutrients_status():
+def nutrients_status(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     zones = [
         {
             "zone_id": z.zone_id,
@@ -256,7 +275,8 @@ def nutrients_status():
 
 
 @router.get("/crew/nutrition", response_model=CrewNutritionResponse)
-def crew_nutrition():
+def crew_nutrition(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     s = engine.crew.state
     total_stored_kcal = s.stored_kcal + s.fresh_buffer_kcal
     days_at_rate = total_stored_kcal / CREW_DAILY_KCAL if CREW_DAILY_KCAL > 0 else 999
@@ -317,7 +337,7 @@ def crew_nutrition():
 
 
 @router.get("/crew/health", response_model=CrewHealthResponse)
-def crew_health():
+def crew_health(session_id: str | None = Query(default=None)):
     """
     Detailed crew health vitals.
 
@@ -326,6 +346,7 @@ def crew_health():
     temperature stress (NASA-STD-3001 Vol.2 §6.2.1), and starvation
     (WHO TRS 724).
     """
+    engine = _engine(session_id)
     h = engine.crew.health
     return {
         "current_sol": engine.current_sol,
@@ -382,8 +403,9 @@ def crew_health():
 
 
 @router.get("/crew/members", response_model=CrewMembersResponse)
-def crew_members():
+def crew_members(session_id: str | None = Query(default=None)):
     """Individual health card for each of the 4 crew members."""
+    engine = _engine(session_id)
     return {
         "current_sol": engine.current_sol,
         "crew_size": len(engine.crew.health.members),
@@ -408,7 +430,8 @@ def crew_members():
 
 
 @router.get("/sensors/readings", response_model=SensorsReadingsResponse)
-def sensors_readings():
+def sensors_readings(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     return {
         "timestamp_sol": engine.current_sol + 0.5,
         "readings": engine.sensor_readings(),
@@ -421,13 +444,18 @@ def sensors_readings():
 
 
 @router.get("/events/log", response_model=EventsLogResponse)
-def events_log(since_sol: int = Query(default=0, ge=0)):
+def events_log(
+    since_sol: int = Query(default=0, ge=0),
+    session_id: str | None = Query(default=None),
+):
+    engine = _engine(session_id)
     events = engine.events.since(since_sol)
     return {"events": [e.to_dict() for e in events]}
 
 
 @router.get("/events/active_crises", response_model=ActiveCrisesResponse)
-def events_active_crises():
+def events_active_crises(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     return {
         "crises": [
             {
@@ -452,7 +480,8 @@ def events_active_crises():
 
 
 @router.get("/score/current", response_model=ScoreCurrentResponse)
-def score_current():
+def score_current(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     snap = engine.scoring.snapshot
     return {
         "current_sol": snap.current_sol,
@@ -461,11 +490,15 @@ def score_current():
 
 
 @router.get("/score/final", response_model=ScoreFinalResponse)
-def score_final():
+def score_final(session_id: str | None = Query(default=None)):
+    engine = _engine(session_id)
     if engine.mission_phase != MissionPhase.COMPLETE:
         raise HTTPException(
             400,
-            f"Mission not yet complete (sol {engine.current_sol}/{MISSION_DURATION_SOLS})",
+            (
+                "Mission not yet complete "
+                f"(sol {engine.current_sol}/{engine.mission_duration_sols})"
+            ),
         )
     snap = engine.scoring.snapshot
     return {
@@ -492,8 +525,9 @@ def catalog_crops():
 
 
 @router.get("/sim/state")
-def sim_state():
+def sim_state(session_id: str | None = Query(default=None)):
     """Full telemetry snapshot — convenience endpoint for the frontend."""
+    engine = _engine(session_id)
     return {
         "current_sol": engine.current_sol,
         "mission_phase": engine.mission_phase.value,

@@ -65,6 +65,7 @@ class SimulationEngine:
         self.current_sol: int = 0
         self.mission_phase: MissionPhase = MissionPhase.ACTIVE
         self.paused: bool = False
+        self.mission_duration_sols: int = MISSION_DURATION_SOLS
 
         # Sub-models
         self.weather = MarsWeatherModel()
@@ -235,13 +236,16 @@ class SimulationEngine:
         )
 
         # Mission completion check
-        if sol >= MISSION_DURATION_SOLS and self.mission_phase == MissionPhase.ACTIVE:
+        if (
+            sol >= self.mission_duration_sols
+            and self.mission_phase == MissionPhase.ACTIVE
+        ):
             self.mission_phase = MissionPhase.COMPLETE
             self.events.log(
                 sol,
                 "info",
                 "mission",
-                "Mission complete after 450 sols.",
+                f"Mission complete after {self.mission_duration_sols} sols.",
                 Severity.INFO,
             )
 
@@ -255,9 +259,11 @@ class SimulationEngine:
         self,
         difficulty: Difficulty = Difficulty.NORMAL,
         starting_reserves: dict[str, float] | None = None,
+        mission_duration_sols: int = MISSION_DURATION_SOLS,
     ) -> None:
         """Reset simulation to sol 0 with optional config overrides."""
         self._init_state()
+        self.mission_duration_sols = mission_duration_sols
 
         # Apply difficulty modifiers
         _apply_difficulty(self, difficulty)

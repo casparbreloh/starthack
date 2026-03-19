@@ -10,12 +10,12 @@ export default function MetricRow({ label, value, unit, sublabel, dimValue }: Me
   return (
     <div className="flex items-baseline justify-between gap-3 py-[4px]">
       <div className="min-w-0 shrink">
-        <span className="text-void-text-secondary text-sm leading-none font-medium">{label}</span>
+        <span className="text-void-text-secondary text-sm font-medium leading-none">{label}</span>
         {sublabel && (
           <span className="text-void-text-tertiary ml-1.5 text-xs leading-none">{sublabel}</span>
         )}
       </div>
-      <div className="shrink-0 text-right font-mono text-[15px] leading-none font-semibold">
+      <div className="shrink-0 text-right font-mono text-[15px] font-semibold leading-none">
         {value === null ? (
           <span className="text-void-text-muted">—</span>
         ) : (

@@ -1,30 +1,22 @@
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useCallback, useMemo } from "react"
 
-import { api } from "../api/client"
-import type { SimulationData } from "../types/simulation"
-
-/** Real-time milliseconds between ticks */
-const TICK_INTERVAL_MS = 1000
-/** Simulation sols advanced per tick */
-const TICK_SOLS = 1
-
-const empty: SimulationData = {
-  status: null,
-  weather: null,
-  energy: null,
-  greenhouse: null,
-  water: null,
-  crops: null,
-  nutrients: null,
-  crew: null,
-  crewHealth: null,
-  crewMembers: null,
-  crises: null,
-  events: null,
-  score: null,
-  loading: true,
-  error: null,
-}
+import type {
+  SimulationData,
+  SimStatus,
+  WeatherCurrent,
+  EnergyStatus,
+  GreenhouseEnvironment,
+  WaterStatus,
+  CropsStatus,
+  NutrientsStatus,
+  CrewNutrition,
+  CrewHealth,
+  CrewMembers,
+  ActiveCrises,
+  EventsLog,
+  ScoreData,
+} from "../types/simulation"
+import { useWebSocketControls } from "./useGameData"
 
 export interface SimulationControls extends SimulationData {
   running: boolean
@@ -32,93 +24,60 @@ export interface SimulationControls extends SimulationData {
 }
 
 export function useSimulation(): SimulationControls {
-  const [data, setData] = useState<SimulationData>(empty)
+  const ws = useWebSocketControls()
   const [running, setRunning] = useState(true)
-  const tickingRef = useRef(false)
 
-  const fetchAll = useCallback(async () => {
-    try {
-      const [
-        status,
-        weather,
-        energy,
-        greenhouse,
-        water,
-        crops,
-        nutrients,
-        crew,
-        crewHealth,
-        crewMembers,
-        crises,
-        events,
-        score,
-      ] = await Promise.allSettled([
-        api.getStatus(),
-        api.getWeather(),
-        api.getEnergy(),
-        api.getGreenhouse(),
-        api.getWater(),
-        api.getCrops(),
-        api.getNutrients(),
-        api.getCrew(),
-        api.getCrewHealth(),
-        api.getCrewMembers(),
-        api.getCrises(),
-        api.getEvents(),
-        api.getScore(),
-      ])
+  const toggleRunning = useCallback(() => {
+    setRunning((prev) => {
+      if (prev) {
+        ws.pause()
+      } else {
+        ws.resume()
+      }
+      return !prev
+    })
+  }, [ws])
 
-      const resolve = <T>(r: PromiseSettledResult<T>): T | null =>
-        r.status === "fulfilled" ? r.value : null
-
-      setData({
-        status: resolve(status),
-        weather: resolve(weather),
-        energy: resolve(energy),
-        greenhouse: resolve(greenhouse),
-        water: resolve(water),
-        crops: resolve(crops),
-        nutrients: resolve(nutrients),
-        crew: resolve(crew),
-        crewHealth: resolve(crewHealth),
-        crewMembers: resolve(crewMembers),
-        crises: resolve(crises),
-        events: resolve(events),
-        score: resolve(score),
-        loading: false,
+  const data: SimulationData = useMemo(() => {
+    const s = ws.lastState
+    if (!s) {
+      return {
+        status: null,
+        weather: null,
+        energy: null,
+        greenhouse: null,
+        water: null,
+        crops: null,
+        nutrients: null,
+        crew: null,
+        crewHealth: null,
+        crewMembers: null,
+        crises: null,
+        events: null,
+        score: null,
+        loading: true,
         error: null,
-      })
-    } catch {
-      setData((prev) => ({ ...prev, loading: false, error: "Simulation offline" }))
+      }
     }
-  }, [])
 
-  const tick = useCallback(async () => {
-    if (tickingRef.current) return
-    tickingRef.current = true
-    try {
-      await api.advance(TICK_SOLS)
-      await fetchAll()
-    } catch {
-      setData((prev) => ({ ...prev, error: "Simulation offline" }))
-    } finally {
-      tickingRef.current = false
+    return {
+      status: (s.sim_status as SimStatus) ?? null,
+      weather: (s.weather_current as WeatherCurrent) ?? null,
+      energy: (s.energy_status as EnergyStatus) ?? null,
+      greenhouse: (s.greenhouse_environment as GreenhouseEnvironment) ?? null,
+      water: (s.water_status as WaterStatus) ?? null,
+      crops: (s.crops_status as CropsStatus) ?? null,
+      nutrients: (s.nutrients_status as NutrientsStatus) ?? null,
+      crew: (s.crew_nutrition as CrewNutrition) ?? null,
+      crewHealth: (s.crew_health as CrewHealth) ?? null,
+      crewMembers: (s.crew_members as CrewMembers) ?? null,
+      crises: (s.active_crises as ActiveCrises) ?? null,
+      events: s.events ? ({ events: s.events } as EventsLog) : null,
+      score: (s.score_current as ScoreData) ?? null,
+      loading: false,
+      error: null,
     }
-  }, [fetchAll])
-
-  // Initial fetch on mount (before first tick fires)
-  useEffect(() => {
-    void fetchAll()
-  }, [fetchAll])
-
-  // Tick loop — advance + refresh on interval
-  useEffect(() => {
-    if (!running) return
-    const id = setInterval(() => void tick(), TICK_INTERVAL_MS)
-    return () => clearInterval(id)
-  }, [running, tick])
-
-  const toggleRunning = useCallback(() => setRunning((r) => !r), [])
+  }, [ws.lastState])
 
   return { ...data, running, toggleRunning }
 }
