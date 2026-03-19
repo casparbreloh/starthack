@@ -254,9 +254,9 @@ class SimulationEngine:
             "HVAC failure scenario injected", -10.0, 15.0,
         )
 
-    def scenario_pathogen(self, crop_id: str) -> None:
+    def scenario_pathogen(self, crop_id: str):
         """Drop a specific crop's health to 10%."""
-        self.crops.inject_pathogen(crop_id)
+        crop_batch = self.crops.inject_pathogen(crop_id)
         self.events.log(
             self.current_sol, "crisis", "crop",
             f"SCENARIO: Pathogen outbreak in crop '{crop_id}' — health → 10%",
@@ -267,6 +267,7 @@ class SimulationEngine:
             self.current_sol, CrisisType.PATHOGEN_OUTBREAK, Severity.CRITICAL,
             f"Pathogen outbreak in {crop_id}", 0.10, 0.50,
         )
+        return crop_batch
 
     def scenario_dust_storm(self, duration_sols: int = 10) -> None:
         """Simulates a dust storm by setting low solar irradiance for N sols (logged only)."""
