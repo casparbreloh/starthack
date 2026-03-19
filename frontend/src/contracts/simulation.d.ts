@@ -674,6 +674,7 @@ export type components = {
       temperature: components["schemas"]["TemperatureHealthResponse"]
       co2: components["schemas"]["Co2HealthResponse"]
       starvation: components["schemas"]["StarvationResponse"]
+      illness: components["schemas"]["IllnessResponse"]
     }
     /** CrewMemberResponse */
     CrewMemberResponse: {
@@ -978,6 +979,19 @@ export type components = {
       /** Consecutive Deficit Sols */
       consecutive_deficit_sols: number
     }
+    /** IllnessResponse */
+    IllnessResponse: {
+      /** Active */
+      active: boolean
+      /** Sick Member Name */
+      sick_member_name: string | null
+      /** Duration Remaining Sols */
+      duration_remaining_sols: number
+      /** Kcal Multiplier */
+      kcal_multiplier: number
+      /** Protein Multiplier */
+      protein_multiplier: number
+    }
     /** NutrientAdjustRequest */
     NutrientAdjustRequest: {
       /** Zone Id */
@@ -996,6 +1010,11 @@ export type components = {
        * @default false
        */
       potassium_boost: boolean
+      /**
+       * Flush Solution
+       * @default false
+       */
+      flush_solution: boolean
     }
     /** NutrientsStatusResponse */
     NutrientsStatusResponse: {
