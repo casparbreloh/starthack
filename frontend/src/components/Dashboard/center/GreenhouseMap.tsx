@@ -272,7 +272,7 @@ export default function GreenhouseMap({ crops }: GreenhouseMapProps) {
   const label = formatZoneLabel(effectiveZone)
 
   return (
-    <div className="flex h-full w-full flex-col items-center pt-10 px-4 pb-4">
+    <div className="flex h-full w-full flex-col items-center px-4 pt-10 pb-4">
       {/* Zone tabs — pinned to top center */}
       {zones.length > 1 && (
         <ZoneTabs zones={zones} active={effectiveZone} onSelect={(z) => setActiveZone(z)} />
