@@ -141,6 +141,14 @@ class SimulationEngine:
                     Severity.INFO,
                 )
 
+        # Apply autonomous dust storm solar reduction (if any) so that
+        # the energy model sees correct generation and surplus_wh is accurate
+        auto_solar_factor = self.autonomous_events.active_solar_factor()
+        if auto_solar_factor < 1.0:
+            weather.solar_irradiance_wm2 = round(
+                weather.solar_irradiance_wm2 * auto_solar_factor, 1
+            )
+
         self.energy.calc_rates(weather, self.climate)
         self.climate.calc_rates(weather, self.energy)
         self.water.calc_rates(
