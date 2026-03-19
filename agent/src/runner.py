@@ -10,10 +10,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import sys
 
 from .config import SIM_BASE_URL, SIM_WS_URL, VALID_DIFFICULTIES
-from .sim_client import SimClient
 
 
 def main() -> None:
@@ -64,8 +64,28 @@ def main() -> None:
         default=SIM_WS_URL,
         help=f"Simulation WebSocket URL (default: {SIM_WS_URL})",
     )
+    parser.add_argument(
+        "--no-memory",
+        action="store_true",
+        default=False,
+        help=(
+            "Disable AgentCore Memory and use legacy file-based cross-session learning. "
+            "Useful for local testing without AWS credentials. "
+            "Clears BEDROCK_AGENTCORE_MEMORY_ID before loading orchestrator."
+        ),
+    )
 
     args = parser.parse_args()
+
+    # Apply --no-memory: clear env var AND patch the already-imported config module
+    # (config.py is imported at module level for SIM_BASE_URL/VALID_DIFFICULTIES,
+    # so memory_enabled was already computed — we must patch it directly)
+    if args.no_memory:
+        os.environ.pop("BEDROCK_AGENTCORE_MEMORY_ID", None)
+        from . import config as _cfg
+
+        _cfg.MEMORY_ID = ""
+        _cfg.memory_enabled = False
 
     # Configure logging with sol numbers in format
     logging.basicConfig(
@@ -74,6 +94,11 @@ def main() -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     logger = logging.getLogger(__name__)
+
+    if args.no_memory:
+        logger.info(
+            "--no-memory flag set: using legacy file-based cross-session learning."
+        )
 
     if args.ws:
         # WebSocket mode
@@ -115,6 +140,7 @@ def main() -> None:
     else:
         # REST mode (original)
         from .agents.orchestrator import run_mission
+        from .sim_client import SimClient
 
         client = SimClient(args.sim_url)
 

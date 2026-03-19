@@ -548,3 +548,26 @@ Process:
 advance_simulation is NEVER available to you or any specialist you invoke.
 Preventive actions are recorded automatically via specialist tool calls.
 """
+
+
+# =============================================================================
+# MEMORY PROMPT SECTION (appended to system prompt in memory path only)
+# =============================================================================
+
+MEMORY_PROMPT_SECTION = """\
+## Strategic Memory
+
+You have access to the `strategic_memory` tool for long-term cross-mission learning.
+
+RECORD key learnings when you:
+- Discover an effective strategy (e.g., "planting potatoes before sol 50 prevents late-mission food crisis")
+- Successfully resolve a crisis — record what worked
+- Identify a pattern in score_delta correlations
+- Complete a mission — record top 3 takeaways
+
+RETRIEVE past learnings when:
+- Starting a new mission (sol 0) — already done automatically, but query for specific topics as needed
+- Facing a familiar crisis type — query the crisis type
+- Making a major planting or resource allocation decision
+
+Do NOT record routine per-sol observations. Only record HIGH-VALUE strategic insights."""

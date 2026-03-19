@@ -3,6 +3,12 @@
 The orchestrator LLM reasons about EVERY decision EVERY sol:
 environment, irrigation, energy, planting, harvesting, nutrients.
 Specialist sub-agents handle crisis escalation with focused context.
+
+Memory paths:
+  - memory_enabled=True (BEDROCK_AGENTCORE_MEMORY_ID set): single persistent Agent
+    with AgentCoreMemorySessionManager + strategic_memory tool
+  - memory_enabled=False (local dev, no env var): per-sol fresh Agent +
+    CrossSessionLearning file-based (legacy path)
 """
 
 from __future__ import annotations
@@ -12,16 +18,34 @@ import logging
 import re
 import time
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from bedrock_agentcore.memory.integrations.strands.session_manager import (
+        AgentCoreMemorySessionManager,
+    )
 
 from strands import Agent
 from strands.models.bedrock import BedrockModel
 
-from ..config import AGENT_TEMPERATURE, AGENTCORE_GATEWAY_URL, MISSION_SOLS, MODEL_ID
+from ..config import (
+    ACTOR_ID,
+    AGENT_TEMPERATURE,
+    AGENTCORE_GATEWAY_URL,
+    MEMORY_ID,
+    MISSION_SOLS,
+    MODEL_ID,
+    memory_enabled,
+)
+from ..crisis_tracker import (
+    CrisisOutcomeTracker,
+    MemoryContext,
+    retrieve_crisis_learnings,
+)
 from ..energy_projection import project_energy_budget, summarize_energy_projection
 from ..journal import CrossSessionLearning, DecisionJournal, compact_state_summary
 from ..mcp_client import create_mcp_client, discover_kb_tools
-from ..prompts import ORCHESTRATOR_SYSTEM_PROMPT
+from ..prompts import MEMORY_PROMPT_SECTION, ORCHESTRATOR_SYSTEM_PROMPT
 from ..sim_client import SimClient
 from ..tools._state import set_client
 from ..tools.actions import create_action_tools
@@ -53,17 +77,22 @@ def create_orchestrator(
     client: SimClient,
     cross_session_context: str = "",
     kb_tools: list | None = None,
+    session_manager: AgentCoreMemorySessionManager | None = None,
+    extra_tools: list | None = None,
 ) -> tuple[Agent, dict]:
-    """Create a fresh orchestrator Agent instance with tools bound to client.
+    """Create an orchestrator Agent instance with tools bound to client.
 
-    Creates a new Agent each sol to prevent unbounded internal message history
-    accumulation. [R8-M6] Cross-sol context comes from the decision journal,
-    not Agent state.
+    When session_manager is provided (memory path), a single Agent is created
+    per mission and the session manager handles context window management.
+    When session_manager is absent (legacy path), a fresh Agent is created
+    each sol to prevent unbounded history accumulation. [R8-M6]
 
     Args:
         client: SimClient instance — all tools will use this client.
         cross_session_context: Previous run summaries formatted for prompt injection. [R5-H7]
         kb_tools: List of MCP KB tool objects discovered from AgentCore gateway. [R6-MCP1]
+        session_manager: AgentCoreMemorySessionManager for context management (memory path).
+        extra_tools: Additional @tool functions to include (e.g. strategic_memory).
 
     Returns:
         Tuple of (Agent, tool_funcs_dict) where tool_funcs_dict contains
@@ -81,6 +110,9 @@ def create_orchestrator(
         system_prompt = (
             system_prompt + "\n\n## Previous Run Learnings\n" + cross_session_context
         )
+    if session_manager is not None:
+        # Append memory guidance so agent knows how to use the strategic_memory tool
+        system_prompt = system_prompt + "\n\n" + MEMORY_PROMPT_SECTION
 
     # Create tools bound to the shared client
     telemetry_tools = create_telemetry_tools(client)
@@ -95,14 +127,25 @@ def create_orchestrator(
         *action_tools.values(),
         *SPECIALIST_TOOLS,
         *(kb_tools or []),
+        *(extra_tools or []),
     ]
 
     model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
-    agent = Agent(
-        model=model,
-        system_prompt=system_prompt,
-        tools=tools,
-    )
+
+    if session_manager is not None:
+        agent = Agent(
+            model=model,
+            system_prompt=system_prompt,
+            tools=tools,
+            session_manager=session_manager,
+        )
+    else:
+        agent = Agent(
+            model=model,
+            system_prompt=system_prompt,
+            tools=tools,
+        )
+
     return agent, {"advance_simulation": advance_simulation}
 
 
@@ -113,6 +156,8 @@ def run_sol(
     weather_forecaster: WeatherForecaster,
     journal: DecisionJournal,
     prev_score: float | None = None,
+    tracker: CrisisOutcomeTracker | None = None,
+    memory_context: MemoryContext | None = None,
 ) -> dict:
     """Run one sol of the mission — the core agent loop.
 
@@ -129,7 +174,7 @@ def run_sol(
 
     Args:
         client: SimClient instance
-        orchestrator: Freshly-created orchestrator Agent
+        orchestrator: Orchestrator Agent (persistent in memory path, fresh in legacy path)
         advance_simulation_fn: Function to advance the simulation (bound to same client)
         weather_forecaster: WeatherForecaster for LSTM forecasts
         journal: DecisionJournal for feedback loop
@@ -146,6 +191,11 @@ def run_sol(
     pre_advance_crises = state["active_crises"]  # [R7-H1]
 
     logger.info("=== Sol %d ===", sol)
+
+    # Capture observation windows for any tracked crises due this sol
+    if tracker is not None:
+        updated = tracker.check_observation_windows(sol, state)
+        logger.debug("Sol %d: %d observation windows captured", sol, len(updated))
     actions_list: list[str] = []
     crises_handled: list[str] = []
 
@@ -277,6 +327,17 @@ def run_sol(
             "Sol %d: %d new crisis(es) detected post-advance", sol, len(new_crises)
         )
         # [R7-M2] Dust storms detected pre-advance from weather; crises post-advance
+        # Retrieve past crisis learnings for context injection (single combined query)
+        if memory_context is not None:
+            crisis_history = retrieve_crisis_learnings(
+                memory_context["memory_client"],
+                memory_context["memory_id"],
+                memory_context["actor_id"],
+                [c.get("type", "") for c in new_crises],
+            )
+        else:
+            crisis_history = ""
+
         # Build minimal prompt for post-advance crisis react [R7-M3]
         crisis_prompt = (
             f"Sol {sol} post-advance: New crises detected.\n"
@@ -284,15 +345,18 @@ def run_sol(
             f"Pre-advance state: {compact_state_summary(state)}\n"
             "Please call the appropriate specialist agent(s) to handle these crises."
         )
+        if crisis_history:
+            crisis_prompt += f"\n\n{crisis_history}\nUse these past learnings to inform your crisis response."
         try:
+            # Crisis orchestrator is always FRESH (stateless) — no session_manager
             crisis_orchestrator, _ = create_orchestrator(client)
             crisis_result = crisis_orchestrator(crisis_prompt)
             # Track which crisis types were handled
             crises_handled = [c.get("type", "unknown") for c in new_crises]
             # Extract additional actions
             try:
-                content = crisis_result.message.get("content", [])
-                for block in content:
+                crisis_content = crisis_result.message.get("content", [])
+                for block in crisis_content:
                     if isinstance(block, dict) and block.get("type") == "tool_use":
                         actions_list.append(
                             f"[crisis]{block['name']}({json.dumps(block.get('input', {}))})"  # type: ignore[typeddict-item]
@@ -305,8 +369,28 @@ def run_sol(
                 crises_handled,
                 compact_state_summary(state),
             )
+            # Record each new crisis for outcome tracking [R8-H4]
+            if tracker is not None:
+                for c in new_crises:
+                    tracker.record_crisis(
+                        crisis_id=c["id"],
+                        crisis_type=c.get("type", "unknown"),
+                        severity=c.get("severity", "unknown"),
+                        sol=sol,
+                        pre_crisis_snapshot=compact_state_summary(state),
+                        pre_crisis_score=float(current_score),
+                        pre_crisis_ids=pre_ids,
+                        response_actions=[
+                            a for a in actions_list if a.startswith("[crisis]")
+                        ],
+                        specialist_output=str(crisis_result.message)[:500],
+                    )
         except Exception as exc:
             logger.warning("Sol %d: crisis response failed (%s)", sol, exc)
+
+    # Synthesize pending crisis learnings (rate-limited to 2/sol)
+    if tracker is not None:
+        tracker.process_synthesis_batch(memory_context=memory_context, max_per_sol=2)
 
     return {
         "sol": sol,
@@ -395,6 +479,17 @@ def run_mission(
 ) -> dict:
     """Run the full Mars greenhouse mission.
 
+    Branches on memory_enabled (auto-detected from BEDROCK_AGENTCORE_MEMORY_ID):
+
+    Memory path (memory_enabled=True):
+      - Single persistent orchestrator Agent with AgentCoreMemorySessionManager
+      - strategic_memory tool for explicit cross-session RECORD/RETRIEVE
+      - retrieve_past_learnings() for mission-start context injection
+
+    Legacy path (memory_enabled=False):
+      - Fresh orchestrator Agent per sol (prevents unbounded history)
+      - CrossSessionLearning file-based persistence in session_logs/
+
     Args:
         client: SimClient instance
         seed: Random seed for simulation reset
@@ -416,16 +511,10 @@ def run_mission(
         mission_sols,
     )
 
-    # Step 2: Initialize cross-session learning [ARCH-5]
-    cross_session = CrossSessionLearning()
-    cross_session_context = cross_session.format_for_prompt()
-
     # Step 3-4: Create MCP client and discover KB tools [R6-MCP4]
     mcp_client = create_mcp_client()
     with mcp_client:
         kb_tools = discover_kb_tools(mcp_client)
-
-        # Step 5: Create orchestrator with cross-session context + KB tools [R5-H7]
         logger.info("KB tools discovered: %d", len(kb_tools))
 
         # Step 6: Initialize WeatherForecaster [ARCH-1]
@@ -434,39 +523,226 @@ def run_mission(
         # Step 7: Initialize DecisionJournal [ARCH-4]
         journal = DecisionJournal()
 
-        # Step 9: Mission loop [R5-M8, R8-M6]
+        # Initialize CrisisOutcomeTracker for long-term crisis outcome tracking
+        tracker = CrisisOutcomeTracker()
+
         run_id = datetime.utcnow().strftime("%Y%m%d_%H%M%S")  # [R5-IR3]
         prev_score: float | None = None
         last_advance_response: dict = {}
         total_crises_seen = 0
 
-        for _loop_idx in range(mission_sols):
-            if _loop_idx % 50 == 0:
-                logger.info("Progress: loop iteration %d / %d", _loop_idx, mission_sols)
+        if memory_enabled:
+            # ============================================================
+            # MEMORY PATH: single persistent Agent with session manager
+            # ============================================================
+            logger.info(
+                "Memory path: BEDROCK_AGENTCORE_MEMORY_ID=%s, session=%s",
+                MEMORY_ID,
+                run_id,
+            )
+            from ..memory import (
+                create_memory_client,
+                create_session_manager,
+                retrieve_past_learnings,
+            )
+            from ..tools.memory_tool import create_memory_tools
 
-            # [R8-M6] Fresh orchestrator per sol to prevent history accumulation
+            session_manager = create_session_manager(session_id=run_id)
+            memory_client = create_memory_client()
+
+            # Retrieve past strategic learnings for mission-start context
+            past_learnings = retrieve_past_learnings(
+                memory_client,
+                MEMORY_ID,
+                ACTOR_ID,
+                "mission strategy key learnings crop management",
+            )
+            cross_session_context = ""
+            if past_learnings:
+                cross_session_context = (
+                    "## Past Mission Learnings (from AgentCore Memory)\n"
+                    + "\n".join(f"- {t}" for t in past_learnings[:5])
+                )
+                logger.info(
+                    "Loaded %d past learning(s) from memory", len(past_learnings)
+                )
+
+            # Build strategic_memory tool bound to this session
+            memory_tools_dict = create_memory_tools(
+                memory_client=memory_client,
+                memory_id=MEMORY_ID,
+                actor_id=ACTOR_ID,
+                session_id=run_id,
+            )
+            memory_tool_list = list(memory_tools_dict.values())
+
+            # Create SINGLE orchestrator for the entire mission
             orchestrator, funcs = create_orchestrator(
-                client, cross_session_context, kb_tools
-            )
-
-            sol_result = run_sol(
                 client,
-                orchestrator,
-                funcs["advance_simulation"],
-                weather_forecaster,
-                journal,
-                prev_score,
+                cross_session_context=cross_session_context,
+                kb_tools=kb_tools,
+                session_manager=session_manager,
+                extra_tools=memory_tool_list,
             )
-            prev_score = sol_result["score"]
-            last_advance_response = sol_result["advance_response"]
-            total_crises_seen += len(sol_result["crises_handled"])
 
-            # [R5-H8] Check for mission completion
-            if sol_result["mission_phase"] == "complete":
-                logger.info("Mission completed at sol %d", sol_result["sol"])
-                break
+            with session_manager:
+                for _loop_idx in range(mission_sols):
+                    if _loop_idx % 50 == 0:
+                        logger.info(
+                            "Progress: loop iteration %d / %d", _loop_idx, mission_sols
+                        )
 
-        # Step 11: Fetch final score [R5-H8]
+                    sol_result = run_sol(
+                        client,
+                        orchestrator,
+                        funcs["advance_simulation"],
+                        weather_forecaster,
+                        journal,
+                        prev_score,
+                        tracker=tracker,
+                        memory_context={
+                            "memory_client": memory_client,
+                            "memory_id": MEMORY_ID,
+                            "actor_id": ACTOR_ID,
+                            "session_id": run_id,
+                        },
+                    )
+                    prev_score = sol_result["score"]
+                    last_advance_response = sol_result["advance_response"]
+                    total_crises_seen += len(sol_result["crises_handled"])
+
+                    if sol_result["mission_phase"] == "complete":
+                        logger.info("Mission completed at sol %d", sol_result["sol"])
+                        break
+
+            # Force-close any pending crisis trackers at mission end
+            final_state = client.read_all_telemetry()
+            actual_sol = final_state.get("sim_status", {}).get(
+                "current_sol", mission_sols
+            )
+            tracker.force_close_pending(
+                current_sol=actual_sol, current_state=final_state
+            )
+            # Flush ALL pending records at mission end (loop until empty)
+            mem_ctx: MemoryContext = {
+                "memory_client": memory_client,
+                "memory_id": MEMORY_ID,
+                "actor_id": ACTOR_ID,
+                "session_id": run_id,
+            }
+            while tracker.get_pending_records():
+                tracker.process_synthesis_batch(memory_context=mem_ctx, max_per_sol=10)
+
+            # Record mission summary in AgentCore Memory
+            _record_mission_summary_to_memory(
+                memory_client=memory_client,
+                memory_id=MEMORY_ID,
+                actor_id=ACTOR_ID,
+                session_id=run_id,
+                run_id=run_id,
+                final_score=prev_score or 0.0,
+                total_crises=total_crises_seen,
+                journal=journal,
+            )
+
+        else:
+            # ============================================================
+            # LEGACY PATH: fresh Agent per sol, file-based CrossSessionLearning
+            # ============================================================
+            logger.info("Legacy path: no BEDROCK_AGENTCORE_MEMORY_ID set.")
+            cross_session = CrossSessionLearning()
+            cross_session_context = cross_session.format_for_prompt()
+
+            for _loop_idx in range(mission_sols):
+                if _loop_idx % 50 == 0:
+                    logger.info(
+                        "Progress: loop iteration %d / %d", _loop_idx, mission_sols
+                    )
+
+                # [R8-M6] Fresh orchestrator per sol to prevent history accumulation
+                orchestrator, funcs = create_orchestrator(
+                    client, cross_session_context, kb_tools
+                )
+
+                sol_result = run_sol(
+                    client,
+                    orchestrator,
+                    funcs["advance_simulation"],
+                    weather_forecaster,
+                    journal,
+                    prev_score,
+                    tracker=tracker,
+                    memory_context=None,
+                )
+                prev_score = sol_result["score"]
+                last_advance_response = sol_result["advance_response"]
+                total_crises_seen += len(sol_result["crises_handled"])
+
+                if sol_result["mission_phase"] == "complete":
+                    logger.info("Mission completed at sol %d", sol_result["sol"])
+                    break
+
+            # Force-close any pending crisis trackers at mission end (legacy path)
+            final_state = client.read_all_telemetry()
+            actual_sol = final_state.get("sim_status", {}).get(
+                "current_sol", mission_sols
+            )
+            tracker.force_close_pending(
+                current_sol=actual_sol, current_state=final_state
+            )
+            # Flush all pending records (in-memory only, no memory persistence)
+            while tracker.get_pending_records():
+                tracker.process_synthesis_batch(max_per_sol=10)
+
+            # Step 11 (legacy): generate and save cross-session summary
+            last_phase = last_advance_response.get("mission_phase", "active")
+            final_score = prev_score or 0.0
+            summary_agent, _ = create_orchestrator(client)
+            summary_prompt = (
+                "Generate a structured mission summary as JSON in a ```json code block.\n\n"
+                f"Run ID: {run_id}\n"
+                f"Final score: {final_score}\n"
+                f"Total crises handled: {total_crises_seen}\n\n"
+                f"Journal (last 50 sols):\n{journal.format_for_prompt(50)}\n\n"
+                "Return JSON with exactly these keys:\n"
+                '{"run_id": "...", "final_score": 0.0, "total_crises": 0, '
+                '"crises_resolved": 0, "avg_daily_kcal": 0.0, '
+                '"key_learnings": ["..."], "worst_decision": "...", "best_decision": "..."}\n'
+            )
+            try:
+                summary_result = summary_agent(summary_prompt)
+                summary_text = str(summary_result.message)
+                start = summary_text.find("```json")
+                end = summary_text.find("```", start + 7) if start != -1 else -1
+                if start != -1 and end != -1:
+                    json_str = summary_text[start + 7 : end].strip()
+                    summary = json.loads(json_str)
+                else:
+                    raise ValueError("No JSON block found in summary response")
+            except Exception as exc:
+                logger.warning("Failed to parse LLM summary: %s", exc)
+                summary = {
+                    "run_id": run_id,
+                    "final_score": final_score,
+                    "total_crises": total_crises_seen,
+                    "crises_resolved": total_crises_seen,
+                    "avg_daily_kcal": 0.0,
+                    "key_learnings": ["Parse error — manual review needed"],
+                    "worst_decision": "N/A",
+                    "best_decision": "N/A",
+                }
+
+            cross_session.save_summary(summary)
+
+            return {
+                "run_id": run_id,
+                "final_score": final_score,
+                "mission_phase": last_phase,
+                "total_crises": total_crises_seen,
+                "summary": summary,
+            }
+
+        # Shared final score fetch for memory path
         last_phase = last_advance_response.get("mission_phase", "active")
         if last_phase == "complete":
             try:
@@ -479,53 +755,21 @@ def run_mission(
         final_score = final_score_data.get("scores", {}).get("overall_score", 0.0)
         logger.info("Final score: %.2f", final_score)
 
-        # Step 12: Generate cross-session summary [ARCH-5, R5-M4, R8-M4]
-        summary_agent, _ = create_orchestrator(
-            client
-        )  # [R9-M4] No KB tools for summary
-        summary_prompt = (
-            "Generate a structured mission summary as JSON in a ```json code block.\n\n"
-            f"Run ID: {run_id}\n"
-            f"Final score: {final_score}\n"
-            f"Total crises handled: {total_crises_seen}\n\n"
-            f"Journal (last 50 sols):\n{journal.format_for_prompt(50)}\n\n"
-            "Return JSON with exactly these keys:\n"
-            '{"run_id": "...", "final_score": 0.0, "total_crises": 0, '
-            '"crises_resolved": 0, "avg_daily_kcal": 0.0, '
-            '"key_learnings": ["..."], "worst_decision": "...", "best_decision": "..."}\n'
-        )
-        try:
-            summary_result = summary_agent(summary_prompt)
-            summary_text = str(summary_result.message)
-            # Parse JSON from response [R8-M4]
-            start = summary_text.find("```json")
-            end = summary_text.find("```", start + 7) if start != -1 else -1
-            if start != -1 and end != -1:
-                json_str = summary_text[start + 7 : end].strip()
-                summary = json.loads(json_str)
-            else:
-                raise ValueError("No JSON block found in summary response")
-        except Exception as exc:
-            logger.warning("Failed to parse LLM summary: %s", exc)
-            summary = {
-                "run_id": run_id,
-                "final_score": final_score,
-                "total_crises": total_crises_seen,
-                "crises_resolved": total_crises_seen,
-                "avg_daily_kcal": 0.0,
-                "key_learnings": ["Parse error — manual review needed"],
-                "worst_decision": "N/A",
-                "best_decision": "N/A",
-            }
-
-        cross_session.save_summary(summary)
-
         return {
             "run_id": run_id,
             "final_score": final_score,
             "mission_phase": last_phase,
             "total_crises": total_crises_seen,
-            "summary": summary,
+            "summary": {
+                "run_id": run_id,
+                "final_score": final_score,
+                "total_crises": total_crises_seen,
+                "crises_resolved": total_crises_seen,
+                "avg_daily_kcal": 0.0,
+                "key_learnings": ["Summary persisted to AgentCore Memory"],
+                "worst_decision": "N/A",
+                "best_decision": "N/A",
+            },
         }
 
 
@@ -932,3 +1176,46 @@ async def run_mission_ws(
             "total_crises": total_crises_seen,
             "summary": summary,
         }
+
+
+def _record_mission_summary_to_memory(
+    memory_client: object,
+    memory_id: str,
+    actor_id: str,
+    session_id: str,
+    run_id: str,
+    final_score: float,
+    total_crises: int,
+    journal: DecisionJournal,
+) -> None:
+    """Record end-of-mission summary to AgentCore Memory for future retrieval.
+
+    Args:
+        memory_client: MemoryClient instance.
+        memory_id: AgentCore memory resource ID.
+        actor_id: Actor ID.
+        session_id: Session ID (same as run_id).
+        run_id: Unique run identifier.
+        final_score: Final overall score (0-100).
+        total_crises: Total crises handled during mission.
+        journal: DecisionJournal with sol-by-sol records.
+    """
+    from ..memory import (
+        MemoryClient as _MemoryClient,  # noqa: F401 (type reference only)
+    )
+
+    summary_content = (
+        f"[END-OF-MISSION SUMMARY run={run_id}] "
+        f"final_score={final_score:.1f} total_crises={total_crises}. "
+        f"Journal highlights: {journal.format_for_prompt(5)[:500]}"
+    )
+    try:
+        memory_client.create_event(  # type: ignore[attr-defined]
+            memory_id=memory_id,
+            actor_id=actor_id,
+            session_id=session_id,
+            messages=[("user", summary_content)],
+        )
+        logger.info("Mission summary recorded to AgentCore Memory for run %s", run_id)
+    except Exception as exc:
+        logger.warning("Failed to record mission summary to memory: %s", exc)

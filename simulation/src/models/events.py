@@ -6,6 +6,7 @@ we use a plain list with automatic crisis detection each tick.
 """
 
 import uuid
+from collections import deque
 from dataclasses import dataclass
 from typing import Any
 
@@ -58,7 +59,7 @@ class EventLog:
     MAX_EVENTS = 200
 
     def __init__(self) -> None:
-        self._events: list[Event] = []
+        self._events: deque[Event] = deque(maxlen=self.MAX_EVENTS)
         self._crises: dict[str, Crisis] = {}  # id → Crisis
 
     # ------------------------------------------------------------------
@@ -85,8 +86,6 @@ class EventLog:
             data=data,
         )
         self._events.append(ev)
-        if len(self._events) > self.MAX_EVENTS:
-            self._events.pop(0)
         return ev
 
     # ------------------------------------------------------------------
@@ -152,7 +151,8 @@ class EventLog:
         return [e for e in self._events if e.sol >= since_sol]
 
     def recent(self, n: int = 20) -> list[Event]:
-        return list(reversed(self._events[-n:]))
+        events = list(self._events)
+        return list(reversed(events[-n:]))
 
     def all_crises(self) -> list[Crisis]:
         return list(self._crises.values())

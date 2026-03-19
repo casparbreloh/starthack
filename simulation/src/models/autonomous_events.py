@@ -87,8 +87,8 @@ class AutonomousEventSystem:
 
         # 1. Expire finished events
         expired = [e for e in self.active_events if e.has_expired(sol)]
+        self.active_events = [e for e in self.active_events if not e.has_expired(sol)]
         for e in expired:
-            self.active_events.remove(e)
             self._on_expire(e, engine)
             emitted.append(
                 _entry("info", "system", f"Event resolved: {e.description}", "info")

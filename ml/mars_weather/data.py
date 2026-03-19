@@ -41,6 +41,13 @@ def load_raw(path: str = DATA_PATH) -> pd.DataFrame:
     return df
 
 
+def load_prepared(path: str = DATA_PATH) -> pd.DataFrame:
+    """Load raw data, engineer features, and drop NaN target rows."""
+    df = load_raw(path)
+    df = engineer_features(df)
+    return df.dropna(subset=TARGETS).reset_index(drop=True)
+
+
 def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add engineered features to the dataframe."""
     df = df.copy()

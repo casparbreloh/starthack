@@ -1,11 +1,6 @@
-import type { CrewNutrition } from "../../types/simulation"
+import type { CrewNutrition, FoodItem } from "../../types/simulation"
 
-interface FoodInventoryItem {
-  kg_remaining: number
-  kcal_remaining: number
-  protein_g_remaining: number
-  pct_remaining: number
-}
+type FoodInventoryItem = FoodItem
 
 interface Props {
   crew: CrewNutrition | null
@@ -81,9 +76,7 @@ function FoodRow({ foodType, item }: { foodType: string; item: FoodInventoryItem
 }
 
 export default function FoodInventory({ crew }: Props) {
-  const inventory = (
-    crew as (CrewNutrition & { food_inventory?: Record<string, FoodInventoryItem> }) | null
-  )?.food_inventory
+  const inventory = crew?.food_inventory
   const foodTypes = inventory ? Object.keys(inventory) : []
 
   const totalKcal = foodTypes.reduce((s, t) => s + (inventory?.[t]?.kcal_remaining ?? 0), 0)

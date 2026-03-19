@@ -36,3 +36,10 @@ EFFECTIVE_SOLAR_HOURS_PER_SOL: int = 8
 
 # -- Path constants --
 SESSION_LOGS_DIR: str = str(_AGENT_DIR / "session_logs")
+
+# -- Memory configuration (auto-detect from env var) --
+MEMORY_ID: str = os.environ.get("BEDROCK_AGENTCORE_MEMORY_ID", "")
+MEMORY_REGION: str = os.environ.get("AWS_REGION", "us-west-2")
+ACTOR_ID: str = "mars-agent"
+MEMORY_BATCH_SIZE: int = 15
+memory_enabled: bool = bool(MEMORY_ID)

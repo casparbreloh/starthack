@@ -27,6 +27,7 @@ from src.constants import (
     FOOD_PROTEIN_G_PER_KG,
     INITIAL_FOOD_KG,
     MISSION_DURATION_SOLS,
+    TOTAL_GREENHOUSE_AREA_M2,
     ZONE_AREAS_M2,
 )
 from src.engine import SimulationEngine
@@ -161,7 +162,7 @@ def greenhouse_environment(session_id: str | None = Query(default=None)):
     w = engine.weather.current()
     return {
         "zones": zones,
-        "total_area_m2": sum(ZONE_AREAS_M2.values()),
+        "total_area_m2": TOTAL_GREENHOUSE_AREA_M2,
         "external_temp_c": w.avg_temp_c if w else None,
     }
 

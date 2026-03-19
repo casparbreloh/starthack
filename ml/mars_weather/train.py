@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from . import MODEL_DIR
+from . import MODEL_DIR, get_device
 from .data import prepare_dataset, TARGETS
 from .model import LSTMPredictor, MarsWeatherDataset, SeasonalBaseline
 
@@ -31,7 +31,7 @@ def train_seasonal_baseline(train_df, target_scaler):
 
 def train_lstm(train_df, val_df, feature_cols, horizon=1):
     """Train LSTM model with early stopping."""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = get_device()
     print(f"Training on: {device}")
 
     train_ds = MarsWeatherDataset(train_df, feature_cols, TARGETS, SEQ_LEN, horizon)
