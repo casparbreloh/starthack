@@ -65,7 +65,7 @@ export function MarsOverview({ onSelectZone, onSelectCrew, weather, sim }: MarsO
         className="absolute left-4 top-4 rounded-sm border border-border bg-card/80 px-4 py-3 backdrop-blur-sm"
       >
         <div className="mb-2 flex items-center gap-3">
-          <span className="font-mono text-lg tracking-[0.2em] text-foreground">A R E S I A</span>
+          <span className="font-mono text-lg tracking-[0.2em] text-foreground">O A S I S</span>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
