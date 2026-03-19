@@ -3,6 +3,7 @@
 - `agent/` — AI agent (Python, uv)
 - `simulation/` — greenhouse simulation API (Python, FastAPI, uv)
 - `frontend/` — dashboard UI (React, TypeScript, Vite, pnpm)
+- `ml/` — Mars weather prediction ML pipeline (PyTorch LSTM)
 - `docs/` — project references (see below)
 
 ## Docs
