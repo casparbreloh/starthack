@@ -4,8 +4,8 @@ Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI ag
 
 ## Stack
 
-- **Agent**: Python 3.12+, deployed on AWS AgentCore
-- **Simulation**: Python 3.12+, FastAPI, uvicorn
+- **Agent**: Python 3.13+, deployed on AWS AgentCore
+- **Simulation**: Python 3.13+, FastAPI, uvicorn
 - **Frontend**: React 19, TypeScript 5.9, Vite 8, Tailwind CSS 4
 - **ML**: PyTorch 2.10, scikit-learn 1.8, pandas 3.0
 - **Package managers**: `uv` (Python), `pnpm` (frontend)

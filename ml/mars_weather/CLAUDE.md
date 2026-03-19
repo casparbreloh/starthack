@@ -27,4 +27,4 @@ Python package implementing the full ML pipeline: data loading, feature engineer
 
 - Uses `from .data import ...` relative imports throughout
 - Scalers (StandardScaler) saved as pickle, metadata as JSON
-- All modules share `TARGETS` and `MODEL_DIR` constants
+- `TARGETS` imported from `data.py`; `MODEL_DIR` defined locally in each module
