@@ -11,7 +11,7 @@ _AGENT_DIR = _SRC_DIR.parent  # agent/
 SIM_BASE_URL: str = os.environ.get("SIM_BASE_URL", "http://localhost:8080")
 MODEL_ID: str = os.environ.get(
     "MODEL_ID",
-    "us.anthropic.claude-sonnet-4-6-20250819-v1:0",
+    "us.anthropic.claude-sonnet-4-6",
 )
 AGENT_TEMPERATURE: float = float(os.environ.get("AGENT_TEMPERATURE", "0.3"))
 AGENTCORE_GATEWAY_URL: str = os.environ.get(
