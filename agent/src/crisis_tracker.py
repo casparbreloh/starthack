@@ -464,7 +464,10 @@ def retrieve_crisis_learnings(
     if not crisis_types:
         return ""
 
-    combined_query = f"crisis response outcome learning {' '.join(set(crisis_types))}"
+    filtered = sorted(set(t for t in crisis_types if t))
+    if not filtered:
+        return ""
+    combined_query = f"crisis response outcome learning {' '.join(filtered)}"
     try:
         results = memory_client.retrieve_memories(  # type: ignore[attr-defined]
             memory_id=memory_id,

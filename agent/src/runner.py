@@ -65,9 +65,15 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Apply --no-memory before importing orchestrator (config is read at import time)
+    # Apply --no-memory: clear env var AND patch the already-imported config module
+    # (config.py is imported at module level for SIM_BASE_URL/VALID_DIFFICULTIES,
+    # so memory_enabled was already computed — we must patch it directly)
     if args.no_memory:
         os.environ.pop("BEDROCK_AGENTCORE_MEMORY_ID", None)
+        from . import config as _cfg
+
+        _cfg.MEMORY_ID = ""
+        _cfg.memory_enabled = False
 
     # Configure logging with sol numbers in format
     logging.basicConfig(

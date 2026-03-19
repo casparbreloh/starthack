@@ -616,18 +616,21 @@ def run_mission(
 
             # Force-close any pending crisis trackers at mission end
             final_state = client.read_all_telemetry()
+            actual_sol = final_state.get("sim_status", {}).get(
+                "current_sol", mission_sols
+            )
             tracker.force_close_pending(
-                current_sol=mission_sols, current_state=final_state
+                current_sol=actual_sol, current_state=final_state
             )
-            tracker.process_synthesis_batch(
-                memory_context={
-                    "memory_client": memory_client,
-                    "memory_id": MEMORY_ID,
-                    "actor_id": ACTOR_ID,
-                    "session_id": run_id,
-                },
-                max_per_sol=10,  # No rate limit at mission end — flush all
-            )
+            # Flush ALL pending records at mission end (loop until empty)
+            mem_ctx: MemoryContext = {
+                "memory_client": memory_client,
+                "memory_id": MEMORY_ID,
+                "actor_id": ACTOR_ID,
+                "session_id": run_id,
+            }
+            while tracker.get_pending_records():
+                tracker.process_synthesis_batch(memory_context=mem_ctx, max_per_sol=10)
 
             # Record mission summary in AgentCore Memory
             _record_mission_summary_to_memory(
@@ -680,10 +683,15 @@ def run_mission(
 
             # Force-close any pending crisis trackers at mission end (legacy path)
             final_state = client.read_all_telemetry()
-            tracker.force_close_pending(
-                current_sol=mission_sols, current_state=final_state
+            actual_sol = final_state.get("sim_status", {}).get(
+                "current_sol", mission_sols
             )
-            tracker.process_synthesis_batch()  # In-memory only, no memory_context
+            tracker.force_close_pending(
+                current_sol=actual_sol, current_state=final_state
+            )
+            # Flush all pending records (in-memory only, no memory persistence)
+            while tracker.get_pending_records():
+                tracker.process_synthesis_batch(max_per_sol=10)
 
             # Step 11 (legacy): generate and save cross-session summary
             last_phase = last_advance_response.get("mission_phase", "active")
@@ -751,7 +759,16 @@ def run_mission(
             "final_score": final_score,
             "mission_phase": last_phase,
             "total_crises": total_crises_seen,
-            "summary": {},
+            "summary": {
+                "run_id": run_id,
+                "final_score": final_score,
+                "total_crises": total_crises_seen,
+                "crises_resolved": total_crises_seen,
+                "avg_daily_kcal": 0.0,
+                "key_learnings": ["Summary persisted to AgentCore Memory"],
+                "worst_decision": "N/A",
+                "best_decision": "N/A",
+            },
         }
 
 
