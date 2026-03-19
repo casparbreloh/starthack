@@ -42,12 +42,6 @@ function formatZoneLabel(zoneId: string): string {
   return `ZONE ${cleaned}`
 }
 
-/** Short format for tabs — "A" → "ZA", "zone_a" → "ZA" */
-function formatZoneTab(zoneId: string): string {
-  const cleaned = zoneId.replace(/^zone[_-]?/i, "").toUpperCase()
-  return `Z${cleaned}`
-}
-
 /* ── Helpers ────────────────────────────────────────────────────────────── */
 
 function getCropImage(crop: Crop): string {
