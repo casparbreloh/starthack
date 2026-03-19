@@ -16,14 +16,11 @@ Covers the full simulation spec:
   /api/catalog/crops          ← static biological rules
 """
 
-from typing import Optional
-
 from fastapi import APIRouter, HTTPException, Query
 
 from src.catalog import CROP_CATALOG
 from src.constants import (
     CREW_DAILY_KCAL,
-    CREW_DAILY_PROTEIN_G,
     MISSION_DURATION_SOLS,
     ZONE_AREAS_M2,
 )
@@ -35,6 +32,7 @@ router = APIRouter()
 # ──────────────────────────────────────────────────────────────────────────────
 # Simulation status
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.get("/sim/status")
 def sim_status():
@@ -49,6 +47,7 @@ def sim_status():
 # ──────────────────────────────────────────────────────────────────────────────
 # Mars Weather
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.get("/weather/current")
 def weather_current():
@@ -75,6 +74,7 @@ def weather_forecast(horizon: int = Query(default=7, ge=1, le=30)):
 # Energy
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.get("/energy/status")
 def energy_status():
     s = engine.energy.state
@@ -94,6 +94,7 @@ def energy_status():
 # ──────────────────────────────────────────────────────────────────────────────
 # Greenhouse Environment
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.get("/greenhouse/environment")
 def greenhouse_environment():
@@ -128,6 +129,7 @@ def greenhouse_environment():
 # Water
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.get("/water/status")
 def water_status():
     s = engine.water.state
@@ -149,30 +151,33 @@ def water_status():
 # Crops
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.get("/crops/status")
 def crops_status():
     crops = []
     for batch in engine.crops.batches.values():
-        crops.append({
-            "crop_id": batch.crop_id,
-            "type": batch.crop_type.value,
-            "zone_id": batch.zone_id,
-            "planted_sol": batch.planted_sol,
-            "current_sol": engine.current_sol,
-            "days_in_cycle": batch.age_days,
-            "expected_harvest_sol": batch.planted_sol + batch.growth_days,
-            "growth_pct": batch.growth_pct,
-            "health": batch.health,
-            "is_ready": batch.is_ready,
-            "stress_indicators": [
-                {"type": s.type, "since_sol": s.since_sol, "severity": s.severity}
-                for s in batch.stress_indicators
-            ],
-            "area_m2": batch.area_m2,
-            "soil_moisture_pct": batch.soil_moisture_pct,
-            "estimated_yield_kg": batch.estimated_yield_kg(),
-            "estimated_calories_kcal": batch.estimated_calories_kcal(),
-        })
+        crops.append(
+            {
+                "crop_id": batch.crop_id,
+                "type": batch.crop_type.value,
+                "zone_id": batch.zone_id,
+                "planted_sol": batch.planted_sol,
+                "current_sol": engine.current_sol,
+                "days_in_cycle": batch.age_days,
+                "expected_harvest_sol": batch.planted_sol + batch.growth_days,
+                "growth_pct": batch.growth_pct,
+                "health": batch.health,
+                "is_ready": batch.is_ready,
+                "stress_indicators": [
+                    {"type": s.type, "since_sol": s.since_sol, "severity": s.severity}
+                    for s in batch.stress_indicators
+                ],
+                "area_m2": batch.area_m2,
+                "soil_moisture_pct": batch.soil_moisture_pct,
+                "estimated_yield_kg": batch.estimated_yield_kg(),
+                "estimated_calories_kcal": batch.estimated_calories_kcal(),
+            }
+        )
 
     total_planted = engine.crops.total_planted_area()
     available_per_zone = {
@@ -183,13 +188,16 @@ def crops_status():
         "crops": crops,
         "total_planted_area_m2": total_planted,
         "available_area_per_zone": available_per_zone,
-        "seeds_remaining": {k.value: v for k, v in engine.crops.seeds_remaining.items()},
+        "seeds_remaining": {
+            k.value: v for k, v in engine.crops.seeds_remaining.items()
+        },
     }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Nutrients
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.get("/nutrients/status")
 def nutrients_status():
@@ -219,13 +227,12 @@ def nutrients_status():
 # Crew & Nutrition
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.get("/crew/nutrition")
 def crew_nutrition():
     s = engine.crew.state
     total_stored_kcal = s.stored_kcal + s.fresh_buffer_kcal
-    days_at_rate = (
-        total_stored_kcal / CREW_DAILY_KCAL if CREW_DAILY_KCAL > 0 else 999
-    )
+    days_at_rate = total_stored_kcal / CREW_DAILY_KCAL if CREW_DAILY_KCAL > 0 else 999
     return {
         "current_sol": engine.current_sol,
         "today": {
@@ -244,7 +251,9 @@ def crew_nutrition():
         "food_buffer": {
             "fresh_harvest_kcal": round(s.fresh_buffer_kcal, 0),
             "fresh_harvest_protein_g": round(s.fresh_buffer_protein_g, 0),
-            "days_of_buffer": round(s.fresh_buffer_kcal / CREW_DAILY_KCAL, 2) if CREW_DAILY_KCAL else 0,
+            "days_of_buffer": round(s.fresh_buffer_kcal / CREW_DAILY_KCAL, 2)
+            if CREW_DAILY_KCAL
+            else 0,
         },
         "cumulative": {
             "avg_daily_kcal": s.cumulative_avg_kcal,
@@ -262,6 +271,7 @@ def crew_nutrition():
 # ──────────────────────────────────────────────────────────────────────────────
 # Crew Health (new — detailed vitals)
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.get("/crew/health")
 def crew_health():
@@ -341,6 +351,7 @@ def crew_members():
 # Sensors
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.get("/sensors/readings")
 def sensors_readings():
     return {
@@ -352,6 +363,7 @@ def sensors_readings():
 # ──────────────────────────────────────────────────────────────────────────────
 # Events
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.get("/events/log")
 def events_log(since_sol: int = Query(default=0, ge=0)):
@@ -396,6 +408,7 @@ def events_active_crises():
 # Scoring
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.get("/score/current")
 def score_current():
     snap = engine.scoring.snapshot
@@ -414,8 +427,12 @@ def score_current():
 @router.get("/score/final")
 def score_final():
     from src.enums import MissionPhase
+
     if engine.mission_phase != MissionPhase.COMPLETE:
-        raise HTTPException(400, f"Mission not yet complete (sol {engine.current_sol}/{MISSION_DURATION_SOLS})")
+        raise HTTPException(
+            400,
+            f"Mission not yet complete (sol {engine.current_sol}/{MISSION_DURATION_SOLS})",
+        )
     snap = engine.scoring.snapshot
     return {
         "final_sol": snap.current_sol,
@@ -435,17 +452,16 @@ def score_final():
 # Static catalog
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.get("/api/catalog/crops")
 def catalog_crops():
-    return {
-        crop_type.value: {**info}
-        for crop_type, info in CROP_CATALOG.items()
-    }
+    return {crop_type.value: {**info} for crop_type, info in CROP_CATALOG.items()}
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Master state endpoint (legacy / convenience)
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.get("/api/state")
 def api_state():
@@ -465,8 +481,13 @@ def api_state():
         },
         "facility_environment": {
             "zones": [
-                {"zone_id": z.zone_id, "temp_c": z.temp_c, "co2_ppm": z.co2_ppm,
-                 "humidity_pct": z.humidity_pct, "par_umol_m2s": z.par_umol_m2s}
+                {
+                    "zone_id": z.zone_id,
+                    "temp_c": z.temp_c,
+                    "co2_ppm": z.co2_ppm,
+                    "humidity_pct": z.humidity_pct,
+                    "par_umol_m2s": z.par_umol_m2s,
+                }
                 for z in engine.climate.state.values()
             ],
             "recycling_efficiency_pct": engine.water.state.recycling_efficiency_pct,
@@ -490,7 +511,12 @@ def api_state():
         ],
         "active_crises": len(engine.events.active_crises()),
         "recent_events": [
-            {"sol": e.sol, "type": e.type, "message": e.message, "severity": e.severity.value}
+            {
+                "sol": e.sol,
+                "type": e.type,
+                "message": e.message,
+                "severity": e.severity.value,
+            }
             for e in engine.events.recent(10)
         ],
         "score": engine.scoring.snapshot.overall_score,
@@ -500,6 +526,7 @@ def api_state():
 # ──────────────────────────────────────────────────────────────────────────────
 # Private helpers
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 def _weather_to_dict(w) -> dict:
     return {

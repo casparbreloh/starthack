@@ -18,7 +18,6 @@ Health constants are sourced from:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from src.constants import (
     CO2_CRITICAL_PPM,
@@ -51,17 +50,22 @@ from src.constants import (
 )
 from src.enums import CrewCauseOfDeath, CrewStatus, DehydrationLevel, StarvationLevel
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Individual crew member
 # ─────────────────────────────────────────────────────────────────────────────
 
-CREW_MEMBER_NAMES = ["Dr. Chen (Commander)", "Eng. Osei (Engineer)", "Dr. Volkov (Botanist)", "Dr. Patel (Medic)"]
+CREW_MEMBER_NAMES = [
+    "Dr. Chen (Commander)",
+    "Eng. Osei (Engineer)",
+    "Dr. Volkov (Botanist)",
+    "Dr. Patel (Medic)",
+]
 
 
 @dataclass
 class CrewMember:
     """Per-person health snapshot. All 4 share the same habitat conditions."""
+
     member_id: str
     name: str
     health_pct: float = 100.0
@@ -74,6 +78,7 @@ class CrewMember:
 # ─────────────────────────────────────────────────────────────────────────────
 # Nutrition state (original logic, unchanged)
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class CrewNutritionState:
@@ -99,6 +104,7 @@ class CrewNutritionState:
 # ─────────────────────────────────────────────────────────────────────────────
 # Health state
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class CrewHealthState:
@@ -135,18 +141,21 @@ class CrewHealthState:
     # ── Overall health ───────────────────────────────────────────────────────
     overall_health_pct: float = 100.0
     alive: bool = True
-    cause_of_death: Optional[str] = None
+    cause_of_death: str | None = None
 
     # ── Individual crew members ──────────────────────────────────────────────
-    members: list = field(default_factory=lambda: [
-        CrewMember(member_id=f"crew_{i + 1}", name=CREW_MEMBER_NAMES[i])
-        for i in range(CREW_SIZE)
-    ])
+    members: list = field(
+        default_factory=lambda: [
+            CrewMember(member_id=f"crew_{i + 1}", name=CREW_MEMBER_NAMES[i])
+            for i in range(CREW_SIZE)
+        ]
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Rate variables
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @dataclass
 class CrewRates:
@@ -158,6 +167,7 @@ class CrewRates:
 # ─────────────────────────────────────────────────────────────────────────────
 # CrewModel
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class CrewModel:
     """
@@ -191,13 +201,17 @@ class CrewModel:
 
         # ── Hydration rate ────────────────────────────────────────────────
         water_available = min(float(CREW_DAILY_WATER_L), water_reservoir_l)
-        self.health.water_fraction_met = water_available / CREW_DAILY_WATER_L if CREW_DAILY_WATER_L > 0 else 1.0
+        self.health.water_fraction_met = (
+            water_available / CREW_DAILY_WATER_L if CREW_DAILY_WATER_L > 0 else 1.0
+        )
         self.health.daily_water_received_l = round(water_available, 2)
 
         deficit_fraction = max(0.0, 1.0 - self.health.water_fraction_met)
         dehydration_loss = deficit_fraction * DEHYDRATION_RATE_PCT_PER_SOL
-        hydration_gain = self.health.water_fraction_met * HYDRATION_RECOVERY_RATE_PCT_PER_SOL * (
-            (100.0 - self.health.hydration_pct) / 100.0
+        hydration_gain = (
+            self.health.water_fraction_met
+            * HYDRATION_RECOVERY_RATE_PCT_PER_SOL
+            * ((100.0 - self.health.hydration_pct) / 100.0)
         )
         self.rates.d_hydration = hydration_gain - dehydration_loss
 
@@ -220,7 +234,9 @@ class CrewModel:
     # Harvest callback
     # ─────────────────────────────────────────────────────────────────────────
 
-    def add_harvest(self, kcal: float, protein_g: float, has_micronutrients: bool) -> None:
+    def add_harvest(
+        self, kcal: float, protein_g: float, has_micronutrients: bool
+    ) -> None:
         self.state.fresh_buffer_kcal += kcal
         self.state.fresh_buffer_protein_g += protein_g
         if has_micronutrients:
@@ -264,15 +280,29 @@ class CrewModel:
 
     def _integrate_nutrition(self) -> None:
         fresh_kcal_used = min(self.state.fresh_buffer_kcal, CREW_DAILY_KCAL)
-        fresh_protein_used = min(self.state.fresh_buffer_protein_g, CREW_DAILY_PROTEIN_G)
-        self.state.fresh_buffer_kcal = max(0.0, self.state.fresh_buffer_kcal - fresh_kcal_used)
-        self.state.fresh_buffer_protein_g = max(0.0, self.state.fresh_buffer_protein_g - fresh_protein_used)
+        fresh_protein_used = min(
+            self.state.fresh_buffer_protein_g, CREW_DAILY_PROTEIN_G
+        )
+        self.state.fresh_buffer_kcal = max(
+            0.0, self.state.fresh_buffer_kcal - fresh_kcal_used
+        )
+        self.state.fresh_buffer_protein_g = max(
+            0.0, self.state.fresh_buffer_protein_g - fresh_protein_used
+        )
 
-        self.state.stored_kcal = max(0.0, self.state.stored_kcal + self.rates.d_stored_kcal)
-        self.state.stored_protein_g = max(0.0, self.state.stored_protein_g + self.rates.d_stored_protein_g)
+        self.state.stored_kcal = max(
+            0.0, self.state.stored_kcal + self.rates.d_stored_kcal
+        )
+        self.state.stored_protein_g = max(
+            0.0, self.state.stored_protein_g + self.rates.d_stored_protein_g
+        )
 
-        actual_kcal = fresh_kcal_used + min(self.state.stored_kcal, -self.rates.d_stored_kcal)
-        actual_protein = fresh_protein_used + min(self.state.stored_protein_g, -self.rates.d_stored_protein_g)
+        actual_kcal = fresh_kcal_used + min(
+            self.state.stored_kcal, -self.rates.d_stored_kcal
+        )
+        actual_protein = fresh_protein_used + min(
+            self.state.stored_protein_g, -self.rates.d_stored_protein_g
+        )
         self.state.today_kcal_consumed = round(actual_kcal, 1)
         self.state.today_protein_consumed_g = round(actual_protein, 1)
 
@@ -328,7 +358,9 @@ class CrewModel:
 
     def _integrate_starvation(self) -> None:
         kcal_fraction = (
-            self.state.today_kcal_consumed / CREW_DAILY_KCAL if CREW_DAILY_KCAL > 0 else 1.0
+            self.state.today_kcal_consumed / CREW_DAILY_KCAL
+            if CREW_DAILY_KCAL > 0
+            else 1.0
         )
         if kcal_fraction < STARVATION_CALORIC_THRESHOLD_PCT:
             self.health.consecutive_caloric_deficit_sols += 1
@@ -357,7 +389,8 @@ class CrewModel:
             self.health.starvation_level = StarvationLevel.STARVING
             self.health.starvation_health_penalty = round(
                 (STARVATION_SEVERE_DEFICIT_SOLS - STARVATION_ONSET_DEFICIT_SOLS) * 0.5
-                + (STARVATION_CRITICAL_DEFICIT_SOLS - STARVATION_SEVERE_DEFICIT_SOLS) * 2.0
+                + (STARVATION_CRITICAL_DEFICIT_SOLS - STARVATION_SEVERE_DEFICIT_SOLS)
+                * 2.0
                 + (deficit_sols - STARVATION_CRITICAL_DEFICIT_SOLS) * 4.0,
                 2,
             )
@@ -366,10 +399,17 @@ class CrewModel:
         self.health.cumulative_radiation_msv = round(
             self.health.cumulative_radiation_msv + CREW_RADIATION_DOSE_PER_SOL, 3
         )
-        self.health.radiation_warning_active = self.health.cumulative_radiation_msv >= RADIATION_WARNING_MSV
-        self.health.radiation_critical_active = self.health.cumulative_radiation_msv >= RADIATION_CRITICAL_MSV
+        self.health.radiation_warning_active = (
+            self.health.cumulative_radiation_msv >= RADIATION_WARNING_MSV
+        )
+        self.health.radiation_critical_active = (
+            self.health.cumulative_radiation_msv >= RADIATION_CRITICAL_MSV
+        )
 
-        if self.health.cumulative_radiation_msv >= RADIATION_FATAL_MSV and self.health.alive:
+        if (
+            self.health.cumulative_radiation_msv >= RADIATION_FATAL_MSV
+            and self.health.alive
+        ):
             self.health.alive = False
             self.health.cause_of_death = CrewCauseOfDeath.RADIATION.value
 
@@ -389,7 +429,9 @@ class CrewModel:
         elif t > CREW_TEMP_HEATSTROKE_RISK_C:
             self.health.hyperthermia_risk = True
             if t >= CREW_TEMP_CRITICAL_HIGH_C:
-                self.health.temperature_health_penalty = round((t - CREW_TEMP_CRITICAL_HIGH_C) * 3.0, 2)
+                self.health.temperature_health_penalty = round(
+                    (t - CREW_TEMP_CRITICAL_HIGH_C) * 3.0, 2
+                )
             else:
                 self.health.temperature_health_penalty = round(
                     (t - CREW_TEMP_HEATSTROKE_RISK_C) * 1.0, 2
@@ -403,13 +445,19 @@ class CrewModel:
         co2 = self.health.ambient_co2_ppm
         if co2 >= CO2_DANGER_PPM:
             self.health.co2_health_impaired = True
-            self.health.co2_health_penalty = round((co2 - CO2_DANGER_PPM) / 1000.0 * 10.0 + 15.0, 2)
+            self.health.co2_health_penalty = round(
+                (co2 - CO2_DANGER_PPM) / 1000.0 * 10.0 + 15.0, 2
+            )
         elif co2 >= CO2_CRITICAL_PPM:
             self.health.co2_health_impaired = True
-            self.health.co2_health_penalty = round((co2 - CO2_CRITICAL_PPM) / 1000.0 * 5.0 + 5.0, 2)
+            self.health.co2_health_penalty = round(
+                (co2 - CO2_CRITICAL_PPM) / 1000.0 * 5.0 + 5.0, 2
+            )
         elif co2 >= CO2_IMPAIRMENT_PPM:
             self.health.co2_health_impaired = True
-            self.health.co2_health_penalty = round((co2 - CO2_IMPAIRMENT_PPM) / 1000.0 * 2.0, 2)
+            self.health.co2_health_penalty = round(
+                (co2 - CO2_IMPAIRMENT_PPM) / 1000.0 * 2.0, 2
+            )
         else:
             self.health.co2_health_impaired = False
             self.health.co2_health_penalty = 0.0
@@ -431,9 +479,8 @@ class CrewModel:
             dehydration_penalty = (HYDRATION_MODERATE_PCT - h) * 1.0
         elif h >= HYDRATION_CRITICAL_PCT:
             dehydration_penalty = (
-                (HYDRATION_MODERATE_PCT - HYDRATION_SEVERE_PCT) * 1.0
-                + (HYDRATION_SEVERE_PCT - h) * 2.0
-            )
+                HYDRATION_MODERATE_PCT - HYDRATION_SEVERE_PCT
+            ) * 1.0 + (HYDRATION_SEVERE_PCT - h) * 2.0
         else:
             dehydration_penalty = (
                 (HYDRATION_MODERATE_PCT - HYDRATION_SEVERE_PCT) * 1.0

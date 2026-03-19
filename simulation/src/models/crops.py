@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from src.catalog import CROP_CATALOG
 from src.enums import CropType
@@ -31,10 +31,10 @@ if TYPE_CHECKING:
 # Default seed stock per crop type
 _DEFAULT_SEEDS: dict[CropType, int] = {
     CropType.LETTUCE: 200,
-    CropType.POTATO:  80,
-    CropType.RADISH:  300,
-    CropType.BEANS:   120,
-    CropType.HERBS:   250,
+    CropType.POTATO: 80,
+    CropType.RADISH: 300,
+    CropType.BEANS: 120,
+    CropType.HERBS: 250,
 }
 
 
@@ -42,7 +42,7 @@ _DEFAULT_SEEDS: dict[CropType, int] = {
 class StressIndicator:
     type: str
     since_sol: int
-    severity: float   # 0.0 – 1.0
+    severity: float  # 0.0 – 1.0
 
 
 @dataclass
@@ -52,8 +52,8 @@ class CropBatch:
     zone_id: str
     planted_sol: int
     area_m2: float
-    health: float = 1.0          # 0 – 1 (1 = perfect)
-    age_days: int = 0            # sols since planting
+    health: float = 1.0  # 0 – 1 (1 = perfect)
+    age_days: int = 0  # sols since planting
     soil_moisture_pct: float = 60.0
     stress_indicators: list = field(default_factory=list)  # list[StressIndicator]
     # Internal water tracking
@@ -85,13 +85,15 @@ class CropBatch:
     def estimated_calories_kcal(self) -> float:
         yield_kg = self.estimated_yield_kg()
         kcal_per_100g = CROP_CATALOG[self.crop_type]["kcal_per_100g"]
-        return round(yield_kg * kcal_per_100g * 10.0, 0)  # kg → kcal: ×10 (since kcal/100g × 1000g/kg / 100)
+        return round(
+            yield_kg * kcal_per_100g * 10.0, 0
+        )  # kg → kcal: ×10 (since kcal/100g × 1000g/kg / 100)
 
 
 @dataclass
 class CropRates:
-    age_increment: dict = field(default_factory=dict)   # crop_id → 0 or 1
-    d_health: dict = field(default_factory=dict)        # crop_id → float
+    age_increment: dict = field(default_factory=dict)  # crop_id → 0 or 1
+    d_health: dict = field(default_factory=dict)  # crop_id → float
 
 
 class CropModel:
@@ -104,7 +106,7 @@ class CropModel:
         self.batches: dict[str, CropBatch] = {}
         self.rates = CropRates()
         self.seeds_remaining: dict[CropType, int] = dict(_DEFAULT_SEEDS)
-        self._total_area_used: dict[str, float] = {}   # zone_id → m²
+        self._total_area_used: dict[str, float] = {}  # zone_id → m²
 
     # ------------------------------------------------------------------
     # PCSE lifecycle
@@ -113,9 +115,9 @@ class CropModel:
     def calc_rates(
         self,
         current_sol: int,
-        climate: "ClimateModel",
-        water: "WaterModel",
-        nutrients: "NutrientModel",
+        climate: ClimateModel,
+        water: WaterModel,
+        nutrients: NutrientModel,
     ) -> None:
         """Phase 1 — compute growth increments and health deltas."""
         # Build per-zone total crop area for irrigation distribution
@@ -139,9 +141,13 @@ class CropModel:
             irrigation_zone_L = water.state.irrigation_settings.get(batch.zone_id, 0.0)
             irrigation_received = (
                 irrigation_zone_L * batch.area_m2 / total_zone_area
-                if total_zone_area > 0 else 0.0
+                if total_zone_area > 0
+                else 0.0
             )
-            new_water_L = max(0.0, min(capacity_L, batch._soil_water_L + irrigation_received - consumed_L))
+            new_water_L = max(
+                0.0,
+                min(capacity_L, batch._soil_water_L + irrigation_received - consumed_L),
+            )
             new_moisture_pct = new_water_L / capacity_L * 100.0
 
             # ── Stress checks ──────────────────────────────────────────
@@ -189,7 +195,7 @@ class CropModel:
             # Age increment: slowed when CO₂ is very low (< 500 ppm)
             age_inc = 1
             if zone and zone.co2_ppm < 500.0:
-                age_inc = 0   # growth stalled
+                age_inc = 0  # growth stalled
 
             self.rates.age_increment[batch_id] = age_inc
             self.rates.d_health[batch_id] = d_health
@@ -223,7 +229,7 @@ class CropModel:
         crop_type: CropType,
         zone_id: str,
         area_m2: float,
-        batch_name: Optional[str] = None,
+        batch_name: str | None = None,
     ) -> CropBatch:
         """Plant a new batch. Raises ValueError if insufficient seeds or area."""
         if self.seeds_remaining.get(crop_type, 0) <= 0:
@@ -257,11 +263,13 @@ class CropModel:
         self._release_area(batch)
 
         base_yield_kg = catalog["yield_kg_per_m2"] * batch.area_m2
-        actual_yield_kg = round(base_yield_kg * batch.health * min(1.0, batch.growth_pct / 100.0), 3)
+        actual_yield_kg = round(
+            base_yield_kg * batch.health * min(1.0, batch.growth_pct / 100.0), 3
+        )
         kcal = round(actual_yield_kg * catalog["kcal_per_100g"] * 10.0, 0)
         protein_g = round(actual_yield_kg * catalog["protein_per_100g_g"] * 10.0, 0)
-        vitamin_c_mg = round(actual_yield_kg * 20.0, 0)     # approximate
-        potassium_mg = round(actual_yield_kg * 430.0, 0)    # approximate
+        vitamin_c_mg = round(actual_yield_kg * 20.0, 0)  # approximate
+        potassium_mg = round(actual_yield_kg * 430.0, 0)  # approximate
 
         return {
             "crop_id": crop_id,
@@ -286,20 +294,25 @@ class CropModel:
         batch = self.batches.pop(crop_id)
         self._release_area(batch)
         catalog = CROP_CATALOG[batch.crop_type]
-        waste_kg = round(catalog["yield_kg_per_m2"] * batch.area_m2 * batch.health * 0.3, 3)
+        waste_kg = round(
+            catalog["yield_kg_per_m2"] * batch.area_m2 * batch.health * 0.3, 3
+        )
         return {"area_freed_m2": batch.area_m2, "waste_kg": waste_kg, "reason": reason}
 
     # ------------------------------------------------------------------
     # Scenario injection
     # ------------------------------------------------------------------
 
-    def inject_pathogen(self, crop_id: str) -> CropBatch:
+    def inject_pathogen(
+        self, crop_id: str, current_sol: int | None = None
+    ) -> CropBatch:
         if crop_id not in self.batches:
             raise KeyError(f"Crop {crop_id!r} not found")
         batch = self.batches[crop_id]
         batch.health = 0.10
+        since_sol = 0 if current_sol is None else current_sol
         batch.stress_indicators.append(  # type: ignore[attr-defined]
-            StressIndicator("pathogen_outbreak", 0, 1.0)
+            StressIndicator("pathogen_outbreak", since_sol, 1.0)
         )
         return batch
 

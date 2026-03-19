@@ -67,13 +67,15 @@ class NutrientModel:
         }
         self.rates = NutrientRates()
         self.stock_remaining_pct: float = INITIAL_NUTRIENT_STOCK_PCT
-        self.days_of_stock_remaining: float = INITIAL_NUTRIENT_STOCK_PCT / NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL
+        self.days_of_stock_remaining: float = (
+            INITIAL_NUTRIENT_STOCK_PCT / NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL
+        )
 
     # ------------------------------------------------------------------
     # PCSE lifecycle
     # ------------------------------------------------------------------
 
-    def calc_rates(self, crop_model: "CropModel") -> None:
+    def calc_rates(self, crop_model: CropModel) -> None:
         """Compute per-zone nutrient uptake by crops each sol."""
         from src.catalog import CROP_CATALOG
 
@@ -85,9 +87,15 @@ class NutrientModel:
             catalog = CROP_CATALOG[batch.crop_type]
             # N demand: proportional to area and growth rate
             base_n = catalog["n_demand_ppm"] * 0.005 * batch.area_m2  # ppm/sol
-            zone_demand_n[batch.zone_id] = zone_demand_n.get(batch.zone_id, 0.0) + base_n
-            zone_demand_p[batch.zone_id] = zone_demand_p.get(batch.zone_id, 0.0) + base_n * 0.25
-            zone_demand_k[batch.zone_id] = zone_demand_k.get(batch.zone_id, 0.0) + base_n * 1.1
+            zone_demand_n[batch.zone_id] = (
+                zone_demand_n.get(batch.zone_id, 0.0) + base_n
+            )
+            zone_demand_p[batch.zone_id] = (
+                zone_demand_p.get(batch.zone_id, 0.0) + base_n * 0.25
+            )
+            zone_demand_k[batch.zone_id] = (
+                zone_demand_k.get(batch.zone_id, 0.0) + base_n * 1.1
+            )
 
         self.rates.d_nitrogen = {z: -zone_demand_n.get(z, 0.0) for z in self.state}
         self.rates.d_phosphorus = {z: -zone_demand_p.get(z, 0.0) for z in self.state}
@@ -113,11 +121,14 @@ class NutrientModel:
 
         # Global stock depletion
         self.stock_remaining_pct = round(
-            max(0.0, self.stock_remaining_pct - NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL), 2
+            max(0.0, self.stock_remaining_pct - NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL),
+            2,
         )
         self.days_of_stock_remaining = round(
             self.stock_remaining_pct / NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL
-            if NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL > 0 else 999.0, 1
+            if NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL > 0
+            else 999.0,
+            1,
         )
 
     # ------------------------------------------------------------------

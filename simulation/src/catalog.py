@@ -63,7 +63,7 @@ CROP_CATALOG: dict[CropType, dict] = {
         "protein_per_100g_g": 9.0,
         "yield_kg_per_m2": 5.0,
         "water_L_per_m2_per_sol": 2.2,
-        "n_demand_ppm": 80.0,          # nitrogen-fixing; lower external demand
+        "n_demand_ppm": 80.0,  # nitrogen-fixing; lower external demand
         "temp_response": [8.0, 18.0, 25.0, 35.0],
         "par_saturation": 350.0,
         "provides_micronutrients": False,

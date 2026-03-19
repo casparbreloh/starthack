@@ -18,8 +18,6 @@ with the simulation.
   POST /api/action/set_environment
 """
 
-from typing import Optional
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -34,6 +32,7 @@ router = APIRouter()
 # Request schemas
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 class EnergyAllocateRequest(BaseModel):
     heating_pct: float = Field(default=47, ge=0, le=100)
     lighting_pct: float = Field(default=30, ge=0, le=100)
@@ -44,17 +43,17 @@ class EnergyAllocateRequest(BaseModel):
 
 class SetEnvironmentRequest(BaseModel):
     zone_id: str
-    target_temp_c: Optional[float] = None
-    target_humidity_pct: Optional[float] = Field(default=None, ge=0, le=100)
-    target_co2_ppm: Optional[float] = Field(default=None, ge=350, le=5000)
-    par_umol_m2s: Optional[float] = Field(default=None, ge=0, le=2000)
-    photoperiod_hours: Optional[float] = Field(default=None, ge=0, le=24)
+    target_temp_c: float | None = None
+    target_humidity_pct: float | None = Field(default=None, ge=0, le=100)
+    target_co2_ppm: float | None = Field(default=None, ge=350, le=5000)
+    par_umol_m2s: float | None = Field(default=None, ge=0, le=2000)
+    photoperiod_hours: float | None = Field(default=None, ge=0, le=24)
 
 
 class SetIrrigationRequest(BaseModel):
     zone_id: str
     irrigation_liters_per_sol: float = Field(ge=0)
-    irrigation_frequency: Optional[str] = "continuous"
+    irrigation_frequency: str | None = "continuous"
 
 
 class WaterMaintenanceRequest(BaseModel):
@@ -65,7 +64,7 @@ class PlantRequest(BaseModel):
     type: CropType
     zone_id: str
     area_m2: float = Field(gt=0, le=50)
-    batch_name: Optional[str] = None
+    batch_name: str | None = None
 
 
 class HarvestRequest(BaseModel):
@@ -79,13 +78,14 @@ class RemoveRequest(BaseModel):
 
 class NutrientAdjustRequest(BaseModel):
     zone_id: str
-    target_ph: Optional[float] = Field(default=None, ge=4.0, le=8.0)
-    target_ec_ms_cm: Optional[float] = Field(default=None, ge=0.1, le=5.0)
+    target_ph: float | None = Field(default=None, ge=4.0, le=8.0)
+    target_ec_ms_cm: float | None = Field(default=None, ge=0.1, le=5.0)
     nitrogen_boost: bool = False
     potassium_boost: bool = False
 
 
 # ── Legacy API action schemas ──────────────────────────────────────────────
+
 
 class LegacyPlantRequest(BaseModel):
     bed_id: int
@@ -93,32 +93,33 @@ class LegacyPlantRequest(BaseModel):
 
 
 class LegacyHarvestRequest(BaseModel):
-    bed_id: Optional[int] = None
-    crop_id: Optional[str] = None
+    bed_id: int | None = None
+    crop_id: str | None = None
 
 
 class LegacyWaterRequest(BaseModel):
-    bed_id: Optional[int] = None
-    zone_id: Optional[str] = None
+    bed_id: int | None = None
+    zone_id: str | None = None
     amount_liters: float = Field(gt=0)
 
 
 class LegacyFertilizeRequest(BaseModel):
-    bed_id: Optional[int] = None
-    zone_id: Optional[str] = None
+    bed_id: int | None = None
+    zone_id: str | None = None
     amount_nitrogen: float = Field(gt=0)
 
 
 class LegacySetEnvironmentRequest(BaseModel):
-    temperature: Optional[float] = None
-    co2_ppm: Optional[float] = None
-    humidity: Optional[float] = None
-    light_par: Optional[float] = None
+    temperature: float | None = None
+    co2_ppm: float | None = None
+    humidity: float | None = None
+    light_par: float | None = None
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Energy
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.post("/energy/allocate")
 def energy_allocate(req: EnergyAllocateRequest):
@@ -131,10 +132,14 @@ def energy_allocate(req: EnergyAllocateRequest):
 # Greenhouse Environment
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.post("/greenhouse/set_environment")
 def greenhouse_set_environment(req: SetEnvironmentRequest):
     if req.zone_id not in engine.climate.state:
-        raise HTTPException(404, f"Zone '{req.zone_id}' not found. Available: {list(engine.climate.state.keys())}")
+        raise HTTPException(
+            404,
+            f"Zone '{req.zone_id}' not found. Available: {list(engine.climate.state.keys())}",
+        )
 
     zone = engine.climate.set_zone(
         zone_id=req.zone_id,
@@ -145,7 +150,9 @@ def greenhouse_set_environment(req: SetEnvironmentRequest):
         photoperiod_hours=req.photoperiod_hours,
     )
     engine.events.log(
-        engine.current_sol, "action", "climate",
+        engine.current_sol,
+        "action",
+        "climate",
         f"Environment setpoints updated for zone {req.zone_id}",
         data=req.model_dump(exclude_none=True),
     )
@@ -163,6 +170,7 @@ def greenhouse_set_environment(req: SetEnvironmentRequest):
 # ──────────────────────────────────────────────────────────────────────────────
 # Water
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.post("/water/set_irrigation")
 def water_set_irrigation(req: SetIrrigationRequest):
@@ -183,7 +191,9 @@ def water_maintenance(req: WaterMaintenanceRequest):
     if result.get("result") == "success":
         engine.scoring.record_preventive_action()
         engine.events.log(
-            engine.current_sol, "action", "water",
+            engine.current_sol,
+            "action",
+            "water",
             f"Water maintenance performed: {req.action}",
             data=result,
         )
@@ -194,6 +204,7 @@ def water_maintenance(req: WaterMaintenanceRequest):
 # Crops
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 @router.post("/crops/plant")
 def crops_plant(req: PlantRequest):
     # Validate zone
@@ -201,7 +212,9 @@ def crops_plant(req: PlantRequest):
         raise HTTPException(404, f"Zone '{req.zone_id}' not found")
 
     # Check available area
-    available = max(0.0, ZONE_AREAS_M2[req.zone_id] - engine.crops.zone_used_area(req.zone_id))
+    available = max(
+        0.0, ZONE_AREAS_M2[req.zone_id] - engine.crops.zone_used_area(req.zone_id)
+    )
     if req.area_m2 > available + 0.01:
         raise HTTPException(
             400,
@@ -218,12 +231,15 @@ def crops_plant(req: PlantRequest):
             batch_name=req.batch_name,
         )
     except ValueError as e:
-        raise HTTPException(400, str(e))
+        raise HTTPException(400, str(e)) from e
 
     from src.catalog import CROP_CATALOG
+
     growth_days = CROP_CATALOG[req.type]["growth_days"]
     engine.events.log(
-        engine.current_sol, "action", "crop",
+        engine.current_sol,
+        "action",
+        "crop",
         f"Planted {req.type.value} ({req.area_m2} m²) in zone {req.zone_id} as '{batch.crop_id}'",
     )
     return {
@@ -232,7 +248,9 @@ def crops_plant(req: PlantRequest):
         "planted_sol": batch.planted_sol,
         "expected_harvest_sol": batch.planted_sol + growth_days,
         "area_m2": batch.area_m2,
-        "seeds_remaining": {k.value: v for k, v in engine.crops.seeds_remaining.items()},
+        "seeds_remaining": {
+            k.value: v for k, v in engine.crops.seeds_remaining.items()
+        },
     }
 
 
@@ -241,7 +259,7 @@ def crops_harvest(req: HarvestRequest):
     try:
         result = engine.crops.harvest(req.crop_id)
     except KeyError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from e
 
     # Add yield to crew stores
     engine.crew.add_harvest(
@@ -251,7 +269,9 @@ def crops_harvest(req: HarvestRequest):
     )
     engine.scoring.record_harvest(result["yield_kg"])
     engine.events.log(
-        engine.current_sol, "harvest", "crop",
+        engine.current_sol,
+        "harvest",
+        "crop",
         f"Harvested '{req.crop_id}': {result['yield_kg']} kg, {result['calories_kcal']:.0f} kcal",
         data=result,
     )
@@ -263,11 +283,13 @@ def crops_remove(req: RemoveRequest):
     try:
         result = engine.crops.remove(req.crop_id, req.reason)
     except KeyError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from e
 
     engine.scoring.record_crop_removed(result["waste_kg"])
     engine.events.log(
-        engine.current_sol, "action", "crop",
+        engine.current_sol,
+        "action",
+        "crop",
         f"Removed crop '{req.crop_id}' (reason: {req.reason or 'unspecified'}). "
         f"Waste: {result['waste_kg']} kg",
     )
@@ -277,6 +299,7 @@ def crops_remove(req: RemoveRequest):
 # ──────────────────────────────────────────────────────────────────────────────
 # Nutrients
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @router.post("/nutrients/adjust")
 def nutrients_adjust(req: NutrientAdjustRequest):
@@ -305,6 +328,7 @@ def nutrients_adjust(req: NutrientAdjustRequest):
 # Legacy /api/action/* endpoints (backwards-compatible with original spec)
 # ──────────────────────────────────────────────────────────────────────────────
 
+
 def _bed_id_to_zone(bed_id: int) -> str:
     """Map legacy integer bed_id (0–9) to zone letter."""
     zones = sorted(ZONE_AREAS_M2.keys())
@@ -319,7 +343,9 @@ def legacy_plant(req: LegacyPlantRequest):
     available = max(0.0, ZONE_AREAS_M2[zone_id] - engine.crops.zone_used_area(zone_id))
     area_m2 = min(area_m2, available)
     if area_m2 <= 0:
-        raise HTTPException(400, f"No space available in zone {zone_id} for bed {req.bed_id}")
+        raise HTTPException(
+            400, f"No space available in zone {zone_id} for bed {req.bed_id}"
+        )
     try:
         batch = engine.crops.plant(
             current_sol=engine.current_sol,
@@ -329,11 +355,15 @@ def legacy_plant(req: LegacyPlantRequest):
             batch_name=f"bed{req.bed_id}_{req.crop_type.value}",
         )
     except ValueError as e:
-        raise HTTPException(400, str(e))
+        raise HTTPException(400, str(e)) from e
     from src.catalog import CROP_CATALOG
+
     return {
-        "status": "ok", "bed_id": req.bed_id, "crop_id": batch.crop_id,
-        "expected_harvest_sol": batch.planted_sol + CROP_CATALOG[req.crop_type]["growth_days"],
+        "status": "ok",
+        "bed_id": req.bed_id,
+        "crop_id": batch.crop_id,
+        "expected_harvest_sol": batch.planted_sol
+        + CROP_CATALOG[req.crop_type]["growth_days"],
     }
 
 
@@ -354,9 +384,11 @@ def legacy_harvest(req: LegacyHarvestRequest):
     try:
         result = engine.crops.harvest(crop_id)
     except KeyError as e:
-        raise HTTPException(404, str(e))
+        raise HTTPException(404, str(e)) from e
 
-    engine.crew.add_harvest(result["calories_kcal"], result["protein_g"], result["provides_micronutrients"])
+    engine.crew.add_harvest(
+        result["calories_kcal"], result["protein_g"], result["provides_micronutrients"]
+    )
     engine.scoring.record_harvest(result["yield_kg"])
     return result
 
@@ -379,7 +411,11 @@ def legacy_water(req: LegacyWaterRequest):
         engine.water.state.reservoir_liters,
     )
     engine.water.set_irrigation(zone_id, req.amount_liters)
-    return {"status": "ok", "zone_id": zone_id, "irrigation_set_liters_per_sol": req.amount_liters}
+    return {
+        "status": "ok",
+        "zone_id": zone_id,
+        "irrigation_set_liters_per_sol": req.amount_liters,
+    }
 
 
 @router.post("/api/action/fertilize")
