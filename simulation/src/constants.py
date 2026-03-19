@@ -51,9 +51,6 @@ TOTAL_GREENHOUSE_AREA_M2 = sum(ZONE_AREAS_M2.values())  # 50 m²
 # ── Water system ──────────────────────────────────────────────────────────────
 WATER_RESERVOIR_CAPACITY_L = 600.0
 WATER_RECYCLING_NOMINAL_PCT = 93.0  # ISS ECLSS historical average (NASA 2023)
-# Plant transpiration recovery: ECLSS Condensing Heat Exchanger captures ~80 % of
-# moisture transpired by plants (NASA JSC-64122, Barta et al. 2005).
-PLANT_TRANSPIRATION_RECOVERY_PCT = 80.0
 FILTER_DEGRADATION_RATE_PCT_PER_SOL = 0.05
 FILTER_HEALTH_MAINTENANCE_RESTORE = 15.0  # % restored by clean_filters action
 FILTER_HEALTH_MIN_EFFICIENCY_FACTOR = 0.5  # recycling can fall to 50 % of nominal
