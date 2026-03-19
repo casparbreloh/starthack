@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from src.constants import (
+    CO2_DANGER_PPM,
     TARGET_CO2_PPM,
     TARGET_HUMIDITY_PCT,
     TARGET_PAR,
@@ -110,7 +111,13 @@ class ClimateModel:
         for z in self.state.values():
             z.temp_c = round(z.temp_c + self.rates.d_temp.get(z.zone_id, 0.0), 2)
             z.co2_ppm = round(
-                max(350.0, z.co2_ppm + self.rates.d_co2.get(z.zone_id, 0.0)), 1
+                max(
+                    350.0,
+                    min(
+                        CO2_DANGER_PPM, z.co2_ppm + self.rates.d_co2.get(z.zone_id, 0.0)
+                    ),
+                ),
+                1,
             )
             z.humidity_pct = round(
                 max(

@@ -839,6 +839,8 @@ export type components = {
       health: number
       /** Is Ready */
       is_ready: boolean
+      /** Is Bolting */
+      is_bolting: boolean
       /** Stress Indicators */
       stress_indicators: components["schemas"]["StressIndicatorResponse"][]
       /** Area M2 */
@@ -1383,6 +1385,14 @@ export type components = {
       irrigation_settings: {
         [key: string]: number
       }
+      /** Drill Health Pct */
+      drill_health_pct: number
+      /** Last Mining Sol */
+      last_mining_sol: number
+      /** Daily Mined Liters */
+      daily_mined_liters: number
+      /** Total Mined Liters */
+      total_mined_liters: number
     }
     /** WeatherForecastResponse */
     WeatherForecastResponse: {
@@ -1469,6 +1479,8 @@ export type components = {
       solution_ph: number
       /** Solution Ec Ms Cm */
       solution_ec_ms_cm: number
+      /** Base Salt Ppm */
+      base_salt_ppm: number
       /** Solution Temp C */
       solution_temp_c: number
       /** Dissolved O2 Ppm */
