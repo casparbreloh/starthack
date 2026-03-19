@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Only renames divergent fields; all other columns pass through unchanged.
 # [R9-M1] Note: min_gts_temp and max_gts_temp are NOT in simulation weather
 # output — they are ground temperature values from the LSTM training data only.
-# They are set to NaN in the context DataFrame; predict_from_context() imputes them.
+# They are set to None in the records; the ML sidecar service handles imputation.
 SIM_TO_LSTM_FIELDS: dict[str, str] = {
     "min_temp_c": "min_temp",
     "max_temp_c": "max_temp",
@@ -42,6 +42,16 @@ class WeatherForecaster:
 
     def __init__(self, service_url: str = ML_SERVICE_URL) -> None:
         self._client = httpx.Client(base_url=service_url, timeout=30.0)
+
+    def close(self) -> None:
+        """Close the underlying HTTP client."""
+        self._client.close()
+
+    def __enter__(self) -> WeatherForecaster:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
 
     def _sim_history_to_lstm_records(self, weather_history: list[dict]) -> list[dict]:
         """Convert simulation weather history to LSTM-compatible records.
