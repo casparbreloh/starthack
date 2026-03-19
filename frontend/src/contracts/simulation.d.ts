@@ -982,8 +982,6 @@ export type components = {
       zone_id: string
       /** Target Ph */
       target_ph?: number | null
-      /** Target Ec Ms Cm */
-      target_ec_ms_cm?: number | null
       /**
        * Nitrogen Boost
        * @default false

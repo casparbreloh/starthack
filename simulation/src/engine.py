@@ -125,6 +125,7 @@ class SimulationEngine:
             self.weather._store[sol] = weather
             self._dust_storm_remaining_sols -= 1
             if self._dust_storm_remaining_sols == 0:
+                self.events.resolve_crisis(CrisisType.DUST_STORM, sol)
                 self.events.log(
                     sol,
                     "info",

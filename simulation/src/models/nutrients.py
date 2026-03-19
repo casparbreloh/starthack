@@ -136,7 +136,6 @@ class NutrientModel:
         self,
         zone_id: str,
         target_ph: float | None = None,
-        target_ec_ms_cm: float | None = None,
         nitrogen_boost: bool = False,
         potassium_boost: bool = False,
     ) -> None:

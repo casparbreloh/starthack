@@ -72,7 +72,6 @@ class RemoveRequest(BaseModel):
 class NutrientAdjustRequest(BaseModel):
     zone_id: str
     target_ph: float | None = Field(default=None, ge=4.0, le=8.0)
-    target_ec_ms_cm: float | None = Field(default=None, ge=0.1, le=5.0)
     nitrogen_boost: bool = False
     potassium_boost: bool = False
 
@@ -269,7 +268,6 @@ def nutrients_adjust(req: NutrientAdjustRequest):
     engine.nutrients.adjust(
         zone_id=req.zone_id,
         target_ph=req.target_ph,
-        target_ec_ms_cm=req.target_ec_ms_cm,
         nitrogen_boost=req.nitrogen_boost,
         potassium_boost=req.potassium_boost,
     )
