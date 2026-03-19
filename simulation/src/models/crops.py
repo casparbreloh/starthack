@@ -293,13 +293,14 @@ class CropModel:
     # Scenario injection
     # ------------------------------------------------------------------
 
-    def inject_pathogen(self, crop_id: str) -> CropBatch:
+    def inject_pathogen(self, crop_id: str, current_sol: Optional[int] = None) -> CropBatch:
         if crop_id not in self.batches:
             raise KeyError(f"Crop {crop_id!r} not found")
         batch = self.batches[crop_id]
         batch.health = 0.10
+        since_sol = 0 if current_sol is None else current_sol
         batch.stress_indicators.append(  # type: ignore[attr-defined]
-            StressIndicator("pathogen_outbreak", 0, 1.0)
+            StressIndicator("pathogen_outbreak", since_sol, 1.0)
         )
         return batch
 
