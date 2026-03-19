@@ -3,6 +3,5 @@ import viteReact from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
 export default defineConfig({
-  plugins: [tailwindcss(), viteReact()],
-  server: { port: 5173 },
+  plugins: [tailwindcss(), viteReact()]
 })

@@ -2,14 +2,14 @@
 	check check-agent check-frontend check-simulation \
 	check-fix check-agent-fix check-frontend-fix check-simulation-fix
 
-dev-agent:
-	@cd agent && uv run python -m src
-
 dev-simulation:
-	@cd simulation && uv run uvicorn main:app --reload
+	@cd simulation && uv run uvicorn main:app --reload --port 8080
+
+dev-agent:
+	@cd agent && uv run uvicorn src.main:app --reload --port 9090
 
 dev-frontend:
-	@cd frontend && pnpm dev
+	@cd frontend && pnpm dev --port 5173
 
 dev:
 	@trap 'kill 0' INT TERM; \

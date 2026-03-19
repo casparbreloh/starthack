@@ -3,9 +3,8 @@ name = "agent"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-    "agentcore>=0.1.6",
+    "bedrock-agentcore[strands-agents]>=1.4.7",
     "strands-agents>=1.30.0",
-    "strands-agents-tools>=0.2.22",
 ]
 
 [dependency-groups]
