@@ -149,8 +149,9 @@ def create_telemetry_tools(snapshot: dict) -> dict:
         Returns:
             JSON string with list of event dicts ordered by sol.
         """
-        events = snapshot.get("events_log", [])
-        if since_sol > 0 and isinstance(events, list):
+        events_log = snapshot.get("events_log", {})
+        events = events_log.get("events", []) if isinstance(events_log, dict) else []
+        if since_sol > 0:
             events = [
                 e
                 for e in events

@@ -65,7 +65,9 @@ def build_consultation_snapshot(engine: SimulationEngine) -> dict[str, Any]:
 
     # Events log (last 50 sols)
     since_sol = max(0, engine.current_sol - 50)
-    snapshot["events_log"] = [e.to_dict() for e in engine.events.since(since_sol)]
+    snapshot["events_log"] = {
+        "events": [e.to_dict() for e in engine.events.since(since_sol)]
+    }
 
     # Sensor readings
     snapshot["sensors_readings"] = {

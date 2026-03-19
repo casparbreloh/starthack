@@ -230,6 +230,14 @@ class SimWebSocketClient:
 
                 elif msg_type == "error":
                     error_payload = msg.get("payload", {})
+                    if (
+                        self._session_created_future is not None
+                        and not self._session_created_future.done()
+                    ):
+                        message = error_payload.get("message", "Unknown server error")
+                        self._session_created_future.set_exception(
+                            RuntimeError(message)
+                        )
                     logger.warning(
                         "Server error: %s", error_payload.get("message", msg)
                     )

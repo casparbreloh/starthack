@@ -52,7 +52,7 @@ def create_action_tools(
     def _queue(endpoint: str, body: dict) -> str:
         """Append to accumulator and return JSON confirmation."""
         _acc.append({"endpoint": endpoint, "body": body})
-        return json.dumps({"status": "queued", "action": endpoint, **body})
+        return json.dumps({"status": "queued", "endpoint": endpoint, "body": body})
 
     @tool
     def allocate_energy(
