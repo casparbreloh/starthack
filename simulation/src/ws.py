@@ -119,6 +119,7 @@ async def _handle_create_session(
         seed=payload.get("seed"),
         difficulty=payload.get("difficulty", "normal"),
         tick_delay_ms=payload.get("tick_delay_ms", 0),
+        mission_sols=payload.get("mission_sols", payload.get("sols", 450)),
         starting_reserves=payload.get("starting_reserves", {}),
     )
     session = session_manager.create(config)
@@ -135,6 +136,7 @@ async def _handle_create_session(
                     "seed": config.seed,
                     "difficulty": config.difficulty,
                     "tick_delay_ms": config.tick_delay_ms,
+                    "mission_sols": config.mission_sols,
                 },
             },
         }

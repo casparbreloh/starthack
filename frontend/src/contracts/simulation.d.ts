@@ -691,6 +691,11 @@ export type components = {
        * @default 0
        */
       tick_delay_ms: number
+      /**
+       * Mission Sols
+       * @default 450
+       */
+      mission_sols: number
       /** Starting Reserves */
       starting_reserves?: {
         [key: string]: number
@@ -1224,6 +1229,8 @@ export type components = {
       difficulty: string
       /** Tick Delay Ms */
       tick_delay_ms: number
+      /** Mission Sols */
+      mission_sols: number
       /** Starting Reserves */
       starting_reserves: {
         [key: string]: number

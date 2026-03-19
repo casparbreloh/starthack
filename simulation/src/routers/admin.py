@@ -60,6 +60,7 @@ class CreateSessionRequest(BaseModel):
     seed: int | None = None
     difficulty: str = "normal"
     tick_delay_ms: int = 0
+    mission_sols: int = Field(default=450, ge=1, le=450)
     starting_reserves: dict[str, float] = Field(default_factory=dict)
 
 
@@ -115,6 +116,7 @@ def create_session(req: CreateSessionRequest):
         seed=req.seed,
         difficulty=req.difficulty,
         tick_delay_ms=req.tick_delay_ms,
+        mission_sols=req.mission_sols,
         starting_reserves=req.starting_reserves,
     )
     session = session_manager.create(config)
@@ -124,6 +126,7 @@ def create_session(req: CreateSessionRequest):
             "seed": config.seed,
             "difficulty": config.difficulty,
             "tick_delay_ms": config.tick_delay_ms,
+            "mission_sols": config.mission_sols,
             "starting_reserves": config.starting_reserves,
         },
     }

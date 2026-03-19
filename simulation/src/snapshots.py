@@ -16,7 +16,6 @@ from src.constants import (
     FOOD_KCAL_PER_KG,
     FOOD_PROTEIN_G_PER_KG,
     INITIAL_FOOD_KG,
-    MISSION_DURATION_SOLS,
     ZONE_AREAS_M2,
 )
 from src.engine import SimulationEngine
@@ -96,7 +95,7 @@ def _weather_to_dict(w: Any) -> dict[str, Any]:
 def _sim_status(engine: SimulationEngine) -> dict[str, Any]:
     return {
         "current_sol": engine.current_sol,
-        "total_sols": MISSION_DURATION_SOLS,
+        "total_sols": engine.mission_duration_sols,
         "mission_phase": engine.mission_phase.value,
         "paused": engine.paused,
     }

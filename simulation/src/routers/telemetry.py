@@ -26,7 +26,6 @@ from src.constants import (
     FOOD_KCAL_PER_KG,
     FOOD_PROTEIN_G_PER_KG,
     INITIAL_FOOD_KG,
-    MISSION_DURATION_SOLS,
     TOTAL_GREENHOUSE_AREA_M2,
     ZONE_AREAS_M2,
 )
@@ -69,7 +68,7 @@ def sim_status(session_id: str | None = Query(default=None)):
     engine = _engine(session_id)
     return {
         "current_sol": engine.current_sol,
-        "total_sols": MISSION_DURATION_SOLS,
+        "total_sols": engine.mission_duration_sols,
         "mission_phase": engine.mission_phase.value,
         "paused": engine.paused,
     }
@@ -496,7 +495,10 @@ def score_final(session_id: str | None = Query(default=None)):
     if engine.mission_phase != MissionPhase.COMPLETE:
         raise HTTPException(
             400,
-            f"Mission not yet complete (sol {engine.current_sol}/{MISSION_DURATION_SOLS})",
+            (
+                "Mission not yet complete "
+                f"(sol {engine.current_sol}/{engine.mission_duration_sols})"
+            ),
         )
     snap = engine.scoring.snapshot
     return {

@@ -8,8 +8,25 @@ WebSocket message and calls _dispatch_action() in tick_loop.py.
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from strands import tool
+
+_ACTION_ACCUMULATOR: ContextVar[list[dict] | None] = ContextVar(
+    "action_accumulator",
+    default=None,
+)
+
+
+@contextmanager
+def bind_action_accumulator(action_accumulator: list[dict]):
+    """Temporarily bind an action accumulator for nested specialist tool calls."""
+    token = _ACTION_ACCUMULATOR.set(action_accumulator)
+    try:
+        yield
+    finally:
+        _ACTION_ACCUMULATOR.reset(token)
 
 
 def create_action_tools(
@@ -23,7 +40,14 @@ def create_action_tools(
 
     Returns a dict with keys matching the tool function names.
     """
-    _acc = action_accumulator if action_accumulator is not None else []
+    inherited_acc = _ACTION_ACCUMULATOR.get()
+    _acc = (
+        action_accumulator
+        if action_accumulator is not None
+        else inherited_acc
+        if inherited_acc is not None
+        else []
+    )
 
     def _queue(endpoint: str, body: dict) -> str:
         """Append to accumulator and return JSON confirmation."""

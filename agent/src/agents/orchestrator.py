@@ -38,7 +38,7 @@ from ..energy_projection import project_energy_budget, summarize_energy_projecti
 from ..journal import CrossSessionLearning, DecisionJournal, compact_state_summary
 from ..mcp_client import create_mcp_client, discover_kb_tools
 from ..prompts import MEMORY_PROMPT_SECTION, ORCHESTRATOR_SYSTEM_PROMPT
-from ..tools.actions import create_action_tools
+from ..tools.actions import bind_action_accumulator, create_action_tools
 from ..tools.telemetry import create_telemetry_tools
 from ..weather_integration import WeatherForecaster
 from .climate_emergency import climate_emergency_agent
@@ -283,14 +283,16 @@ def run_consultation(
     # Run LLM with retry
     result = None
     try:
-        result = orchestrator(prompt)
+        with bind_action_accumulator(action_accumulator):
+            result = orchestrator(prompt)
     except Exception as exc:
         logger.warning(
             "Sol %d: orchestrator call failed (%s), retrying in 5s...", sol, exc
         )
         time.sleep(5)
         try:
-            result = orchestrator(prompt)
+            with bind_action_accumulator(action_accumulator):
+                result = orchestrator(prompt)
         except Exception as exc2:
             logger.warning(
                 "Sol %d: orchestrator retry also failed (%s). Skipping.",
@@ -375,6 +377,7 @@ async def run_mission(
                 "seed": seed,
                 "difficulty": difficulty,
                 "tick_delay_ms": 0,
+                "mission_sols": mission_sols,
             }
             session_id = await ws_client.create_session(session_config)
             logger.info(
@@ -449,9 +452,13 @@ async def run_mission(
                     next_checkin,
                 )
 
-        # Use last snapshot for final score (no REST needed)
+        mission_end_payload = ws_client.mission_end_payload or {}
+        final_snapshot = mission_end_payload.get("snapshot", last_snapshot)
+        mission_phase = mission_end_payload.get("mission_phase", "complete")
+
+        # Use the terminal snapshot for final score when available.
         final_score = (
-            last_snapshot.get("score_current", {})
+            final_snapshot.get("score_current", {})
             .get("scores", {})
             .get("overall_score", prev_score or 0.0)
         )
@@ -498,7 +505,7 @@ async def run_mission(
         return {
             "run_id": run_id,
             "final_score": final_score,
-            "mission_phase": "complete",
+            "mission_phase": mission_phase,
             "total_crises": total_crises_seen,
             "summary": summary,
         }
