@@ -61,6 +61,10 @@ Frontend TypeScript types are auto-generated from the simulation's OpenAPI schem
 
 When changing an API response shape: update the Pydantic model in `responses.py`, run `make codegen`, and the frontend types update automatically. CI runs `make check-codegen` to enforce types stay in sync.
 
+## Pre-Commit Checks
+
+Before committing and pushing, always run `make check` to catch lint, format, and type errors. If it fails, run `make check-fix` to auto-fix what it can, then re-run `make check`. If changing API response shapes, also run `make check-codegen` to verify generated types are in sync. Do not commit or push until all checks pass.
+
 ## Conventions
 
 - Python: snake_case, relative imports within packages
