@@ -31,10 +31,11 @@ const BEDS_PER_ZONE = 4
 /* Isometric grid layout — tune these to adjust pot alignment */
 const TILE_W = 260
 const TILE_H = Math.round(TILE_W * (512 / 509)) // match image aspect ratio
-const ISO_STEP_X = 105 // horizontal offset per grid step
+const ISO_STEP_X = 128 // horizontal offset per grid step
 const ISO_STEP_Y = 76 // vertical offset per grid step
+const ISO_VERTICAL_SPREAD = 16 // extra offset pushing top bed up / bottom bed down
 const GRID_W = ISO_STEP_X * 2 + TILE_W
-const GRID_H = ISO_STEP_Y * 2 + TILE_H
+const GRID_H = ISO_STEP_Y * 2 + TILE_H + ISO_VERTICAL_SPREAD * 2
 
 /** Format zone ID for display — "A" → "ZONE A", "zone_a" → "ZONE A" */
 function formatZoneLabel(zoneId: string): string {
@@ -302,15 +303,15 @@ export default function GreenhouseMap({ crops }: GreenhouseMapProps) {
               <BedImage crop={beds[0]} index={0} />
             </div>
             {/* Left */}
-            <div className="absolute" style={{ left: 0, top: ISO_STEP_Y }}>
+            <div className="absolute" style={{ left: 0, top: ISO_STEP_Y + ISO_VERTICAL_SPREAD }}>
               <BedImage crop={beds[1]} index={1} />
             </div>
             {/* Right */}
-            <div className="absolute" style={{ left: ISO_STEP_X * 2, top: ISO_STEP_Y }}>
+            <div className="absolute" style={{ left: ISO_STEP_X * 2, top: ISO_STEP_Y + ISO_VERTICAL_SPREAD }}>
               <BedImage crop={beds[2]} index={2} />
             </div>
             {/* Bottom */}
-            <div className="absolute" style={{ left: ISO_STEP_X, top: ISO_STEP_Y * 2 }}>
+            <div className="absolute" style={{ left: ISO_STEP_X, top: ISO_STEP_Y * 2 + ISO_VERTICAL_SPREAD * 2 }}>
               <BedImage crop={beds[3]} index={3} />
             </div>
           </motion.div>
