@@ -12,7 +12,7 @@ type WsIncoming =
   | {
       type: "session_created"
       session_id: string
-      payload: { session_id: string; config: unknown }
+      payload: { session_id: string; paused?: boolean; config: unknown }
     }
   | {
       type: "mission_end"
@@ -51,17 +51,26 @@ interface WsOutgoing {
 
 export type CreateSessionConfig = CreateSessionRequest
 
+// ── Demo mode defaults ───────────────────────────────────────────────────────
+
+const DEMO_DEFAULTS: Partial<CreateSessionConfig> = {
+  tick_delay_ms: 1000,
+  autonomous_events_enabled: false,
+}
+
 // ── Hook return type ─────────────────────────────────────────────────────────
 
 export interface WebSocketState {
   connected: boolean
   sessionId: string | null
+  isPaused: boolean
   lastState: TickPayload | null
   lastEvents: unknown[]
   injectCrisis: (scenario: string, params?: Record<string, unknown>) => void
   setTickDelay: (ms: number) => void
   pause: () => void
   resume: () => void
+  reset: (config?: Partial<CreateSessionConfig>) => void
   createSession: (config?: CreateSessionConfig) => void
 }
 
@@ -69,6 +78,7 @@ export interface WebSocketState {
 
 const MAX_RECONNECT_RETRIES = 5
 const BASE_RECONNECT_DELAY_MS = 1000
+const SESSION_STORAGE_KEY = "oasis_session_id"
 
 function buildWsUrl(): string {
   const envUrl = import.meta.env.VITE_SIM_WS_URL as string | undefined
@@ -82,6 +92,7 @@ function buildWsUrl(): string {
 export function useWebSocket(): WebSocketState {
   const [connected, setConnected] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [isPaused, setIsPaused] = useState(true)
   const [lastState, setLastState] = useState<TickPayload | null>(null)
   const [lastEvents, setLastEvents] = useState<unknown[]>([])
 
@@ -103,40 +114,88 @@ export function useWebSocket(): WebSocketState {
     }
   }, [])
 
-  const handleMessage = useCallback((event: MessageEvent<string>) => {
-    let msg: WsIncoming
-    try {
-      msg = JSON.parse(event.data) as WsIncoming
-    } catch {
-      return
+  // Store handleMessage in a ref so `connect` doesn't depend on it.
+  // This prevents React strict mode double-mount from recreating the WS.
+  const handleMessageRef = useRef<(event: MessageEvent<string>) => void>(() => {})
+
+  // Track whether we're waiting for a join_session response so we can
+  // fall back to create_session if the join fails (session was destroyed).
+  const pendingJoinRef = useRef(false)
+
+  useEffect(() => {
+    handleMessageRef.current = (event: MessageEvent<string>) => {
+      let msg: WsIncoming
+      try {
+        msg = JSON.parse(event.data) as WsIncoming
+      } catch {
+        return
+      }
+
+      switch (msg.type) {
+        case "tick": {
+          setLastState(msg.payload)
+          setLastEvents((msg.payload.events as unknown[]) ?? [])
+          // Keep isPaused in sync with the simulation's actual state
+          const simStatus = msg.payload.sim_status as { paused?: boolean } | undefined
+          if (simStatus && typeof simStatus.paused === "boolean") {
+            setIsPaused(simStatus.paused)
+          }
+          break
+        }
+
+        case "session_created":
+          setSessionId(msg.session_id)
+          sessionStorage.setItem(SESSION_STORAGE_KEY, msg.session_id)
+          setIsPaused("paused" in msg.payload && Boolean(msg.payload.paused))
+          break
+
+        case "session_joined":
+          setSessionId(msg.session_id)
+          sessionStorage.setItem(SESSION_STORAGE_KEY, msg.session_id)
+          pendingJoinRef.current = false
+          // isPaused will be synced from the follow-up tick snapshot
+          break
+
+        case "mission_end":
+          setLastState(msg.payload.snapshot)
+          sessionStorage.removeItem(SESSION_STORAGE_KEY)
+          break
+
+        case "paused":
+          setIsPaused(true)
+          break
+
+        case "resumed":
+          setIsPaused(false)
+          break
+
+        case "error":
+          // If a join_session failed (session gone), fall back to create
+          if (pendingJoinRef.current) {
+            pendingJoinRef.current = false
+            sessionStorage.removeItem(SESSION_STORAGE_KEY)
+            const ws = wsRef.current
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(
+                JSON.stringify({
+                  type: "create_session",
+                  payload: { ...DEMO_DEFAULTS, paused: true },
+                }),
+              )
+            }
+          }
+          break
+
+        case "registered":
+        case "crisis_injected":
+        case "tick_delay_set":
+          // Acknowledged; no state change needed
+          break
+      }
     }
+  })
 
-    switch (msg.type) {
-      case "tick":
-        setLastState(msg.payload)
-        setLastEvents((msg.payload.events as unknown[]) ?? [])
-        break
-
-      case "session_created":
-        setSessionId(msg.session_id)
-        break
-
-      case "mission_end":
-        setLastState(msg.payload.snapshot)
-        break
-
-      case "registered":
-      case "session_joined":
-      case "paused":
-      case "resumed":
-      case "crisis_injected":
-      case "tick_delay_set":
-      case "error":
-        // Acknowledged; no state change needed
-        break
-    }
-  }, [])
-
+  // connect is stable (no deps) — only fires once per mount
   const connect = useCallback(() => {
     if (!mountedRef.current) return
 
@@ -148,25 +207,28 @@ export function useWebSocket(): WebSocketState {
       retriesRef.current = 0
       // Register as frontend
       ws.send(JSON.stringify({ type: "register", payload: { role: "frontend" } }))
-      // Re-join existing session or auto-create a new one
-      if (sessionIdRef.current) {
+
+      // Try to rejoin an existing session (from ref, or sessionStorage on refresh)
+      const existingId = sessionIdRef.current || sessionStorage.getItem(SESSION_STORAGE_KEY)
+      if (existingId) {
+        pendingJoinRef.current = true
         ws.send(
           JSON.stringify({
             type: "join_session",
-            payload: { session_id: sessionIdRef.current },
+            payload: { session_id: existingId },
           }),
         )
       } else {
         ws.send(
           JSON.stringify({
             type: "create_session",
-            payload: { tick_delay_ms: 100 },
+            payload: { ...DEMO_DEFAULTS, paused: true },
           }),
         )
       }
     }
 
-    ws.onmessage = handleMessage
+    ws.onmessage = (e) => handleMessageRef.current(e)
 
     ws.onclose = () => {
       setConnected(false)
@@ -185,7 +247,7 @@ export function useWebSocket(): WebSocketState {
     ws.onerror = () => {
       // onclose will fire after onerror, handling reconnect there
     }
-  }, [handleMessage])
+  }, [])
 
   // Connect on mount, clean up on unmount
   useEffect(() => {
@@ -244,6 +306,26 @@ export function useWebSocket(): WebSocketState {
     })
   }, [send])
 
+  const reset = useCallback(
+    (config?: Partial<CreateSessionConfig>) => {
+      setLastEvents([])
+      setLastState(null)
+      setIsPaused(true)
+      // Clear stored session — reset creates a new one
+      sessionStorage.removeItem(SESSION_STORAGE_KEY)
+      send({
+        type: "reset_session",
+        session_id: sessionIdRef.current ?? undefined,
+        payload: {
+          ...DEMO_DEFAULTS,
+          paused: true,
+          ...config,
+        } as Record<string, unknown>,
+      })
+    },
+    [send],
+  )
+
   const createSession = useCallback(
     (config?: CreateSessionConfig) => {
       send({
@@ -257,12 +339,14 @@ export function useWebSocket(): WebSocketState {
   return {
     connected,
     sessionId,
+    isPaused,
     lastState,
     lastEvents,
     injectCrisis,
     setTickDelay,
     pause,
     resume,
+    reset,
     createSession,
   }
 }

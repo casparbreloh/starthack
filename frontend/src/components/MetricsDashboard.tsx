@@ -23,6 +23,7 @@ export default function MetricsDashboard({ data }: MetricsDashboardProps) {
           score={data.score}
           running={data.running}
           toggleRunning={data.toggleRunning}
+          reset={data.reset}
           loading={data.loading}
           error={data.error}
         />
@@ -54,6 +55,7 @@ function TopBar({
   score,
   running,
   toggleRunning,
+  reset,
   loading,
   error,
 }: {
@@ -61,13 +63,17 @@ function TopBar({
   score: ScoreData | null
   running: boolean
   toggleRunning: () => void
+  reset: () => void
   loading: boolean
   error: string | null
 }) {
   return (
     <div className="border-void-border-subtle relative flex items-center border-b px-4 py-5">
-      {/* Left: phase + score */}
+      {/* Left: brand + phase + score */}
       <div className="flex items-center gap-4">
+        <span className="text-void-text-primary font-mono text-sm font-bold tracking-[0.2em]">
+          OASIS
+        </span>
         {status?.mission_phase && (
           <span className="text-void-text-muted text-sm font-semibold uppercase tracking-[0.15em]">
             {status.mission_phase}
@@ -99,6 +105,12 @@ function TopBar({
           className="text-void-text-tertiary hover:text-void-text-secondary cursor-pointer font-mono text-sm font-semibold uppercase tracking-[0.15em] transition-colors"
         >
           {running ? "Pause" : "Run"}
+        </button>
+        <button
+          onClick={reset}
+          className="text-void-text-tertiary hover:text-void-text-secondary cursor-pointer font-mono text-sm font-semibold uppercase tracking-[0.15em] transition-colors"
+        >
+          Reset
         </button>
         <span
           className={`inline-block h-1.5 w-1.5 rounded-full ${loading ? "animate-pulse bg-yellow-500/60" : error ? "bg-red-500/60" : running ? "animate-pulse bg-green-500/40" : "bg-void-text-muted"}`}

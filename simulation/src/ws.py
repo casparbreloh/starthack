@@ -12,19 +12,26 @@ Provides a single /ws endpoint that handles:
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import os
 from typing import Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, ValidationError
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from src.agent_bridge import invoke_agent
 from src.constants import MISSION_DURATION_SOLS
 from src.engine import AgentDecision
 from src.session import SessionConfig
+from src.snapshots import build_state_snapshot
 from src.state import session_manager
 
 logger = logging.getLogger(__name__)
+
+AGENT_URL: str | None = os.environ.get("AGENT_URL") or None
+SIM_WS_URL: str = os.environ.get("SIM_WS_URL", "ws://localhost:8080/ws")
 
 router = APIRouter()
 
@@ -46,6 +53,8 @@ class _CreateSessionPayload(BaseModel):
         default=MISSION_DURATION_SOLS, ge=1, le=MISSION_DURATION_SOLS
     )
     starting_reserves: dict[str, float] = Field(default_factory=dict)
+    paused: bool = True
+    autonomous_events_enabled: bool = True
 
 
 @router.websocket("/ws")
@@ -80,36 +89,59 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             msg_session_id = msg.get("session_id", session_id)
             payload = msg.get("payload", {})
 
-            if msg_type == "create_session":
-                new_session_id = await _handle_create_session(ws, role, payload)
-                if new_session_id is not None:
-                    session_id = new_session_id
+            try:
+                if msg_type == "create_session":
+                    new_session_id = await _handle_create_session(ws, role, payload)
+                    if new_session_id is not None:
+                        session_id = new_session_id
 
-            elif msg_type == "join_session":
-                session_id = await _handle_join_session(ws, role, payload)
+                elif msg_type == "join_session":
+                    session_id = await _handle_join_session(ws, role, payload)
 
-            elif msg_type == "agent_actions":
-                await _handle_agent_actions(msg_session_id, payload)
+                elif msg_type == "reset_session":
+                    new_session_id = await _handle_reset_session(
+                        ws, role, msg_session_id, payload
+                    )
+                    if new_session_id is not None:
+                        session_id = new_session_id
 
-            elif msg_type == "inject_crisis":
-                await _handle_inject_crisis(ws, msg_session_id, payload)
+                elif msg_type == "agent_actions":
+                    await _handle_agent_actions(msg_session_id, payload)
 
-            elif msg_type == "set_tick_delay":
-                await _handle_set_tick_delay(ws, msg_session_id, payload)
+                elif msg_type == "inject_crisis":
+                    await _handle_inject_crisis(ws, msg_session_id, payload)
 
-            elif msg_type == "pause":
-                await _handle_pause(ws, msg_session_id)
+                elif msg_type == "set_tick_delay":
+                    await _handle_set_tick_delay(ws, msg_session_id, payload)
 
-            elif msg_type == "resume":
-                await _handle_resume(ws, msg_session_id)
+                elif msg_type == "pause":
+                    await _handle_pause(ws, msg_session_id)
 
-            else:
-                await ws.send_json(
-                    {
-                        "type": "error",
-                        "payload": {"message": f"Unknown message type: {msg_type}"},
-                    }
-                )
+                elif msg_type == "resume":
+                    await _handle_resume(ws, msg_session_id)
+
+                else:
+                    await ws.send_json(
+                        {
+                            "type": "error",
+                            "payload": {"message": f"Unknown message type: {msg_type}"},
+                        }
+                    )
+            except WebSocketDisconnect:
+                raise
+            except Exception:
+                logger.exception("Error handling message type '%s'", msg_type)
+                try:
+                    await ws.send_json(
+                        {
+                            "type": "error",
+                            "payload": {
+                                "message": f"Internal error handling {msg_type}"
+                            },
+                        }
+                    )
+                except Exception:
+                    pass
 
     except WebSocketDisconnect:
         logger.info("WebSocket disconnected (role=%s)", role)
@@ -153,9 +185,17 @@ async def _handle_create_session(
         tick_delay_ms=req.tick_delay_ms,
         mission_sols=req.mission_sols,
         starting_reserves=req.starting_reserves,
+        autonomous_events_enabled=req.autonomous_events_enabled,
     )
     session = session_manager.create(config)
+    session.engine.autonomous_events_enabled = config.autonomous_events_enabled
     session.connections.register(ws, role or "frontend")
+
+    # Start paused if requested (default) so the frontend can show initial state
+    if req.paused:
+        session.paused = True
+        session.engine.paused = True
+
     session.start()
 
     await ws.send_json(
@@ -164,16 +204,31 @@ async def _handle_create_session(
             "session_id": session.id,
             "payload": {
                 "session_id": session.id,
+                "paused": session.paused,
                 "config": {
                     "seed": config.seed,
                     "difficulty": config.difficulty,
                     "tick_delay_ms": config.tick_delay_ms,
                     "mission_sols": config.mission_sols,
+                    "autonomous_events_enabled": config.autonomous_events_enabled,
                 },
             },
         }
     )
-    logger.info("Session %s created and started via WS", session.id)
+
+    # Send initial state snapshot so the UI has data even while paused
+    snapshot = build_state_snapshot(session.engine)
+    await ws.send_json({"type": "tick", "payload": snapshot})
+
+    logger.info("Session %s created (paused=%s) via WS", session.id, session.paused)
+
+    # Auto-invoke agent if configured
+    if AGENT_URL:
+        asyncio.create_task(
+            invoke_agent(AGENT_URL, session.id, SIM_WS_URL),
+            name=f"invoke-agent-{session.id[:8]}",
+        )
+
     return session.id
 
 
@@ -192,8 +247,33 @@ async def _handle_join_session(
             "payload": {"session_id": session.id},
         }
     )
+
+    # Send current state so reconnects get immediate data
+    snapshot = build_state_snapshot(session.engine)
+    await ws.send_json({"type": "tick", "payload": snapshot})
+
+    # When agent joins, trigger immediate consultation on next tick
+    if role == "agent":
+        session.next_consultation_sol = session.engine.current_sol
+
     logger.info("WebSocket re-joined session %s as %s", session.id, role)
     return session.id
+
+
+async def _handle_reset_session(
+    ws: WebSocket,
+    role: str | None,
+    old_session_id: str | None,
+    payload: dict[str, Any],
+) -> str | None:
+    """Destroy the current session and create a fresh one (paused by default)."""
+    if old_session_id:
+        try:
+            session_manager.destroy(old_session_id)
+        except Exception:
+            pass  # session may already be gone
+
+    return await _handle_create_session(ws, role, payload)
 
 
 async def _handle_agent_actions(

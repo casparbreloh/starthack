@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react"
+import { useCallback, useMemo } from "react"
 
 import type {
   SimulationData,
@@ -17,28 +17,33 @@ import type {
   ScoreData,
 } from "../types/simulation"
 import { useWebSocketControls } from "./useGameData"
-import type { WebSocketState } from "./useWebSocket"
+import type { WebSocketState, CreateSessionConfig } from "./useWebSocket"
 
 export interface SimulationControls extends SimulationData {
   running: boolean
   toggleRunning: () => void
+  reset: (config?: Partial<CreateSessionConfig>) => void
   ws: WebSocketState
 }
 
 export function useSimulation(): SimulationControls {
   const ws = useWebSocketControls()
-  const [running, setRunning] = useState(true)
+  const running = !ws.isPaused
 
   const toggleRunning = useCallback(() => {
-    setRunning((prev) => {
-      if (prev) {
-        ws.pause()
-      } else {
-        ws.resume()
-      }
-      return !prev
-    })
-  }, [ws])
+    if (running) {
+      ws.pause()
+    } else {
+      ws.resume()
+    }
+  }, [ws, running])
+
+  const reset = useCallback(
+    (config?: Partial<CreateSessionConfig>) => {
+      ws.reset(config)
+    },
+    [ws],
+  )
 
   const data: SimulationData = useMemo(() => {
     const s = ws.lastState
@@ -81,5 +86,5 @@ export function useSimulation(): SimulationControls {
     }
   }, [ws.lastState])
 
-  return { ...data, running, toggleRunning, ws }
+  return { ...data, running, toggleRunning, reset, ws }
 }
