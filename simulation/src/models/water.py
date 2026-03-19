@@ -182,11 +182,7 @@ class WaterModel:
         """Extract water from Martian ice deposits using a drill.
 
         Degrades drill health; limited to once per sol.
-        Reset daily_mined_liters at the top of every call.
         """
-        # Always reset daily counter at the start of every mine_ice call
-        self.state.daily_mined_liters = 0.0
-
         # Guard 1: Can only mine once per sol
         if current_sol == self.state.last_mining_sol:
             return {"result": "failed", "reason": "already_mined_this_sol"}
@@ -199,6 +195,11 @@ class WaterModel:
         if self.state.drill_health_pct < ICE_MINING_DRILL_MIN_HEALTH_PCT:
             return {"result": "failed", "reason": "drill_too_damaged"}
 
+        # Guard 4: Reservoir must have room
+        available_capacity = WATER_RESERVOIR_CAPACITY_L - self.state.reservoir_liters
+        if available_capacity <= 0:
+            return {"result": "failed", "reason": "reservoir_full"}
+
         # Calculate yield based on drill health (linear interpolation)
         liters = (
             ICE_MINING_MIN_YIELD_L
@@ -207,8 +208,8 @@ class WaterModel:
             / 100.0
         )
 
-        # Clamp to reservoir capacity
-        liters = min(liters, WATER_RESERVOIR_CAPACITY_L - self.state.reservoir_liters)
+        # Clamp to available capacity
+        liters = min(liters, available_capacity)
 
         # Update state
         self.state.reservoir_liters = round(

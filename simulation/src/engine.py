@@ -283,8 +283,8 @@ class SimulationEngine:
                     starting_reserves["battery_wh"]
                 )
             if "drill_health_pct" in starting_reserves:
-                self.water.state.drill_health_pct = float(
-                    starting_reserves["drill_health_pct"]
+                self.water.state.drill_health_pct = max(
+                    0.0, min(100.0, float(starting_reserves["drill_health_pct"]))
                 )
 
         self.weather.advance(0)
