@@ -3,7 +3,7 @@ import { Thermometer, Sun, CloudFog, Gauge, AlertTriangle, CheckCircle } from "l
 
 import marsLandscape from "@/assets/mars-landscape.png"
 import { useActiveCrises, useScore } from "@/hooks/useGameData"
-import type { WeatherCurrent, SimStatus } from "@/types/simulation"
+import type { WeatherCurrent, SimStatus } from "@/types/game"
 
 interface MarsOverviewProps {
   onSelectZone: (zone: string) => void

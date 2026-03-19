@@ -14,7 +14,7 @@ import {
   adaptScore,
   adaptEvents,
 } from "@/lib/api"
-import type * as T from "@/types/simulation"
+import type * as T from "@/types/game"
 
 import { useWebSocket, type WebSocketState } from "./useWebSocket"
 

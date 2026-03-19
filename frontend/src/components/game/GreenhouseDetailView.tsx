@@ -13,7 +13,7 @@ import unhealthyPotato from "@/assets/crops/unhealthy_potato.png"
 import unhealthyRadish from "@/assets/crops/unhealthy_radish.png"
 import greenhouseDome from "@/assets/greenhouse-dome.png"
 import { useWater, useEnergy } from "@/hooks/useGameData"
-import type { CropBatch, ZoneEnvironment, ZoneNutrients } from "@/types/simulation"
+import type { CropBatch, ZoneEnvironment, ZoneNutrients } from "@/types/game"
 
 const CROP_IMAGES: Record<string, { healthy: string; unhealthy: string }> = {
   potato: { healthy: healthyPotato, unhealthy: unhealthyPotato },

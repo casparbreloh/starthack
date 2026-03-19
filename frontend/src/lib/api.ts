@@ -3,7 +3,7 @@
  * shapes into the types the UI components expect.
  */
 
-import type * as T from "@/types/simulation"
+import type * as T from "@/types/game"
 
 // ─── Raw simulation snapshot shapes (mirrors snapshots.py) ──────────────────
 
