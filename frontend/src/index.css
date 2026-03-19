@@ -76,6 +76,28 @@
     --void-warn-dim: #4a4025;
     --void-critical: #8a4a4a;
     --void-critical-dim: #4a2525;
+
+    /* Aliases with Tailwind v4 --color-* prefix (used by dashboard inline styles) */
+    --color-void-bg: var(--void-bg);
+    --color-void-surface: var(--void-surface);
+    --color-void-surface-elevated: var(--void-surface-elevated);
+    --color-void-surface-hover: var(--void-surface-hover);
+    --color-void-border: var(--void-border);
+    --color-void-border-subtle: var(--void-border-subtle);
+    --color-void-text-primary: var(--void-text-primary);
+    --color-void-text-secondary: var(--void-text-secondary);
+    --color-void-text-tertiary: var(--void-text-tertiary);
+    --color-void-text-muted: var(--void-text-muted);
+    --color-void-accent: var(--void-accent);
+    --color-void-accent-dim: var(--void-accent-dim);
+    --color-void-accent-muted: var(--void-accent-muted);
+    --color-void-accent-glow: var(--void-accent-glow);
+    --color-void-ok: var(--void-ok);
+    --color-void-ok-dim: var(--void-ok-dim);
+    --color-void-warn: var(--void-warn);
+    --color-void-warn-dim: var(--void-warn-dim);
+    --color-void-critical: var(--void-critical);
+    --color-void-critical-dim: var(--void-critical-dim);
   }
 }
 

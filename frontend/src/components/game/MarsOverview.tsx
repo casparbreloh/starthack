@@ -84,7 +84,7 @@ export function MarsOverview({ onSelectZone, onSelectCrew, weather, sim }: MarsO
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="absolute top-4 right-4 bg-card/80 backdrop-blur-sm border border-border rounded-sm px-4 py-3"
+        className="absolute top-14 right-4 bg-card/80 backdrop-blur-sm border border-border rounded-sm px-4 py-3"
       >
         <span className="label-aerospace block mb-2">MARS WEATHER</span>
         <div className="flex flex-col gap-1.5">
