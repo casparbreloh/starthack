@@ -364,24 +364,47 @@ def _crew_health(engine: SimulationEngine) -> dict[str, Any]:
         "hydration": {
             "hydration_pct": h.hydration_pct,
             "level": h.dehydration_level.value,
+            "daily_water_received_l": h.daily_water_received_l,
+            "daily_water_required_l": h.daily_water_required_l,
+            "water_fraction_met": round(h.water_fraction_met, 3),
+            "consecutive_deficit_sols": h.consecutive_water_deficit_sols,
         },
         "radiation": {
             "cumulative_msv": h.cumulative_radiation_msv,
+            "daily_dose_msv": round(h.daily_radiation_msv, 3),
             "warning_active": h.radiation_warning_active,
             "critical_active": h.radiation_critical_active,
+            "nasa_career_limit_msv": 600.0,
+            "pct_of_career_limit": round(h.cumulative_radiation_msv / 600.0 * 100.0, 1),
         },
         "temperature": {
+            "ambient_temp_c": h.ambient_temp_c,
+            "hypothermia_risk": h.hypothermia_risk,
+            "hyperthermia_risk": h.hyperthermia_risk,
             "health_penalty_pct": h.temperature_health_penalty,
+            "nasa_comfort_range_c": [18.3, 26.7],
         },
         "co2": {
+            "ambient_co2_ppm": h.ambient_co2_ppm,
+            "health_impaired": h.co2_health_impaired,
             "health_penalty_pct": h.co2_health_penalty,
+            "osha_8h_limit_ppm": 5000,
         },
         "starvation": {
             "level": h.starvation_level.value,
+            "consecutive_deficit_sols": h.consecutive_caloric_deficit_sols,
             "health_penalty_pct": h.starvation_health_penalty,
+        },
+        "micronutrients": {
+            "level": h.micronutrient_level.value,
+            "consecutive_deficit_sols": h.consecutive_micronutrient_deficit_sols,
+            "health_penalty_pct": h.micronutrient_health_penalty,
         },
         "illness": {
             "active": h.illness.active,
             "sick_member_name": h.illness.sick_member_name,
+            "duration_remaining_sols": h.illness.duration_remaining_sols,
+            "kcal_multiplier": h.illness.kcal_multiplier,
+            "protein_multiplier": h.illness.protein_multiplier,
         },
     }

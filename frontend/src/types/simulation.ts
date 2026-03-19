@@ -29,6 +29,9 @@ export type CrewHealth = Schemas["CrewHealthResponse"]
 export type EventsLog = Schemas["EventsLogResponse"]
 export type ScoreData = Schemas["ScoreCurrentResponse"]
 export type SimAdvanceResponse = Schemas["SimAdvanceResponse"]
+export type CreateSessionRequest = Schemas["CreateSessionRequest"]
+export type CreateSessionResponse = Schemas["CreateSessionResponse"]
+export type ListSessionsResponse = Schemas["ListSessionsResponse"]
 
 // ── Frontend-only state (not an API response) ─────────────────────────
 export interface SimulationData {

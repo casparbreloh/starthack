@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 
 /** Raw tick payload from the simulation — field names match Python snapshot builder. */
 export type TickPayload = Record<string, unknown>
+import type { CreateSessionRequest } from "../types/simulation"
 
 type WsIncoming =
   | { type: "tick"; payload: TickPayload }
@@ -48,10 +49,7 @@ interface WsOutgoing {
 
 // ── Session config for create_session ────────────────────────────────────────
 
-export interface CreateSessionConfig {
-  tick_delay_ms?: number
-  difficulty?: string
-}
+export type CreateSessionConfig = CreateSessionRequest
 
 // ── Hook return type ─────────────────────────────────────────────────────────
 

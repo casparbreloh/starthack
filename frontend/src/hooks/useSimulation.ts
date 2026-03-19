@@ -17,10 +17,12 @@ import type {
   ScoreData,
 } from "../types/simulation"
 import { useWebSocketControls } from "./useGameData"
+import type { WebSocketState } from "./useWebSocket"
 
 export interface SimulationControls extends SimulationData {
   running: boolean
   toggleRunning: () => void
+  ws: WebSocketState
 }
 
 export function useSimulation(): SimulationControls {
@@ -79,5 +81,5 @@ export function useSimulation(): SimulationControls {
     }
   }, [ws.lastState])
 
-  return { ...data, running, toggleRunning }
+  return { ...data, running, toggleRunning, ws }
 }
