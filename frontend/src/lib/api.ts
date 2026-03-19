@@ -140,12 +140,17 @@ interface RawActiveCrises {
   crises: RawCrisis[]
 }
 
+interface RawScoreCategory {
+  score: number
+  [key: string]: unknown
+}
+
 interface RawScoreCurrent {
   scores: {
-    survival: number
-    nutrition: number
-    resource_efficiency: number
-    crisis_management: number
+    survival: RawScoreCategory
+    nutrition: RawScoreCategory
+    resource_efficiency: RawScoreCategory
+    crisis_management: RawScoreCategory
     overall_score: number
   }
 }
@@ -310,10 +315,10 @@ export function adaptCrises(r: unknown): T.ActiveCrisis[] {
 export function adaptScore(r: unknown): T.ScoreCurrent {
   const s = r as RawScoreCurrent
   return {
-    survival: s.scores.survival,
-    nutrition: s.scores.nutrition,
-    resource_efficiency: s.scores.resource_efficiency,
-    crisis_management: s.scores.crisis_management,
+    survival: s.scores.survival.score,
+    nutrition: s.scores.nutrition.score,
+    resource_efficiency: s.scores.resource_efficiency.score,
+    crisis_management: s.scores.crisis_management.score,
     overall_score: s.scores.overall_score,
   }
 }
