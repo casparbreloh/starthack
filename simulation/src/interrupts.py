@@ -4,6 +4,13 @@ Interrupt detection for the tick loop.
 After each sol, checks for state changes that should trigger an agent
 consultation: new crises, crop deaths, harvest readiness, critical
 resource levels, and mission phase transitions.
+
+Interrupts are categorized as "urgent" or "persistent":
+- Urgent (new_crisis, crop_death, mission_phase_change): genuinely new
+  events the agent hasn't seen → force immediate consultation.
+- Persistent (battery_critical, water_critical, harvest_ready): ongoing
+  conditions the agent likely already knows about → included in the next
+  scheduled consultation but do NOT force early consultation.
 """
 
 from __future__ import annotations
@@ -13,6 +20,13 @@ from typing import Any
 from src.constants import CRISIS_BATTERY_PCT, CRISIS_WATER_RESERVOIR_L
 from src.engine import SimulationEngine
 from src.enums import MissionPhase
+
+# Interrupt types that force immediate agent consultation regardless of
+# the agent's next_checkin schedule.  Everything else is "persistent" and
+# rides along with the next scheduled consultation.
+URGENT_INTERRUPT_TYPES: frozenset[str] = frozenset(
+    {"new_crisis", "crop_death", "mission_phase_change"}
+)
 
 
 def detect_interrupts(

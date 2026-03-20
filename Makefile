@@ -1,7 +1,8 @@
 .PHONY: dev dev-agent dev-simulation dev-frontend dev-ml install install-frozen \
-	check check-agent check-frontend check-simulation check-ml \
-	check-fix check-agent-fix check-frontend-fix check-simulation-fix \
-	codegen check-codegen
+	check check-agent check-frontend check-simulation check-ml check-fast-sim \
+	check-fix check-agent-fix check-frontend-fix check-simulation-fix check-fast-sim-fix \
+	codegen check-codegen \
+	install-fast-sim deploy-fast-sim dispatch-wave query-results
 
 dev-simulation:
 	@cd simulation && AGENT_URL=$${AGENT_URL:-http://localhost:9090} uv run uvicorn main:app --reload --port 8080
@@ -31,12 +32,14 @@ install:
 	@cd simulation && uv sync
 	@cd ml && uv sync
 	@cd frontend && pnpm install
+	@cd fast-sim && uv sync
 
 install-frozen:
 	@cd agent && uv sync --frozen
 	@cd simulation && uv sync --frozen
 	@cd ml && uv sync --frozen
 	@cd frontend && pnpm install --frozen-lockfile
+	@cd fast-sim && uv sync --frozen
 
 check-agent:
 	@cd agent && uv run ruff check src && uv run ruff format --check src && uv run pyright src
@@ -50,7 +53,7 @@ check-simulation:
 check-ml:
 	@cd ml && uv run ruff check serve.py && uv run ruff format --check serve.py && uv run pyright serve.py
 
-check: check-agent check-frontend check-simulation check-ml
+check: check-agent check-frontend check-simulation check-ml check-fast-sim
 
 check-agent-fix:
 	@cd agent && uv run ruff check --fix src && uv run ruff format src
@@ -61,7 +64,25 @@ check-frontend-fix:
 check-simulation-fix:
 	@cd simulation && uv run ruff check --fix src main.py && uv run ruff format src main.py
 
-check-fix: check-agent-fix check-frontend-fix check-simulation-fix
+install-fast-sim:
+	@cd fast-sim && uv sync
+
+check-fast-sim:
+	@cd fast-sim && uv run ruff check src && uv run ruff format --check src && uv run pyright src
+
+check-fast-sim-fix:
+	@cd fast-sim && uv run ruff check --fix src && uv run ruff format src
+
+deploy-fast-sim:
+	@cd fast-sim && cdk deploy --all
+
+dispatch-wave:
+	@cd fast-sim && uv run python -m src.cli dispatch
+
+query-results:
+	@cd fast-sim && uv run python -m src.cli query
+
+check-fix: check-agent-fix check-frontend-fix check-simulation-fix check-fast-sim-fix
 
 codegen:
 	@cd simulation && uv run python -m scripts.export_openapi > /tmp/mars-openapi.json

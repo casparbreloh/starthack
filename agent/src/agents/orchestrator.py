@@ -159,11 +159,17 @@ def _dedup_actions(actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for idx, act in enumerate(actions):
         endpoint = act.get("endpoint", "")
         body = act.get("body", {})
-        # Build a key from the endpoint + the most common discriminator
+        # Build a key from the endpoint + discriminators.
+        # For planting, include crop type so different crops in the same
+        # zone are NOT deduped (potatoes + beans in zone C are distinct).
         key_parts = [endpoint]
         for field in ("zone_id", "crop_id"):
             if field in body:
                 key_parts.append(f"{field}={body[field]}")
+        if endpoint == "crops/plant" and "type" in body:
+            key_parts.append(f"type={body['type']}")
+        if endpoint == "crops/plant" and "batch_name" in body:
+            key_parts.append(f"batch={body['batch_name']}")
         key = "|".join(key_parts)
         seen[key] = idx  # last write wins
 
