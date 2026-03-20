@@ -66,7 +66,7 @@ check-fix: check-agent-fix check-frontend-fix check-simulation-fix
 codegen:
 	@cd simulation && uv run python -m scripts.export_openapi > /tmp/mars-openapi.json
 	@cd frontend && pnpm exec openapi-typescript /tmp/mars-openapi.json -o src/contracts/simulation.d.ts --export-type
-	@cd frontend && pnpm exec oxfmt src/contracts/simulation.d.ts
+	@cd frontend && npx oxfmt src/contracts/simulation.d.ts
 
 check-codegen:
 	@make codegen
