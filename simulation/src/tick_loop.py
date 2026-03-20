@@ -82,9 +82,7 @@ async def run_session_loop(session: Session) -> None:
             # Persistent conditions (battery_critical, water_critical,
             # harvest_ready) ride along with the next scheduled consultation
             # instead of forcing early consultation every sol.
-            has_urgent = any(
-                i["type"] in URGENT_INTERRUPT_TYPES for i in interrupts
-            )
+            has_urgent = any(i["type"] in URGENT_INTERRUPT_TYPES for i in interrupts)
             should_consult = session.connections.agent is not None and (
                 engine.current_sol >= session.next_consultation_sol
                 or has_urgent
