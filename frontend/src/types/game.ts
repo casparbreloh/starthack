@@ -155,6 +155,16 @@ export interface ActiveCrisis {
   resolution_status: string
 }
 
+// === Agent Decision ===
+export interface AgentDecision {
+  sol: number
+  risk_assessment: "nominal" | "elevated" | "critical" | string
+  reasoning: string
+  summary: string
+  actions_count: number
+  actions_summary: string[]
+}
+
 // === Score ===
 export interface ScoreCurrent {
   survival: number

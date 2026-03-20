@@ -63,6 +63,14 @@ SPECIALIST_TOOLS = [
 ]
 
 
+def _extract_summary(reasoning: str) -> str:
+    """Extract the DECISION_SUMMARY line from agent reasoning output."""
+    match = re.search(r"DECISION_SUMMARY:\s*(.+)", reasoning, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return ""
+
+
 def _collect_text_fragments(value: Any) -> list[str]:
     """Recursively collect string fragments from a model result payload."""
     if value is None:
@@ -485,8 +493,9 @@ async def _consultation_loop(
             )
 
         log_decision = {
-            "reasoning": reasoning[:500] if reasoning else "nominal",
+            "reasoning": reasoning[:500] if reasoning else "",
             "risk_assessment": reasoning[:200] if reasoning else "nominal",
+            "summary": _extract_summary(reasoning),
         }
         await ws_client.send_actions(actions, next_checkin, log_decision)
 

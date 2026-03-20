@@ -229,7 +229,7 @@ export function MarsOverview({ onSelectZone, onSelectCrew, weather, sim }: MarsO
           Reset
         </button>
         <div className="h-4 w-px bg-border" />
-        <CrisisInjector ws={ws} disabled={ws.isPaused || sim.mission_phase !== "active"} />
+        <CrisisInjector ws={ws} disabled={sim.mission_phase !== "active"} />
       </motion.div>
     </div>
   )
