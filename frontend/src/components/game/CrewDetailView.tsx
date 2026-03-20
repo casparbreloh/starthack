@@ -2,6 +2,7 @@ import { motion } from "framer-motion"
 import { ArrowLeft, Heart, Droplets, Radiation } from "lucide-react"
 
 import crewHabitat from "@/assets/crew-habitat.png"
+import { num } from "@/lib/num"
 import type { CrewMember, CrewNutrition, CrewHealth, AgentDecision } from "@/types/game"
 
 import { AgentDecisionPanel } from "./AgentDecisionPanel"
@@ -170,8 +171,8 @@ export function CrewDetailView({
                 />
               </div>
               <span className="font-mono text-[9px] text-muted-foreground">
-                {nutrition.daily_calories_consumed.toFixed(0)} /{" "}
-                {nutrition.daily_calories_target.toFixed(0)} kcal
+                {num(nutrition.daily_calories_consumed).toFixed(0)} /{" "}
+                {num(nutrition.daily_calories_target).toFixed(0)} kcal
               </span>
             </div>
             <div>
@@ -186,8 +187,8 @@ export function CrewDetailView({
                 />
               </div>
               <span className="font-mono text-[9px] text-muted-foreground">
-                {nutrition.daily_protein_consumed_g.toFixed(0)} /{" "}
-                {nutrition.daily_protein_target_g.toFixed(0)} g
+                {num(nutrition.daily_protein_consumed_g).toFixed(0)} /{" "}
+                {num(nutrition.daily_protein_target_g).toFixed(0)} g
               </span>
             </div>
           </div>
@@ -202,13 +203,13 @@ export function CrewDetailView({
             <div className="flex items-baseline justify-between">
               <span className="label-aerospace">FROM GREENHOUSE</span>
               <span className="font-mono text-xs tabular-nums text-primary">
-                {nutrition.greenhouse_food_pct.toFixed(1)}%
+                {num(nutrition.greenhouse_food_pct).toFixed(1)}%
               </span>
             </div>
             <div className="flex items-baseline justify-between">
               <span className="label-aerospace">FROM STORES</span>
               <span className="font-mono text-xs tabular-nums text-foreground">
-                {nutrition.stored_food_pct.toFixed(1)}%
+                {num(nutrition.stored_food_pct).toFixed(1)}%
               </span>
             </div>
             <div className="flex items-baseline justify-between">
@@ -217,7 +218,7 @@ export function CrewDetailView({
                 className={`font-mono text-xs tabular-nums ${nutrition.days_of_food_remaining > 60 ? "text-primary" : nutrition.days_of_food_remaining > 20 ? "text-amber-alert" : "text-destructive"}`}
               >
                 {typeof nutrition.days_of_food_remaining === "number"
-                  ? nutrition.days_of_food_remaining.toFixed(0)
+                  ? num(nutrition.days_of_food_remaining).toFixed(0)
                   : "—"}
               </span>
             </div>
@@ -237,7 +238,7 @@ export function CrewDetailView({
                     <span
                       className={`font-mono text-xs tabular-nums ${(kg as number) > 5 ? "text-primary" : (kg as number) > 1 ? "text-amber-alert" : "text-destructive"}`}
                     >
-                      {typeof kg === "number" ? kg.toFixed(1) : "0.0"} kg
+                      {num(kg).toFixed(1)} kg
                     </span>
                   </div>
                 ))}
@@ -283,7 +284,7 @@ export function CrewDetailView({
             <div className="flex items-baseline justify-between">
               <span className="label-aerospace">CO₂ IMPACT</span>
               <span className="font-mono text-xs tabular-nums text-foreground">
-                {(health.co2_impact * 100).toFixed(0)}%
+                {(num(health.co2_impact) * 100).toFixed(0)}%
               </span>
             </div>
             {health.illness && (

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 
+import { num } from "@/lib/num"
 import type { SessionDetail, TrainingResult } from "@/types/orchestrator"
 
 interface ResultsPanelProps {
@@ -99,7 +100,7 @@ export default function ResultsPanel({ session, fetchResults, onClose }: Results
             <div className="mb-4 text-center">
               <span className="label-aerospace mb-1 block">Overall Score</span>
               <span className="font-mono text-4xl font-extralight text-green-400">
-                {result.final_score.toFixed(1)}
+                {num(result.final_score).toFixed(1)}
               </span>
             </div>
 
@@ -116,7 +117,7 @@ export default function ResultsPanel({ session, fetchResults, onClose }: Results
                       />
                     </div>
                     <span className="w-10 text-right font-mono text-xs text-foreground">
-                      {score.toFixed(1)}
+                      {num(score).toFixed(1)}
                     </span>
                   </div>
                 </div>

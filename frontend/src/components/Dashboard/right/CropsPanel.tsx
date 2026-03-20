@@ -1,3 +1,5 @@
+import { num } from "@/lib/num"
+
 import type { CropsStatus } from "../../../types/simulation.ts"
 import Panel from "../Panel.tsx"
 import type { Severity } from "../Panel.tsx"
@@ -55,7 +57,7 @@ export default function CropsPanel({ crops }: CropsPanelProps) {
                       </span>
                     )}
                     <span className="text-void-text-primary font-mono text-sm font-semibold">
-                      {crop.growth_pct.toFixed(0)}%
+                      {num(crop.growth_pct).toFixed(0)}%
                     </span>
                   </div>
                 </div>
@@ -69,7 +71,7 @@ export default function CropsPanel({ crops }: CropsPanelProps) {
                     {Math.round(crop.health * 100)}%
                   </span>
                   <span className="text-void-text-muted font-mono text-xs">
-                    ~{crop.estimated_yield_kg.toFixed(1)} kg
+                    ~{num(crop.estimated_yield_kg).toFixed(1)} kg
                   </span>
                 </div>
                 {crop.stress_indicators.length > 0 && (

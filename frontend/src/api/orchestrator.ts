@@ -7,6 +7,11 @@ import type {
 
 const BASE_URL = import.meta.env.VITE_ORCHESTRATOR_URL ?? "/api"
 
+function num(v: unknown, fallback = 0): number {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : fallback
+}
+
 class OrchestratorError extends Error {
   constructor(
     message: string,
@@ -48,7 +53,12 @@ export async function listSessions(): Promise<SessionInfo[]> {
 }
 
 export async function getSession(sessionId: string): Promise<SessionDetail> {
-  return request<SessionDetail>(`/sessions/${sessionId}`)
+  const raw = await request<SessionDetail>(`/sessions/${sessionId}`)
+  return {
+    ...raw,
+    current_sol: raw.current_sol != null ? num(raw.current_sol) : undefined,
+    final_score: raw.final_score != null ? num(raw.final_score) : undefined,
+  }
 }
 
 export async function stopSession(sessionId: string): Promise<void> {
@@ -58,5 +68,16 @@ export async function stopSession(sessionId: string): Promise<void> {
 }
 
 export async function getResults(sessionId: string): Promise<TrainingResult> {
-  return request<TrainingResult>(`/sessions/${sessionId}/results`)
+  const raw = await request<TrainingResult>(`/sessions/${sessionId}/results`)
+  const breakdown: Record<string, number> = {}
+  for (const [k, v] of Object.entries(raw.score_breakdown ?? {})) {
+    breakdown[k] = num(v)
+  }
+  return {
+    ...raw,
+    final_score: num(raw.final_score),
+    total_crises: num(raw.total_crises),
+    seed: num(raw.seed),
+    score_breakdown: breakdown,
+  }
 }
