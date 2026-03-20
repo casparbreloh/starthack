@@ -1,4 +1,4 @@
-"""CLI entry point for the Mars greenhouse agent mission runner.
+"""CLI entry point for the Oasis agent mission runner.
 
 Usage:
     uv run mars-agent [options]
@@ -19,7 +19,7 @@ from .config import SIM_WS_URL, VALID_DIFFICULTIES
 def main() -> None:
     """Main entry point for the mission runner CLI."""
     parser = argparse.ArgumentParser(
-        description="Mars Greenhouse Agent — autonomous greenhouse controller"
+        description="Oasis Agent — autonomous greenhouse controller"
     )
     parser.add_argument(
         "--seed",
@@ -107,7 +107,7 @@ def main() -> None:
             from .agents.orchestrator import run_mission
 
             logger.info(
-                "Starting Mars Greenhouse Mission: seed=%d, difficulty=%s, sols=%d, ws_url=%s",
+                "Starting Oasis Mission: seed=%d, difficulty=%s, sols=%d, ws_url=%s",
                 args.seed,
                 args.difficulty,
                 args.sols,

@@ -33,6 +33,7 @@ from src.constants import (
     CREW_TEMP_CRITICAL_LOW_C,
     CREW_TEMP_HEATSTROKE_RISK_C,
     CREW_TEMP_HYPOTHERMIA_RISK_C,
+    CREW_VITAMIN_SUPPLEMENT_SOLS,
     DEHYDRATION_RATE_PCT_PER_SOL,
     HYDRATION_CRITICAL_PCT,
     HYDRATION_MILD_PCT,
@@ -181,6 +182,7 @@ class CrewHealthState:
     micronutrient_level: MicronutrientLevel = MicronutrientLevel.ADEQUATE
     consecutive_micronutrient_deficit_sols: int = 0
     micronutrient_health_penalty: float = 0.0
+    vitamin_supplement_remaining_sols: int = 0  # set in __init__ from constant
 
     # ── Illness ──────────────────────────────────────────────────────────────
     illness: IllnessState = field(default_factory=IllnessState)
@@ -225,6 +227,7 @@ class CrewModel:
     def __init__(self) -> None:
         self.state = CrewNutritionState()
         self.health = CrewHealthState()
+        self.health.vitamin_supplement_remaining_sols = CREW_VITAMIN_SUPPLEMENT_SOLS
         self.rates = CrewRates()
         self._total_kcal_consumed: float = 0.0
         self._total_protein_consumed: float = 0.0
@@ -622,6 +625,11 @@ class CrewModel:
         # Consume the per-sol flag set by add_harvest(); reset for next sol.
         received = self.state.micronutrients_sufficient
         self.state.micronutrients_sufficient = False
+
+        # Stored vitamin supplements cover the crew until lettuce matures.
+        if not received and self.health.vitamin_supplement_remaining_sols > 0:
+            self.health.vitamin_supplement_remaining_sols -= 1
+            received = True
 
         if received:
             # Recovery: −2 per sol when micronutrients supplied

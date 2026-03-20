@@ -9,7 +9,7 @@ from __future__ import annotations
 from strands import Agent, tool
 from strands.models.bedrock import BedrockModel
 
-from ..config import AGENT_TEMPERATURE, MODEL_ID
+from ..config import AGENT_TEMPERATURE, SPECIALIST_MODEL_ID
 from ..prompts import TRIAGE_PROMPT
 from .climate_emergency import climate_emergency_agent
 from .energy_crisis import energy_crisis_agent
@@ -53,7 +53,7 @@ def triage_agent(
     Returns:
         String summarizing all crisis responses and actions taken.
     """
-    model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
+    model = BedrockModel(model_id=SPECIALIST_MODEL_ID, temperature=AGENT_TEMPERATURE)
     agent = Agent(
         model=model,
         system_prompt=TRIAGE_PROMPT,

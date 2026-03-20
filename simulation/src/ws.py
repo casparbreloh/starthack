@@ -21,7 +21,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field, ValidationError
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from src.agent_bridge import invoke_agent
+from src.agent_bridge import get_own_ws_url, invoke_agent
 from src.constants import MISSION_DURATION_SOLS
 from src.engine import AgentDecision
 from src.session import SessionConfig
@@ -30,8 +30,16 @@ from src.state import session_manager
 
 logger = logging.getLogger(__name__)
 
-AGENT_URL: str | None = os.environ.get("AGENT_URL") or None
-SIM_WS_URL: str = os.environ.get("SIM_WS_URL", "ws://localhost:8080/ws")
+
+class _JoinSessionNotFound(Exception):
+    """Raised when join_session targets a session that no longer exists."""
+
+
+# Agent invocation is handled inside invoke_agent() which reads
+# AGENT_RUNTIME_ARN / AGENT_URL from environment directly.
+_AGENT_CONFIGURED = bool(
+    os.environ.get("AGENT_RUNTIME_ARN") or os.environ.get("AGENT_URL")
+)
 
 router = APIRouter()
 
@@ -58,7 +66,8 @@ class _CreateSessionPayload(BaseModel):
 
 
 @router.websocket("/ws")
-async def websocket_endpoint(ws: WebSocket) -> None:
+@router.websocket("/ws/{run_id}")
+async def websocket_endpoint(ws: WebSocket, run_id: str | None = None) -> None:
     """Main WebSocket endpoint with message dispatch."""
     await ws.accept()
 
@@ -129,6 +138,8 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     )
             except WebSocketDisconnect:
                 raise
+            except _JoinSessionNotFound:
+                pass  # already handled with error response + info log
             except Exception:
                 logger.exception("Error handling message type '%s'", msg_type)
                 try:
@@ -222,10 +233,11 @@ async def _handle_create_session(
 
     logger.info("Session %s created (paused=%s) via WS", session.id, session.paused)
 
-    # Auto-invoke agent if configured
-    if AGENT_URL:
+    # Auto-invoke agent if configured (AGENT_RUNTIME_ARN or AGENT_URL)
+    if _AGENT_CONFIGURED:
+        ws_url = await get_own_ws_url()
         asyncio.create_task(
-            invoke_agent(AGENT_URL, session.id, SIM_WS_URL),
+            invoke_agent(session.id, ws_url),
             name=f"invoke-agent-{session.id[:8]}",
         )
 
@@ -237,7 +249,16 @@ async def _handle_join_session(
 ) -> str:
     """Re-register a WebSocket with an existing session (e.g. after reconnect)."""
     target_id = payload.get("session_id", "")
-    session = session_manager.get(target_id)
+    session = session_manager.try_get(target_id)
+    if session is None:
+        logger.info("join_session: session %s not found (stale?)", target_id)
+        await ws.send_json(
+            {
+                "type": "error",
+                "payload": {"message": f"Session '{target_id}' not found"},
+            }
+        )
+        raise _JoinSessionNotFound(target_id)
     session.connections.register(ws, role or "frontend")
 
     await ws.send_json(
@@ -302,6 +323,8 @@ async def _handle_agent_actions(
             sol=session.engine.current_sol,
             decisions=session.pending_actions,
             risk_assessment=log_decision.get("risk_assessment", "nominal"),
+            reasoning=log_decision.get("reasoning", ""),
+            summary=log_decision.get("summary", ""),
         )
         session.engine.log_agent_decision(decision)
 

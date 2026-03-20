@@ -13,10 +13,12 @@ import {
   adaptCrises,
   adaptScore,
   adaptEvents,
+  adaptAgentDecision,
 } from "@/lib/api"
 import type * as T from "@/types/game"
 
-import { useWebSocket, type WebSocketState } from "./useWebSocket"
+import { useGameSession, isOrchestratorMode, type GameSessionState } from "./useGameSession"
+import { useWebSocket, type WebSocketState, type TickPayload } from "./useWebSocket"
 
 // ── Adapted game state ──────────────────────────────────────────────────────
 
@@ -34,7 +36,11 @@ interface GameState {
   crises: T.ActiveCrisis[] | undefined
   score: T.ScoreCurrent | undefined
   events: T.EventLogEntry[] | undefined
+  agentDecision: T.AgentDecision | undefined
+  stateHistory: TickPayload[]
   ws: WebSocketState
+  /** Orchestrator session state (only present in orchestrator mode) */
+  orchestrator: GameSessionState | null
 }
 
 const GameContext = createContext<GameState | null>(null)
@@ -47,7 +53,7 @@ function useGame(): GameState {
 
 // ── Provider ────────────────────────────────────────────────────────────────
 
-function adaptSnapshot(ws: WebSocketState): GameState {
+function adaptSnapshot(ws: WebSocketState, orch: GameSessionState | null): GameState {
   const s = ws.lastState
   if (!s) {
     return {
@@ -64,7 +70,10 @@ function adaptSnapshot(ws: WebSocketState): GameState {
       crises: undefined,
       score: undefined,
       events: undefined,
+      agentDecision: undefined,
+      stateHistory: ws.stateHistory,
       ws,
+      orchestrator: orch,
     }
   }
 
@@ -82,13 +91,24 @@ function adaptSnapshot(ws: WebSocketState): GameState {
     crises: adaptCrises(s.active_crises),
     score: adaptScore(s.score_current),
     events: ws.lastEvents ? adaptEvents(ws.lastEvents) : undefined,
+    agentDecision: adaptAgentDecision(s.last_agent_decision),
+    stateHistory: ws.stateHistory,
     ws,
+    orchestrator: orch,
   }
 }
 
 export function GameDataProvider({ children }: { children: ReactNode }) {
-  const ws = useWebSocket()
-  const state = useMemo(() => adaptSnapshot(ws), [ws])
+  const useOrchestrator = isOrchestratorMode()
+  const gameSession = useGameSession()
+
+  // In orchestrator mode: pass the ws_url from the orchestrator (null until ready).
+  // In local mode: pass undefined so useWebSocket falls back to buildWsUrl().
+  const wsUrlParam = useOrchestrator ? gameSession.wsUrl : undefined
+  const ws = useWebSocket(wsUrlParam)
+
+  const orch = useOrchestrator ? gameSession : null
+  const state = useMemo(() => adaptSnapshot(ws, orch), [ws, orch])
 
   return createElement(GameContext.Provider, { value: state }, children)
 }
@@ -108,4 +128,7 @@ export const useCrewHealth = () => ({ data: useGame().crewHealth })
 export const useActiveCrises = () => ({ data: useGame().crises })
 export const useScore = () => ({ data: useGame().score })
 export const useEventLog = () => ({ data: useGame().events })
+export const useAgentDecision = () => ({ data: useGame().agentDecision })
+export const useStateHistory = () => useGame().stateHistory
 export const useWebSocketControls = () => useGame().ws
+export const useOrchestratorState = () => useGame().orchestrator

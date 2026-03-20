@@ -1,6 +1,7 @@
 """Climate Emergency specialist agent for the Mars greenhouse.
 
 Handles temperature_failure and co2_imbalance crisis types. [C-4]
+Advisory-only: returns text recommendations, does NOT execute actions.
 """
 
 from __future__ import annotations
@@ -8,9 +9,8 @@ from __future__ import annotations
 from strands import Agent, tool
 from strands.models.bedrock import BedrockModel
 
-from ..config import AGENT_TEMPERATURE, MODEL_ID
+from ..config import AGENT_TEMPERATURE, SPECIALIST_MODEL_ID
 from ..prompts import CLIMATE_EMERGENCY_PROMPT
-from ..tools.actions import create_action_tools
 
 
 @tool
@@ -22,13 +22,10 @@ def climate_emergency_agent(
     crisis_type: str,
     current_sol: int,
 ) -> str:
-    """Handle a climate emergency (temperature_failure or co2_imbalance).
+    """Get expert advice on handling a climate emergency.
 
-    Pass the exact crisis type string from get_active_crises() as crisis_type.
-    Handles 'temperature_failure' (too hot >28C or too cold <15C) and
-    'co2_imbalance' (CO2 < 500 ppm = STRESS_CO2_LOW_PPM). [C-4, MEDIUM-4]
-    Temperature changes must not exceed 2C/hour to avoid thermal shock.
-    Does NOT call advance_simulation.
+    Returns text recommendations for climate management. The orchestrator
+    should read the advice and then execute actions itself.
 
     Args:
         environment: JSON string from get_greenhouse_environment()
@@ -40,18 +37,15 @@ def climate_emergency_agent(
         current_sol: Current simulation sol number for context
 
     Returns:
-        String describing the climate emergency response actions taken.
+        String describing recommended climate emergency response actions.
     """
-    actions = create_action_tools()
-    model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
+    model = BedrockModel(model_id=SPECIALIST_MODEL_ID, temperature=AGENT_TEMPERATURE)
     agent = Agent(
         model=model,
-        system_prompt=CLIMATE_EMERGENCY_PROMPT,
-        tools=[
-            actions["set_zone_environment"],
-            actions["allocate_energy"],
-            actions["adjust_nutrients"],
-        ],
+        system_prompt=CLIMATE_EMERGENCY_PROMPT
+        + "\n\nIMPORTANT: You are an ADVISOR. Describe exactly what actions "
+        "should be taken with specific parameter values, but do NOT call any "
+        "action tools. The orchestrator will execute your recommendations.",
     )
 
     prompt = (
@@ -61,10 +55,10 @@ def climate_emergency_agent(
         f"Energy Status:\n{energy_status}\n\n"
         f"Crops Status:\n{crops_status}\n\n"
         f"Nutrients Status:\n{nutrients_status}\n\n"
-        "Analyze the climate situation and take appropriate corrective actions. "
-        "For temperature_failure: adjust setpoints (max 2C/hour change), "
-        "rebalance energy for heating/cooling. For co2_imbalance: adjust CO2 "
-        "targets (stress threshold is 500 ppm), check nutrient pump allocation."
+        "Analyze the climate situation and recommend corrective actions. "
+        "For temperature_failure: recommend setpoint adjustments (max 2C/hour), "
+        "energy rebalancing. For co2_imbalance: recommend CO2 target adjustments, "
+        "nutrient pump allocation. Be specific with exact parameter values."
     )
 
     result = agent(prompt)

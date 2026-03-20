@@ -24,6 +24,7 @@ from src.constants import (
     BATTERY_CAPACITY_WH,
     CREW_DAILY_KCAL,
     DUST_STORM_OPACITY_TAU,
+    ICE_MINING_ENERGY_COST_WH,
     MARS_DUST_EXTINCTION_COEFF,
     MISSION_DURATION_SOLS,
 )
@@ -46,6 +47,8 @@ class AgentDecision:
     decisions: list[dict[str, Any]]
     weather_forecast_used: dict[str, Any] | None = None
     risk_assessment: str = "nominal"
+    reasoning: str = ""
+    summary: str = ""
 
 
 class SimulationEngine:
@@ -171,9 +174,32 @@ class SimulationEngine:
         # ── Phase 2: integrate ───────────────────────────────────────
         self.energy.integrate()
         self.climate.integrate()
+
+        # ── Automatic ice mining (runs every sol, costs energy) ───
+        if self.energy.state.battery_level_wh >= ICE_MINING_ENERGY_COST_WH:
+            result = self.water.mine_ice(sol, self.energy.state.battery_level_wh)
+            if result["result"] == "success":
+                self.energy.state.battery_level_wh = round(
+                    self.energy.state.battery_level_wh - ICE_MINING_ENERGY_COST_WH, 2
+                )
+
         self.water.integrate()
-        self.nutrients.integrate()
+        self.nutrients.integrate(
+            pump_delivery_ratio=self.energy.rates.nutrient_pumps_delivery_ratio,
+        )
         dead_crops = self.crops.integrate()
+
+        # Growing lettuce provides daily micronutrients (leaf picking) once
+        # past 20% maturity. This is more realistic than requiring a full harvest.
+        for batch in self.crops.batches.values():
+            if (
+                batch.crop_type == "lettuce"
+                and batch.growth_pct >= 20.0
+                and batch.health > 0.0
+            ):
+                self.crew.state.micronutrients_sufficient = True
+                break
+
         self.crew.integrate(current_sol=sol)
 
         # ── Autonomous events (post-integration effects this sol) ─────

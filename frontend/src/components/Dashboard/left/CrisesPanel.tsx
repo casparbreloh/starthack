@@ -1,3 +1,5 @@
+import { num } from "@/lib/num"
+
 import type { ActiveCrises } from "../../../types/simulation.ts"
 import Panel from "../Panel.tsx"
 import type { Severity } from "../Panel.tsx"
@@ -54,7 +56,7 @@ export default function CrisesPanel({ crises }: CrisesPanelProps) {
                 </div>
                 {crisis.current_value !== undefined && crisis.threshold !== undefined && (
                   <p className="text-void-text-tertiary mt-0.5 font-mono text-xs">
-                    {crisis.current_value.toFixed(1)} / {crisis.threshold.toFixed(1)}
+                    {num(crisis.current_value).toFixed(1)} / {num(crisis.threshold).toFixed(1)}
                   </p>
                 )}
               </div>

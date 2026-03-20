@@ -6,15 +6,21 @@ import pickle
 
 import numpy as np
 import pandas as pd
-import torch
 
-from . import MODEL_DIR, get_device
-from .data import load_prepared, TARGETS
-from .model import LSTMPredictor
+from . import MODEL_DIR
+from .data import TARGETS, engineer_features
 
 
 def load_model_and_scalers(horizon=1, model_dir=MODEL_DIR):
-    """Load trained LSTM model, metadata, and scalers."""
+    """Load trained LSTM model, metadata, and scalers.
+
+    Requires PyTorch — used for training and evaluation only.
+    """
+    import torch
+
+    from . import get_device
+    from .model import LSTMPredictor
+
     with open(os.path.join(model_dir, f"lstm_h{horizon}_meta.json")) as f:
         meta = json.load(f)
 
@@ -41,6 +47,44 @@ def load_model_and_scalers(horizon=1, model_dir=MODEL_DIR):
     return model, meta, feature_scaler, target_scaler, device
 
 
+def load_model_onnx(horizon=1, model_dir=MODEL_DIR):
+    """Load an ONNX model session, metadata, and scalers for inference.
+
+    Returns the same interface as load_model_and_scalers() but with an
+    ONNX InferenceSession instead of a PyTorch model + device.
+    """
+    import onnxruntime as ort
+
+    with open(os.path.join(model_dir, f"lstm_h{horizon}_meta.json")) as f:
+        meta = json.load(f)
+
+    onnx_path = os.path.join(model_dir, f"lstm_h{horizon}.onnx")
+    session = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
+
+    with open(os.path.join(model_dir, "feature_scaler.pkl"), "rb") as f:
+        feature_scaler = pickle.load(f)
+    with open(os.path.join(model_dir, "target_scaler.pkl"), "rb") as f:
+        target_scaler = pickle.load(f)
+
+    return session, meta, feature_scaler, target_scaler
+
+
+def _onnx_infer(session, context):
+    """Run ONNX inference on a context array.
+
+    Args:
+        session: ONNX InferenceSession
+        context: numpy array of shape (seq_len, input_size)
+
+    Returns:
+        numpy array of shape (output_size,) with scaled predictions
+    """
+    input_array = context[np.newaxis, :, :].astype(np.float32)
+    input_name = session.get_inputs()[0].name
+    outputs = session.run(None, {input_name: input_array})
+    return outputs[0][0]
+
+
 def predict_next(n_sols=7, model_dir=MODEL_DIR):
     """Predict the next n_sols of Mars weather using the h=1 model autoregressively.
 
@@ -54,6 +98,10 @@ def predict_next(n_sols=7, model_dir=MODEL_DIR):
     Returns:
         DataFrame with columns: sol, min_temp, max_temp, pressure, min_gts_temp, max_gts_temp
     """
+    import torch
+
+    from .data import load_prepared
+
     model, meta, feature_scaler, target_scaler, device = load_model_and_scalers(1, model_dir)
     feature_cols = meta["feature_cols"]
     seq_len = meta["seq_len"]
@@ -144,6 +192,10 @@ def predict_at_horizon(horizon=7, model_dir=MODEL_DIR):
     Returns:
         dict with sol and predicted targets
     """
+    import torch
+
+    from .data import load_prepared
+
     model, meta, feature_scaler, target_scaler, device = load_model_and_scalers(horizon, model_dir)
     feature_cols = meta["feature_cols"]
     seq_len = meta["seq_len"]
@@ -187,6 +239,7 @@ if __name__ == "__main__":
 # =============================================================================
 # Context-based prediction functions for agent use [R5-C2, R7-C2, R9-H1, R9-H2]
 # These accept simulation weather history instead of loading the CSV.
+# Uses ONNX Runtime for inference (no PyTorch dependency at serve time).
 # =============================================================================
 
 
@@ -230,6 +283,8 @@ def predict_from_context(weather_history, n_sols=7, model_dir=MODEL_DIR):
     instead of loading the CSV. This means LSTM predictions reflect the
     simulation's actual weather trajectory, not static Curiosity data. [R5-C2]
 
+    Uses ONNX Runtime for inference — no PyTorch dependency needed.
+
     Field name mapping (min_temp_c -> min_temp etc.) should be done by the
     caller (WeatherForecaster._sim_history_to_lstm_df) before calling this.
 
@@ -246,8 +301,8 @@ def predict_from_context(weather_history, n_sols=7, model_dir=MODEL_DIR):
         Returns empty list if history is too short (<seq_len) or fails. [R8-C1]
     """
     try:
-        # [R9-H2] Step 1: Load model and scalers FIRST (provides seq_len)
-        model, meta, feature_scaler, target_scaler, device = load_model_and_scalers(1, model_dir)
+        # [R9-H2] Step 1: Load ONNX session and scalers FIRST (provides seq_len)
+        session, meta, feature_scaler, target_scaler = load_model_onnx(1, model_dir)
         feature_cols = meta["feature_cols"]
         seq_len = meta["seq_len"]
 
@@ -279,9 +334,7 @@ def predict_from_context(weather_history, n_sols=7, model_dir=MODEL_DIR):
 
         predictions = []
         for step in range(n_sols):
-            x = torch.tensor(context, device=device).unsqueeze(0)
-            with torch.no_grad():
-                pred_scaled = model(x).detach().cpu().numpy()[0]
+            pred_scaled = _onnx_infer(session, context)
 
             pred = target_scaler.inverse_transform(pred_scaled.reshape(1, -1))[0]
 
@@ -337,6 +390,7 @@ def predict_at_horizon_from_context(weather_history, horizon=7, model_dir=MODEL_
     """Single-shot prediction at a specific horizon from simulation weather history.
 
     Same as predict_at_horizon() but accepts external DataFrame instead of CSV.
+    Uses ONNX Runtime for inference — no PyTorch dependency needed.
 
     Args:
         weather_history: pd.DataFrame with simulation weather history,
@@ -348,7 +402,7 @@ def predict_at_horizon_from_context(weather_history, horizon=7, model_dir=MODEL_
         dict with sol and predicted target values. Empty dict on failure.
     """
     try:
-        model, meta, feature_scaler, target_scaler, device = load_model_and_scalers(
+        session, meta, feature_scaler, target_scaler = load_model_onnx(
             horizon, model_dir
         )
         feature_cols = meta["feature_cols"]
@@ -366,10 +420,7 @@ def predict_at_horizon_from_context(weather_history, horizon=7, model_dir=MODEL_
         df_scaled[feature_cols] = feature_scaler.transform(df[feature_cols])
 
         context = df_scaled[feature_cols].values[-seq_len:].astype(np.float32)
-        x = torch.tensor(context, device=device).unsqueeze(0)
-
-        with torch.no_grad():
-            pred_scaled = model(x).detach().cpu().numpy()[0]
+        pred_scaled = _onnx_infer(session, context)
 
         pred = target_scaler.inverse_transform(pred_scaled.reshape(1, -1))[0]
         last_sol = int(df["sol"].iloc[-1])

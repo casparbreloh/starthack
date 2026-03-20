@@ -2,7 +2,7 @@
 
 ## Purpose
 
-React/TypeScript dashboard UI for the Mars Greenhouse simulation.
+React/TypeScript dashboard UI for the Oasis simulation.
 
 ## Tech
 
@@ -15,8 +15,8 @@ React/TypeScript dashboard UI for the Mars Greenhouse simulation.
 
 - `src/main.tsx` — App entry point, renders `<App />`
 - `src/App.tsx` — Root component with view switching and simulation controls
-- `src/api/client.ts` — Typed API client using native fetch
-- `src/hooks/useSimulation.ts` — Central state management hook (polling + auto-advance)
+- `src/hooks/useWebSocket.ts` — WebSocket client hook: connects to simulation /ws, receives tick/consultation/event messages
+- `src/hooks/useSimulation.ts` — Central state management hook (maps WebSocket snapshots to SimulationData)
 - `src/types/simulation.ts` — Re-exports generated types under stable names
 - `src/contracts/simulation.d.ts` — Auto-generated TypeScript types from OpenAPI (do not edit)
 - `src/index.css` — Tailwind imports

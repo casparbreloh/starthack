@@ -1,4 +1,4 @@
-"""Mars Greenhouse Agent — BedrockAgentCoreApp entry point.
+"""Oasis Agent — BedrockAgentCoreApp entry point.
 
 Supports two modes:
   1. run_mission: Run the full 450-sol greenhouse management loop (WebSocket)

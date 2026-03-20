@@ -12,7 +12,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from src.enums import CropType, MissionPhase, Severity
-from src.interrupts import detect_interrupts
+from src.interrupts import URGENT_INTERRUPT_TYPES, detect_interrupts
 from src.snapshots import build_consultation_snapshot, build_state_snapshot
 
 if TYPE_CHECKING:
@@ -78,15 +78,26 @@ async def run_session_loop(session: Session) -> None:
             snapshot["interrupts"] = interrupts
             await session.connections.broadcast_tick(snapshot)
 
-            # Agent consultation check: scheduled (every N sols) OR interrupt
+            # Agent consultation check: scheduled OR urgent interrupt.
+            # Persistent conditions (battery_critical, water_critical,
+            # harvest_ready) ride along with the next scheduled consultation
+            # instead of forcing early consultation every sol.
+            has_urgent = any(i["type"] in URGENT_INTERRUPT_TYPES for i in interrupts)
             should_consult = session.connections.agent is not None and (
                 engine.current_sol >= session.next_consultation_sol
-                or interrupts
+                or has_urgent
                 or crisis_pending
             )
 
             if should_consult:
-                reason = "interrupt" if interrupts or crisis_pending else "scheduled"
+                if has_urgent:
+                    reason = "urgent_interrupt"
+                elif crisis_pending:
+                    reason = "crisis_injected"
+                elif interrupts:
+                    reason = "scheduled+persistent"
+                else:
+                    reason = "scheduled"
                 await _consult_agent(session, snapshot, interrupts, reason)
 
             # Check if mission ended
@@ -101,6 +112,18 @@ async def run_session_loop(session: Session) -> None:
                         },
                     }
                 )
+
+                # Invoke mission-end callback (used by Fargate mode for
+                # results upload and process shutdown)
+                if session.on_mission_end is not None:
+                    try:
+                        await session.on_mission_end(session)
+                    except Exception:
+                        logger.exception(
+                            "on_mission_end callback failed for session %s",
+                            session.id,
+                        )
+
                 break
 
     except asyncio.CancelledError:

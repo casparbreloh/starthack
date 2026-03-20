@@ -3,12 +3,28 @@ services:
     build: ./simulation
     ports:
       - "8080:8080"
+    environment:
+      - ML_SERVICE_URL=http://ml:8090
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
       interval: 2s
       timeout: 3s
       retries: 10
       start_period: 5s
+    depends_on:
+      ml:
+        condition: service_healthy
+
+  ml:
+    build: ./ml
+    ports:
+      - "8090:8090"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8090/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   agent:
     build: ./agent

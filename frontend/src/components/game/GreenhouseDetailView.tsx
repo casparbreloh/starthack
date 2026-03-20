@@ -13,6 +13,7 @@ import unhealthyPotato from "@/assets/crops/unhealthy_potato.png"
 import unhealthyRadish from "@/assets/crops/unhealthy_radish.png"
 import greenhouseDome from "@/assets/greenhouse-dome.png"
 import { useWater, useEnergy } from "@/hooks/useGameData"
+import { num } from "@/lib/num"
 import type { CropBatch, ZoneEnvironment, ZoneNutrients } from "@/types/game"
 
 const CROP_IMAGES: Record<string, { healthy: string; unhealthy: string }> = {
@@ -52,7 +53,7 @@ export function GreenhouseDetailView({
   const apiZoneId = zoneId.replace("zone_", "").toUpperCase()
   const zoneCrops = crops.filter((c) => c.zone_id === apiZoneId)
   const label = apiZoneId
-  const totalYieldKg = zoneCrops.reduce((s, c) => s + c.yield_estimate_kg, 0).toFixed(1)
+  const totalYieldKg = num(zoneCrops.reduce((s, c) => s + num(c.yield_estimate_kg), 0)).toFixed(1)
 
   return (
     <motion.div
@@ -101,7 +102,7 @@ export function GreenhouseDetailView({
             {zoneCrops[2] && <CropBed crop={zoneCrops[2]} index={2} />}
           </div>
           {zoneCrops[3] && (
-            <div className={zoneCrops[1] || zoneCrops[2] ? "-mt-40" : ""}>
+            <div className={zoneCrops[1] || zoneCrops[2] ? "-mt-36" : ""}>
               <CropBed crop={zoneCrops[3]} index={3} />
             </div>
           )}
@@ -120,10 +121,10 @@ export function GreenhouseDetailView({
           <span className="label-aerospace mb-2 block text-primary">ENVIRONMENT</span>
           {zone && (
             <div className="flex flex-col gap-1.5">
-              <DataRow label="TEMP" value={`${zone.temp_c.toFixed(1)}°C`} />
-              <DataRow label="HUMIDITY" value={`${zone.humidity_pct.toFixed(1)}%`} />
-              <DataRow label="CO₂" value={`${zone.co2_ppm.toFixed(0)} ppm`} />
-              <DataRow label="LIGHT" value={`${zone.par_light_umol.toFixed(0)} µmol`} />
+              <DataRow label="TEMP" value={`${num(zone.temp_c).toFixed(1)}°C`} />
+              <DataRow label="HUMIDITY" value={`${num(zone.humidity_pct).toFixed(1)}%`} />
+              <DataRow label="CO₂" value={`${num(zone.co2_ppm).toFixed(0)} ppm`} />
+              <DataRow label="LIGHT" value={`${num(zone.par_light_umol).toFixed(0)} µmol`} />
               <DataRow label="PHOTOPERIOD" value={`${zone.photoperiod_hours}h`} />
             </div>
           )}
@@ -138,7 +139,7 @@ export function GreenhouseDetailView({
             <div className="flex flex-col gap-1.5">
               <DataRow
                 label="RESERVOIR"
-                value={`${water.reservoir_level_pct.toFixed(1)}%`}
+                value={`${num(water.reservoir_level_pct).toFixed(1)}%`}
                 color={
                   water.reservoir_level_pct > 40
                     ? "text-primary"
@@ -149,22 +150,22 @@ export function GreenhouseDetailView({
               />
               <DataRow
                 label="RECYCLING EFF."
-                value={`${water.recycling_efficiency_pct.toFixed(1)}%`}
+                value={`${num(water.recycling_efficiency_pct).toFixed(1)}%`}
               />
               <DataRow
                 label="FILTER HEALTH"
-                value={`${water.filter_health_pct.toFixed(1)}%`}
+                value={`${num(water.filter_health_pct).toFixed(1)}%`}
                 color={water.filter_health_pct > 50 ? "text-primary" : "text-amber-alert"}
               />
-              <DataRow label="DAILY USE" value={`${water.daily_consumption_l.toFixed(1)} L`} />
+              <DataRow label="DAILY USE" value={`${num(water.daily_consumption_l).toFixed(1)} L`} />
               <DataRow
                 label="RECYCLED"
-                value={`${water.daily_recycled_l.toFixed(1)} L`}
+                value={`${num(water.daily_recycled_l).toFixed(1)} L`}
                 color="text-primary"
               />
               <DataRow
                 label="DAYS LEFT"
-                value={`${water.days_until_critical.toFixed(0)}`}
+                value={`${num(water.days_until_critical).toFixed(0)}`}
                 color={
                   water.days_until_critical > 30
                     ? "text-primary"
@@ -188,12 +189,12 @@ export function GreenhouseDetailView({
             <div className="flex flex-col gap-1.5">
               <DataRow
                 label="SOLAR GEN."
-                value={`${energy.solar_generation_kw.toFixed(2)} kW`}
+                value={`${num(energy.solar_generation_kw).toFixed(2)} kW`}
                 color="text-primary"
               />
               <DataRow
                 label="BATTERY"
-                value={`${energy.battery_pct.toFixed(1)}%`}
+                value={`${num(energy.battery_pct).toFixed(1)}%`}
                 color={
                   energy.battery_pct > 40
                     ? "text-primary"
@@ -202,12 +203,21 @@ export function GreenhouseDetailView({
                       : "text-destructive"
                 }
               />
-              <DataRow label="HEATING" value={`${energy.consumption.heating_kw.toFixed(2)} kW`} />
-              <DataRow label="LIGHTING" value={`${energy.consumption.lighting_kw.toFixed(2)} kW`} />
-              <DataRow label="WATER SYS." value={`${energy.consumption.water_kw.toFixed(2)} kW`} />
+              <DataRow
+                label="HEATING"
+                value={`${num(energy.consumption.heating_kw).toFixed(2)} kW`}
+              />
+              <DataRow
+                label="LIGHTING"
+                value={`${num(energy.consumption.lighting_kw).toFixed(2)} kW`}
+              />
+              <DataRow
+                label="WATER SYS."
+                value={`${num(energy.consumption.water_kw).toFixed(2)} kW`}
+              />
               <DataRow
                 label="SURPLUS"
-                value={`${energy.surplus_deficit_kw.toFixed(2)} kW`}
+                value={`${num(energy.surplus_deficit_kw).toFixed(2)} kW`}
                 color={energy.surplus_deficit_kw >= 0 ? "text-primary" : "text-destructive"}
               />
             </div>
@@ -253,7 +263,7 @@ export function GreenhouseDetailView({
               <div className="mb-0.5 flex items-baseline justify-between">
                 <span className="label-aerospace">GROWTH</span>
                 <span className="font-mono text-[10px] tabular-nums text-foreground">
-                  {c.growth_pct.toFixed(0)}%
+                  {num(c.growth_pct).toFixed(0)}%
                 </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-sm bg-secondary">
@@ -271,7 +281,7 @@ export function GreenhouseDetailView({
                 <span
                   className={`font-mono text-[10px] tabular-nums ${c.health_pct >= 70 ? "text-primary" : c.health_pct >= 40 ? "text-amber-alert" : "text-destructive"}`}
                 >
-                  {c.health_pct.toFixed(0)}%
+                  {num(c.health_pct).toFixed(0)}%
                 </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-sm bg-secondary">
@@ -288,28 +298,28 @@ export function GreenhouseDetailView({
                 <span
                   className={`font-mono text-[9px] tabular-nums ${c.stress_water > 0.5 ? "text-destructive" : "text-amber-alert"}`}
                 >
-                  H₂O:{(c.stress_water * 100).toFixed(0)}%
+                  H₂O:{(num(c.stress_water) * 100).toFixed(0)}%
                 </span>
               )}
               {c.stress_nutrient > 0 && (
                 <span
                   className={`font-mono text-[9px] tabular-nums ${c.stress_nutrient > 0.5 ? "text-destructive" : "text-amber-alert"}`}
                 >
-                  NUT:{(c.stress_nutrient * 100).toFixed(0)}%
+                  NUT:{(num(c.stress_nutrient) * 100).toFixed(0)}%
                 </span>
               )}
               {c.stress_light > 0 && (
                 <span
                   className={`font-mono text-[9px] tabular-nums ${c.stress_light > 0.5 ? "text-destructive" : "text-amber-alert"}`}
                 >
-                  LIT:{(c.stress_light * 100).toFixed(0)}%
+                  LIT:{(num(c.stress_light) * 100).toFixed(0)}%
                 </span>
               )}
               {c.stress_temp > 0 && (
                 <span
                   className={`font-mono text-[9px] tabular-nums ${c.stress_temp > 0.5 ? "text-destructive" : "text-amber-alert"}`}
                 >
-                  TMP:{(c.stress_temp * 100).toFixed(0)}%
+                  TMP:{(num(c.stress_temp) * 100).toFixed(0)}%
                 </span>
               )}
               {c.stress_water === 0 &&
@@ -331,7 +341,7 @@ export function GreenhouseDetailView({
               <div className="flex items-baseline gap-1">
                 <span className="label-aerospace">YIELD</span>
                 <span className="font-mono text-[10px] tabular-nums text-primary">
-                  {c.yield_estimate_kg.toFixed(1)} KG
+                  {num(c.yield_estimate_kg).toFixed(1)} KG
                 </span>
               </div>
             </div>
@@ -344,21 +354,21 @@ export function GreenhouseDetailView({
             <div className="mt-1 h-px bg-border" />
             <span className="label-aerospace text-primary">NUTRIENTS</span>
             <div className="flex flex-col gap-1.5">
-              <DataRow label="PH" value={`${nutrients.ph.toFixed(1)}`} />
-              <DataRow label="EC" value={`${nutrients.ec_ms_cm.toFixed(2)} mS/cm`} />
-              <DataRow label="N" value={`${nutrients.nitrogen_ppm.toFixed(0)} ppm`} />
-              <DataRow label="P" value={`${nutrients.phosphorus_ppm.toFixed(0)} ppm`} />
-              <DataRow label="K" value={`${nutrients.potassium_ppm.toFixed(0)} ppm`} />
-              <DataRow label="Ca" value={`${nutrients.calcium_ppm.toFixed(0)} ppm`} />
-              <DataRow label="Mg" value={`${nutrients.magnesium_ppm.toFixed(0)} ppm`} />
+              <DataRow label="PH" value={`${num(nutrients.ph).toFixed(1)}`} />
+              <DataRow label="EC" value={`${num(nutrients.ec_ms_cm).toFixed(2)} mS/cm`} />
+              <DataRow label="N" value={`${num(nutrients.nitrogen_ppm).toFixed(0)} ppm`} />
+              <DataRow label="P" value={`${num(nutrients.phosphorus_ppm).toFixed(0)} ppm`} />
+              <DataRow label="K" value={`${num(nutrients.potassium_ppm).toFixed(0)} ppm`} />
+              <DataRow label="Ca" value={`${num(nutrients.calcium_ppm).toFixed(0)} ppm`} />
+              <DataRow label="Mg" value={`${num(nutrients.magnesium_ppm).toFixed(0)} ppm`} />
               <DataRow
                 label="STOCK"
-                value={`${nutrients.stock_remaining_pct.toFixed(1)}%`}
+                value={`${num(nutrients.stock_remaining_pct).toFixed(1)}%`}
                 color={nutrients.stock_remaining_pct > 50 ? "text-primary" : "text-amber-alert"}
               />
               <DataRow
                 label="STOCK DAYS"
-                value={`${nutrients.days_of_stock.toFixed(0)}`}
+                value={`${num(nutrients.days_of_stock).toFixed(0)}`}
                 color={nutrients.days_of_stock > 30 ? "text-primary" : "text-amber-alert"}
               />
             </div>

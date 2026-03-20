@@ -2,6 +2,7 @@
 
 Triggered by dust storm detection via weather telemetry (dust_opacity > 1.0),
 NOT by crisis type. [CRITICAL-2]
+Advisory-only: returns text recommendations, does NOT execute actions.
 """
 
 from __future__ import annotations
@@ -9,9 +10,8 @@ from __future__ import annotations
 from strands import Agent, tool
 from strands.models.bedrock import BedrockModel
 
-from ..config import AGENT_TEMPERATURE, MODEL_ID
+from ..config import AGENT_TEMPERATURE, SPECIALIST_MODEL_ID
 from ..prompts import STORM_PREPARATION_PROMPT
-from ..tools.actions import create_action_tools
 
 
 @tool
@@ -21,15 +21,10 @@ def storm_preparation_agent(
     crops_status: str,
     current_sol: int,
 ) -> str:
-    """Prepare the greenhouse for an incoming dust storm.
+    """Get expert advice on preparing for a dust storm.
 
-    WEATHER-BASED DETECTION: This agent is invoked because the orchestrator
-    detected dust_opacity > 1.0 in weather telemetry. Dust storms are NOT
-    a crisis type — they do NOT appear in get_active_crises(). [CRITICAL-2]
-
-    Focuses on: battery pre-charging, reducing non-essential consumption,
-    photoperiod reduction, and calculating storm survival duration.
-    Does NOT call advance_simulation.
+    Returns text recommendations for storm preparation. The orchestrator
+    should read the advice and then execute actions itself.
 
     Args:
         energy_status: JSON string from get_energy_status()
@@ -38,14 +33,15 @@ def storm_preparation_agent(
         current_sol: Current simulation sol number
 
     Returns:
-        String describing the storm preparation actions taken.
+        String describing recommended storm preparation actions.
     """
-    actions = create_action_tools()
-    model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
+    model = BedrockModel(model_id=SPECIALIST_MODEL_ID, temperature=AGENT_TEMPERATURE)
     agent = Agent(
         model=model,
-        system_prompt=STORM_PREPARATION_PROMPT,
-        tools=[actions["allocate_energy"], actions["set_zone_environment"]],
+        system_prompt=STORM_PREPARATION_PROMPT
+        + "\n\nIMPORTANT: You are an ADVISOR. Describe exactly what actions "
+        "should be taken with specific parameter values, but do NOT call any "
+        "action tools. The orchestrator will execute your recommendations.",
     )
 
     prompt = (
@@ -55,9 +51,10 @@ def storm_preparation_agent(
         f"Energy Status:\n{energy_status}\n\n"
         f"Weather Forecast:\n{weather_forecast}\n\n"
         f"Crops Status:\n{crops_status}\n\n"
-        "Pre-charge batteries, reduce non-essential consumption, reduce "
-        "photoperiods to 12h/sol minimum. Calculate how many sols the "
-        "greenhouse can sustain in battery-only mode."
+        "Recommend: battery pre-charging allocations, non-essential consumption "
+        "reduction, photoperiod targets (12h/sol minimum). Calculate how many sols "
+        "the greenhouse can sustain in battery-only mode. Be specific with exact "
+        "parameter values."
     )
 
     result = agent(prompt)

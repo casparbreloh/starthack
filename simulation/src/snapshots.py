@@ -36,6 +36,7 @@ def build_state_snapshot(engine: SimulationEngine) -> dict[str, Any]:
         "score_current": _score_current(engine),
         "crew_members": _crew_members(engine),
         "crew_health": _crew_health(engine),
+        "last_agent_decision": _last_agent_decision(engine),
     }
 
 
@@ -289,6 +290,7 @@ def _crew_nutrition(engine: SimulationEngine) -> dict[str, Any]:
             "level": engine.crew.health.micronutrient_level.value,
             "consecutive_deficit_sols": engine.crew.health.consecutive_micronutrient_deficit_sols,
             "health_penalty_pct": engine.crew.health.micronutrient_health_penalty,
+            "vitamin_supplement_remaining_sols": engine.crew.health.vitamin_supplement_remaining_sols,
         },
         "food_inventory": {
             food_type: {
@@ -358,6 +360,34 @@ def _crew_members(engine: SimulationEngine) -> dict[str, Any]:
     }
 
 
+def _last_agent_decision(engine: SimulationEngine) -> dict[str, Any] | None:
+    if not engine.agent_decisions:
+        return None
+    d = engine.agent_decisions[-1]
+    # Build a human-readable summary of what actions were taken
+    action_summaries = []
+    for action in d.decisions:
+        endpoint = action.get("endpoint", "")
+        body = action.get("body", {})
+        # Extract meaningful parts from common endpoints
+        parts = endpoint.strip("/").split("/")
+        label = parts[-1].replace("_", " ").upper() if parts else endpoint
+        if body:
+            detail = ", ".join(f"{k}={v}" for k, v in list(body.items())[:2])
+            action_summaries.append(f"{label} ({detail})")
+        else:
+            action_summaries.append(label)
+
+    return {
+        "sol": d.sol,
+        "risk_assessment": d.risk_assessment,
+        "reasoning": d.reasoning,
+        "summary": d.summary,
+        "actions_count": len(d.decisions),
+        "actions_summary": action_summaries[:5],  # max 5 for display
+    }
+
+
 def _crew_health(engine: SimulationEngine) -> dict[str, Any]:
     h = engine.crew.health
     return {
@@ -403,6 +433,7 @@ def _crew_health(engine: SimulationEngine) -> dict[str, Any]:
             "level": h.micronutrient_level.value,
             "consecutive_deficit_sols": h.consecutive_micronutrient_deficit_sols,
             "health_penalty_pct": h.micronutrient_health_penalty,
+            "vitamin_supplement_remaining_sols": h.vitamin_supplement_remaining_sols,
         },
         "illness": {
             "active": h.illness.active,
