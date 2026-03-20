@@ -13,7 +13,7 @@ from fastapi import FastAPI
 
 from src.routers import actions_router, admin_router, telemetry_router
 
-schema_app = FastAPI(title="Mars Greenhouse Simulation Engine", version="1.0.0")
+schema_app = FastAPI(title="Oasis Simulation Engine", version="1.0.0")
 schema_app.include_router(telemetry_router)
 schema_app.include_router(actions_router)
 schema_app.include_router(admin_router)

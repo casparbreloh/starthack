@@ -1,7 +1,7 @@
-.PHONY: dev dev-agent dev-simulation dev-frontend dev-ml install install-frozen \
+.PHONY: dev dev-agent dev-simulation dev-frontend dev-ml install install-frozen install-infra \
 	check check-agent check-frontend check-simulation check-ml \
 	check-fix check-agent-fix check-frontend-fix check-simulation-fix \
-	codegen check-codegen
+	codegen check-codegen deploy destroy synth
 
 dev-simulation:
 	@cd simulation && AGENT_URL=$${AGENT_URL:-http://localhost:9090} uv run uvicorn main:app --reload --port 8080
@@ -26,11 +26,15 @@ dev:
 	make dev-agent & \
 	wait
 
+install-infra:
+	@cd infra && uv sync
+
 install:
 	@cd agent && uv sync
 	@cd simulation && uv sync
 	@cd ml && uv sync
 	@cd frontend && pnpm install
+	@cd infra && uv sync
 
 install-frozen:
 	@cd agent && uv sync --frozen
@@ -42,7 +46,7 @@ check-agent:
 	@cd agent && uv run ruff check src && uv run ruff format --check src && uv run pyright src
 
 check-frontend:
-	@cd frontend && npx oxfmt --check && npx oxlint && npx tsc --noEmit
+	@cd frontend && npx oxfmt --check src && npx oxlint src && npx tsc --noEmit
 
 check-simulation:
 	@cd simulation && uv run ruff check src main.py && uv run ruff format --check src main.py && uv run pyright src main.py
@@ -56,7 +60,7 @@ check-agent-fix:
 	@cd agent && uv run ruff check --fix src && uv run ruff format src
 
 check-frontend-fix:
-	@cd frontend && npx oxfmt && npx oxlint --fix
+	@cd frontend && npx oxfmt src && npx oxlint --fix src
 
 check-simulation-fix:
 	@cd simulation && uv run ruff check --fix src main.py && uv run ruff format src main.py
@@ -64,10 +68,19 @@ check-simulation-fix:
 check-fix: check-agent-fix check-frontend-fix check-simulation-fix
 
 codegen:
-	@cd simulation && uv run python -m scripts.export_openapi > /tmp/mars-openapi.json
-	@cd frontend && pnpm exec openapi-typescript /tmp/mars-openapi.json -o src/contracts/simulation.d.ts --export-type
+	@cd simulation && uv run python -m scripts.export_openapi > /tmp/oasis-openapi.json
+	@cd frontend && pnpm exec openapi-typescript /tmp/oasis-openapi.json -o src/contracts/simulation.d.ts --export-type
 	@cd frontend && npx oxfmt src/contracts/simulation.d.ts
 
 check-codegen:
 	@make codegen
 	@git diff --exit-code frontend/src/contracts/simulation.d.ts
+
+deploy:
+	@cd infra && npx cdk deploy --require-approval never $(if $(GITHUB_TOKEN),-c github_token=$(GITHUB_TOKEN),)
+
+destroy:
+	@cd infra && npx cdk destroy --force
+
+synth:
+	@cd infra && npx cdk synth
