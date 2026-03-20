@@ -13,6 +13,7 @@ import {
   useCrewHealth,
   useGreenhouseEnv,
   useNutrients,
+  useAgentDecision,
 } from "@/hooks/useGameData"
 
 type ViewState = { type: "overview" } | { type: "greenhouse"; zoneId: string } | { type: "crew" }
@@ -28,6 +29,7 @@ export function GameView() {
   const { data: health } = useCrewHealth()
   const { data: zones } = useGreenhouseEnv()
   const { data: nutrients } = useNutrients()
+  const { data: agentDecision } = useAgentDecision()
 
   if (!sim || !weather || !crops || !crew || !nutrition || !health) {
     return (
@@ -69,6 +71,7 @@ export function GameView() {
             members={crew}
             nutrition={nutrition}
             health={health}
+            agentDecision={agentDecision}
             onBack={goBack}
           />
         )}
