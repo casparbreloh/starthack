@@ -25,6 +25,7 @@ logger.setLevel(logging.INFO)
 ecs = boto3.client("ecs")
 ec2 = boto3.client("ec2")
 s3 = boto3.client("s3")
+elbv2 = boto3.client("elbv2")
 
 CLUSTER_NAME = os.environ["CLUSTER_NAME"]
 TASK_DEFINITION_ARN = os.environ["TASK_DEFINITION_ARN"]
@@ -32,6 +33,9 @@ SUBNET_IDS = os.environ["SUBNET_IDS"].split(",")
 SECURITY_GROUP_ID = os.environ["SECURITY_GROUP_ID"]
 RESULTS_BUCKET = os.environ["RESULTS_BUCKET"]
 AGENT_RUNTIME_ARN = os.environ.get("AGENT_RUNTIME_ARN", "")
+ALB_LISTENER_ARN = os.environ.get("ALB_LISTENER_ARN", "")
+VPC_ID = os.environ.get("VPC_ID", "")
+WS_BASE_URL = os.environ.get("WS_BASE_URL", "")
 
 
 def _json_response(status_code: int, body: dict | list) -> dict:
@@ -68,6 +72,120 @@ def _resolve_public_ip(eni_id: str) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# ALB routing helpers
+# ---------------------------------------------------------------------------
+
+
+def _ensure_alb_routing(run_id: str, public_ip: str) -> None:
+    """Create ALB target group and listener rule for a simulation task.
+
+    Idempotent — if the target group already exists, skip.
+    """
+    if not ALB_LISTENER_ARN:
+        return
+
+    tg_name = f"oasis-{run_id[:8]}"
+
+    # Check if TG already exists (idempotent)
+    try:
+        resp = elbv2.describe_target_groups(Names=[tg_name])
+        if resp["TargetGroups"]:
+            return  # Already set up
+    except elbv2.exceptions.TargetGroupNotFoundException:
+        pass
+    except Exception:
+        pass  # TargetGroupNotFound may surface as a generic ClientError
+
+    # Create target group
+    tg_resp = elbv2.create_target_group(
+        Name=tg_name,
+        TargetType="ip",
+        Protocol="HTTP",
+        Port=8080,
+        VpcId=VPC_ID,
+        HealthCheckEnabled=True,
+        HealthCheckPath="/health",
+        HealthCheckProtocol="HTTP",
+        HealthCheckPort="8080",
+    )
+    tg_arn = tg_resp["TargetGroups"][0]["TargetGroupArn"]
+
+    # Register the Fargate task's public IP
+    elbv2.register_targets(
+        TargetGroupArn=tg_arn,
+        Targets=[{"Id": public_ip, "Port": 8080, "AvailabilityZone": "all"}],
+    )
+
+    # Find next available priority
+    rules_resp = elbv2.describe_rules(ListenerArn=ALB_LISTENER_ARN)
+    used_priorities = {
+        int(r["Priority"])
+        for r in rules_resp["Rules"]
+        if r["Priority"] != "default"
+    }
+    priority = 1
+    while priority in used_priorities:
+        priority += 1
+
+    # Create listener rule for this run_id
+    elbv2.create_rule(
+        ListenerArn=ALB_LISTENER_ARN,
+        Conditions=[
+            {
+                "Field": "path-pattern",
+                "Values": [f"/ws/{run_id}", f"/ws/{run_id}/*"],
+            },
+        ],
+        Priority=priority,
+        Actions=[{"Type": "forward", "TargetGroupArn": tg_arn}],
+    )
+
+    logger.info(
+        "ALB routing created for run %s → %s (priority %d)",
+        run_id,
+        public_ip,
+        priority,
+    )
+
+
+def _cleanup_alb_routing(run_id: str) -> None:
+    """Remove ALB listener rule and target group for a finished session."""
+    if not ALB_LISTENER_ARN:
+        return
+
+    tg_name = f"oasis-{run_id[:8]}"
+
+    # Find and delete the listener rule
+    try:
+        rules_resp = elbv2.describe_rules(ListenerArn=ALB_LISTENER_ARN)
+        for rule in rules_resp["Rules"]:
+            if rule["IsDefault"]:
+                continue
+            for condition in rule.get("Conditions", []):
+                values = condition.get("Values", [])
+                if f"/ws/{run_id}" in values:
+                    elbv2.delete_rule(RuleArn=rule["RuleArn"])
+                    logger.info("Deleted ALB rule for run %s", run_id)
+                    break
+    except Exception:
+        logger.warning(
+            "Failed to delete ALB rule for run %s", run_id, exc_info=True
+        )
+
+    # Delete target group
+    try:
+        tg_resp = elbv2.describe_target_groups(Names=[tg_name])
+        if tg_resp["TargetGroups"]:
+            tg_arn = tg_resp["TargetGroups"][0]["TargetGroupArn"]
+            elbv2.delete_target_group(TargetGroupArn=tg_arn)
+            logger.info("Deleted ALB target group %s", tg_name)
+    except Exception:
+        logger.warning(
+            "Failed to delete target group %s", tg_name, exc_info=True
+        )
+
+
+# ---------------------------------------------------------------------------
 # Route: POST /sessions
 # ---------------------------------------------------------------------------
 
@@ -100,20 +218,26 @@ def _start_session(event: dict) -> dict:
         ]
     }
 
-    resp = ecs.run_task(
-        cluster=CLUSTER_NAME,
-        taskDefinition=TASK_DEFINITION_ARN,
-        launchType="FARGATE",
-        networkConfiguration={
-            "awsvpcConfiguration": {
-                "subnets": SUBNET_IDS,
-                "securityGroups": [SECURITY_GROUP_ID],
-                "assignPublicIp": "ENABLED",
-            }
-        },
-        overrides=container_overrides,
-        startedBy=run_id,
-    )
+    try:
+        resp = ecs.run_task(
+            cluster=CLUSTER_NAME,
+            taskDefinition=TASK_DEFINITION_ARN,
+            launchType="FARGATE",
+            networkConfiguration={
+                "awsvpcConfiguration": {
+                    "subnets": SUBNET_IDS,
+                    "securityGroups": [SECURITY_GROUP_ID],
+                    "assignPublicIp": "ENABLED",
+                }
+            },
+            overrides=container_overrides,
+            startedBy=run_id,
+        )
+    except Exception as exc:
+        logger.exception("ecs.run_task raised for run %s", run_id)
+        return _json_response(
+            500, {"error": f"ECS RunTask failed: {exc}"}
+        )
 
     tasks = resp.get("tasks", [])
     if not tasks:
@@ -186,7 +310,23 @@ def _extract_task_info(task: dict) -> dict:
         if public_ip:
             break
 
-    ws_url = f"ws://{public_ip}:8080/ws" if public_ip else None
+    # Set up ALB routing when the task's IP is first resolved
+    if public_ip and started_by and ALB_LISTENER_ARN:
+        try:
+            _ensure_alb_routing(started_by, public_ip)
+        except Exception:
+            logger.warning(
+                "Failed to set up ALB routing for run %s",
+                started_by,
+                exc_info=True,
+            )
+
+    if WS_BASE_URL and started_by:
+        ws_url = f"{WS_BASE_URL}/ws/{started_by}"
+    elif public_ip:
+        ws_url = f"ws://{public_ip}:8080/ws"
+    else:
+        ws_url = None
 
     return {
         "session_id": started_by,
@@ -285,6 +425,8 @@ def _stop_session(event: dict, run_id: str) -> dict:
             reason="User requested stop",
         )
 
+    _cleanup_alb_routing(run_id)
+
     return _json_response(200, {"status": "stopped"})
 
 
@@ -322,6 +464,14 @@ def handler(event, context):
 
     logger.info("Request: %s %s", method, path)
 
+    try:
+        return _route(method, path, event)
+    except Exception as exc:
+        logger.exception("Unhandled error in handler")
+        return _json_response(500, {"error": str(exc)})
+
+
+def _route(method: str, path: str, event: dict) -> dict:
     # GET /sessions/{id}/results
     match = SESSION_RESULTS_RE.match(path)
     if match and method == "GET":

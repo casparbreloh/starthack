@@ -71,7 +71,13 @@ export async function getResults(sessionId: string): Promise<TrainingResult> {
   const raw = await request<TrainingResult>(`/sessions/${sessionId}/results`)
   const breakdown: Record<string, number> = {}
   for (const [k, v] of Object.entries(raw.score_breakdown ?? {})) {
-    breakdown[k] = num(v)
+    // Backend returns nested objects like {score: 85, crew_alive: true, ...}
+    // Extract the score property when v is an object, otherwise coerce directly
+    if (v != null && typeof v === "object" && "score" in (v as Record<string, unknown>)) {
+      breakdown[k] = num((v as Record<string, unknown>).score)
+    } else {
+      breakdown[k] = num(v)
+    }
   }
   return {
     ...raw,

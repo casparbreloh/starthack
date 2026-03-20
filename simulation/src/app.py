@@ -109,11 +109,17 @@ async def _start_fargate_session() -> None:
     # Auto-invoke agent if configured (AGENT_RUNTIME_ARN or AGENT_URL)
     from src.agent_bridge import get_own_ws_url, invoke_agent
 
-    ws_url = await get_own_ws_url()
-    asyncio.create_task(
-        invoke_agent(session.id, ws_url),
-        name=f"invoke-agent-{session.id[:8]}",
-    )
+    try:
+        ws_url = await get_own_ws_url()
+    except BaseException:
+        logger.exception("Failed to resolve own WS URL — running without agent")
+        ws_url = None
+
+    if ws_url:
+        asyncio.create_task(
+            invoke_agent(session.id, ws_url),
+            name=f"invoke-agent-{session.id[:8]}",
+        )
 
     # Start timeout watchdog
     asyncio.create_task(

@@ -240,7 +240,20 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
     if (!mountedRef.current) return
     if (effectiveUrl === null) return
 
-    const ws = new WebSocket(effectiveUrl)
+    // Upgrade ws:// to wss:// when running on HTTPS to avoid mixed-content block
+    let url = effectiveUrl
+    if (window.location.protocol === "https:" && url.startsWith("ws://")) {
+      url = "wss://" + url.slice(5)
+    }
+
+    let ws: WebSocket
+    try {
+      ws = new WebSocket(url)
+    } catch {
+      // DOMException: "The operation is insecure" on mixed content
+      console.error("[WebSocket] Failed to connect — insecure context or invalid URL:", url)
+      return
+    }
     wsRef.current = ws
 
     ws.onopen = () => {

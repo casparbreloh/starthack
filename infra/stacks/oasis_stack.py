@@ -5,9 +5,12 @@ from aws_cdk import aws_amplify as amplify
 from aws_cdk import aws_apigatewayv2 as apigwv2
 from aws_cdk import aws_apigatewayv2_integrations as apigwv2_integrations
 from aws_cdk import aws_bedrockagentcore as agentcore
+from aws_cdk import aws_cloudfront as cloudfront
+from aws_cdk import aws_cloudfront_origins as origins
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_ecr_assets as ecr_assets
 from aws_cdk import aws_ecs as ecs
+from aws_cdk import aws_elasticloadbalancingv2 as elbv2
 from aws_cdk import aws_iam as iam
 from aws_cdk import aws_lambda as lambda_
 from aws_cdk import aws_logs as logs
@@ -88,10 +91,64 @@ class OasisStack(Stack):
             description="Allow inbound WebSocket traffic to simulation tasks",
             allow_all_outbound=True,
         )
-        simulation_sg.add_ingress_rule(
+        # --- ALB Security Group ---
+        alb_sg = ec2.SecurityGroup(
+            self,
+            "AlbSg",
+            vpc=vpc,
+            description="Allow inbound HTTP from CloudFront to ALB",
+            allow_all_outbound=True,
+        )
+        alb_sg.add_ingress_rule(
             ec2.Peer.any_ipv4(),
+            ec2.Port.tcp(80),
+            "Allow inbound HTTP (CloudFront)",
+        )
+
+        simulation_sg.add_ingress_rule(
+            alb_sg,
             ec2.Port.tcp(8080),
-            "Allow inbound TCP 8080 (WebSocket)",
+            "Allow inbound TCP 8080 from ALB",
+        )
+
+        # --- Application Load Balancer ---
+        alb = elbv2.ApplicationLoadBalancer(
+            self,
+            "SimulationAlb",
+            vpc=vpc,
+            internet_facing=True,
+            security_group=alb_sg,
+            vpc_subnets=ec2.SubnetSelection(
+                subnet_type=ec2.SubnetType.PUBLIC,
+            ),
+        )
+
+        http_listener = alb.add_listener(
+            "HttpListener",
+            port=80,
+            protocol=elbv2.ApplicationProtocol.HTTP,
+            default_action=elbv2.ListenerAction.fixed_response(
+                status_code=404,
+                content_type="text/plain",
+                message_body="No active session",
+            ),
+        )
+
+        # --- CloudFront Distribution (TLS termination for WebSocket) ---
+        cf_distribution = cloudfront.Distribution(
+            self,
+            "WsDistribution",
+            default_behavior=cloudfront.BehaviorOptions(
+                origin=origins.HttpOrigin(
+                    alb.load_balancer_dns_name,
+                    protocol_policy=cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+                    http_port=80,
+                ),
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
+                origin_request_policy=cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+                allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
+            ),
         )
 
         # --- ML Lambda Function (Docker-based, ONNX Runtime inference) ---
@@ -238,6 +295,9 @@ class OasisStack(Stack):
                 "SECURITY_GROUP_ID": simulation_sg.security_group_id,
                 "RESULTS_BUCKET": results_bucket.bucket_name,
                 "AGENT_RUNTIME_ARN": agent_runtime.attr_agent_runtime_arn,
+                "ALB_LISTENER_ARN": http_listener.listener_arn,
+                "VPC_ID": vpc.vpc_id,
+                "WS_BASE_URL": f"wss://{cf_distribution.distribution_domain_name}",
             },
         )
 
@@ -282,6 +342,23 @@ class OasisStack(Stack):
         orchestrator_fn.add_to_role_policy(
             iam.PolicyStatement(
                 actions=["ec2:DescribeNetworkInterfaces"],
+                resources=["*"],
+            )
+        )
+
+        # ELBv2 permissions for ALB target group / listener rule management
+        orchestrator_fn.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "elasticloadbalancingv2:CreateTargetGroup",
+                    "elasticloadbalancingv2:DeleteTargetGroup",
+                    "elasticloadbalancingv2:RegisterTargets",
+                    "elasticloadbalancingv2:DeregisterTargets",
+                    "elasticloadbalancingv2:CreateRule",
+                    "elasticloadbalancingv2:DeleteRule",
+                    "elasticloadbalancingv2:DescribeRules",
+                    "elasticloadbalancingv2:DescribeTargetGroups",
+                ],
                 resources=["*"],
             )
         )
@@ -456,4 +533,16 @@ applications:
             "AmplifyAppUrl",
             value=f"https://main.{amplify_app.attr_default_domain}",
             description="Amplify frontend URL",
+        )
+        CfnOutput(
+            self,
+            "WsUrl",
+            value=f"wss://{cf_distribution.distribution_domain_name}",
+            description="CloudFront WebSocket URL (wss://)",
+        )
+        CfnOutput(
+            self,
+            "AlbDnsName",
+            value=alb.load_balancer_dns_name,
+            description="ALB DNS name (for debugging)",
         )

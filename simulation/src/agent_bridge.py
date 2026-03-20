@@ -43,7 +43,9 @@ async def _resolve_public_ip() -> str | None:
             resp = await client.get("https://checkip.amazonaws.com")
             resp.raise_for_status()
             return resp.text.strip()
-    except Exception:
+    except BaseException:
+        # Must catch BaseException — asyncio.CancelledError is not an Exception
+        # in Python 3.9+ and will crash the lifespan if it escapes.
         logger.warning("Failed to resolve public IP", exc_info=True)
     return None
 
@@ -80,7 +82,7 @@ async def _resolve_fargate_ip() -> str | None:
                     addrs = network.get("IPv4Addresses", [])
                     if addrs:
                         return addrs[0]
-    except Exception:
+    except BaseException:
         logger.warning("Failed to fetch ECS task metadata", exc_info=True)
 
     return None
