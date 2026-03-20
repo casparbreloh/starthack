@@ -96,7 +96,9 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                         session_id = new_session_id
 
                 elif msg_type == "join_session":
-                    session_id = await _handle_join_session(ws, role, payload)
+                    joined_id = await _handle_join_session(ws, role, payload)
+                    if joined_id is not None:
+                        session_id = joined_id
 
                 elif msg_type == "reset_session":
                     new_session_id = await _handle_reset_session(
@@ -224,7 +226,7 @@ async def _handle_create_session(
 
     # Auto-invoke agent if configured
     if AGENT_URL:
-        asyncio.create_task(
+        session.agent_task = asyncio.create_task(
             invoke_agent(AGENT_URL, session.id, SIM_WS_URL),
             name=f"invoke-agent-{session.id[:8]}",
         )
@@ -234,10 +236,19 @@ async def _handle_create_session(
 
 async def _handle_join_session(
     ws: WebSocket, role: str | None, payload: dict[str, Any]
-) -> str:
+) -> str | None:
     """Re-register a WebSocket with an existing session (e.g. after reconnect)."""
     target_id = payload.get("session_id", "")
-    session = session_manager.get(target_id)
+    session = session_manager.try_get(target_id)
+    if session is None:
+        logger.info("join_session: session %s not found, telling client", target_id)
+        await ws.send_json(
+            {
+                "type": "error",
+                "payload": {"message": f"Session '{target_id}' not found"},
+            }
+        )
+        return None
     session.connections.register(ws, role or "frontend")
 
     await ws.send_json(
@@ -269,7 +280,7 @@ async def _handle_reset_session(
     """Destroy the current session and create a fresh one (paused by default)."""
     if old_session_id:
         try:
-            session_manager.destroy(old_session_id)
+            await session_manager.destroy(old_session_id)
         except Exception:
             pass  # session may already be gone
 
@@ -403,6 +414,21 @@ async def _handle_pause(ws: WebSocket, session_id: str | None) -> None:
     session = session_manager.get(session_id)
     session.paused = True
     session.engine.paused = True
+
+    # Disconnect the agent so it stops working while paused
+    if session.connections.agent is not None:
+        agent_ws = session.connections.agent
+        session.connections.disconnect(agent_ws)
+        try:
+            await agent_ws.close()
+        except Exception:
+            pass
+    if session.agent_task is not None and not session.agent_task.done():
+        session.agent_task.cancel()
+        session.agent_task = None
+    # Unblock tick loop if it's waiting for an agent response
+    session.agent_response_event.set()
+
     await ws.send_json({"type": "paused", "session_id": session_id, "payload": {}})
 
 
@@ -417,4 +443,12 @@ async def _handle_resume(ws: WebSocket, session_id: str | None) -> None:
     session = session_manager.get(session_id)
     session.paused = False
     session.engine.paused = False
+
+    # Re-invoke the agent so it reconnects and gets consulted for the current sol
+    if AGENT_URL and session.connections.agent is None:
+        session.agent_task = asyncio.create_task(
+            invoke_agent(AGENT_URL, session.id, SIM_WS_URL),
+            name=f"invoke-agent-{session.id[:8]}",
+        )
+
     await ws.send_json({"type": "resumed", "session_id": session_id, "payload": {}})

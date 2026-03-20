@@ -68,6 +68,19 @@ class ConnectionManager:
         for ws in targets:
             await self._safe_send(ws, data)
 
+    async def close_all(self) -> None:
+        """Close all tracked WebSocket connections."""
+        targets: list[WebSocket] = list(self.frontends)
+        if self.agent is not None:
+            targets.append(self.agent)
+        for ws in targets:
+            try:
+                await ws.close()
+            except Exception:
+                pass
+        self.agent = None
+        self.frontends.clear()
+
     async def _safe_send(self, ws: WebSocket, data: dict[str, Any]) -> None:
         """Send JSON to a WebSocket, handling disconnection gracefully."""
         try:

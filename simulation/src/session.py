@@ -67,6 +67,7 @@ class Session:
         self.paused: bool = False
         self.next_checkin: int = 1
         self.tick_task: asyncio.Task | None = None  # type: ignore[type-arg]
+        self.agent_task: asyncio.Task | None = None  # type: ignore[type-arg]
         self.crisis_interrupt_pending: bool = False
         self.last_interrupt_sols: dict[str, int] = {}
 
@@ -82,9 +83,14 @@ class Session:
         )
 
     def stop(self) -> None:
-        """Cancel the tick loop task."""
+        """Cancel the tick loop and agent invocation tasks."""
         if self.tick_task is not None and not self.tick_task.done():
             self.tick_task.cancel()
+        if self.agent_task is not None and not self.agent_task.done():
+            self.agent_task.cancel()
+            self.agent_task = None
+        # Unblock anything waiting on the agent so the tick loop can exit
+        self.agent_response_event.set()
 
 
 class SessionManager:
@@ -108,20 +114,25 @@ class SessionManager:
             raise HTTPException(404, f"Session '{session_id}' not found")
         return session
 
+    def try_get(self, session_id: str) -> Session | None:
+        """Look up a session by id; returns None if not found."""
+        return self._sessions.get(session_id)
+
     def get_or_default(self, session_id: str | None) -> Session:
         """Return the requested session, or the default if session_id is None."""
         if session_id is None:
             return self._default_session
         return self.get(session_id)
 
-    def destroy(self, session_id: str) -> None:
-        """Stop the tick loop and remove a session from the registry."""
+    async def destroy(self, session_id: str) -> None:
+        """Stop the tick loop, close connections, and remove a session."""
         if session_id not in self._sessions:
             raise HTTPException(404, f"Session '{session_id}' not found")
         if session_id == self._default_session.id:
             raise HTTPException(400, "Cannot destroy the default session")
-        self._sessions[session_id].stop()
-        del self._sessions[session_id]
+        session = self._sessions.pop(session_id)
+        session.stop()
+        await session.connections.close_all()
 
     def list_sessions(self) -> list[Session]:
         """Return all active sessions."""
