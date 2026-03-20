@@ -6,7 +6,7 @@ import TrainingSuite from "@/components/TrainingSuite/TrainingSuite"
 import { Toaster as Sonner } from "@/components/ui/sonner"
 import { Toaster } from "@/components/ui/toaster"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { GameDataProvider, useOrchestratorState } from "@/hooks/useGameData"
+import { GameDataProvider, useOrchestratorState, useWebSocketControls } from "@/hooks/useGameData"
 import { isOrchestratorMode } from "@/hooks/useGameSession"
 
 import Index from "./pages/Index.tsx"
@@ -36,14 +36,12 @@ function TrainingView({ onSwitch }: { onSwitch: () => void }) {
 
 // ── Orchestrator loading gate ────────────────────────────────────────────────
 
-function OrchestratorGate({ children }: { children: React.ReactNode }) {
+export function OrchestratorGate({ children }: { children: React.ReactNode }) {
   const orch = useOrchestratorState()
+  const ws = useWebSocketControls()
 
   // Not in orchestrator mode — render immediately
   if (!orch) return <>{children}</>
-
-  // Session is ready (ws connected) — render the game
-  if (orch.wsUrl) return <>{children}</>
 
   // Error state
   if (orch.error) {
@@ -61,8 +59,39 @@ function OrchestratorGate({ children }: { children: React.ReactNode }) {
     )
   }
 
+  if (ws.error) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
+        <p className="font-mono text-sm text-destructive">{ws.error}</p>
+        <button
+          type="button"
+          onClick={() => orch.startSession()}
+          className="rounded border border-primary/30 bg-primary/10 px-6 py-2 font-mono text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+        >
+          Retry
+        </button>
+      </div>
+    )
+  }
+
+  if (!orch.isStarting && orch.wsUrl === null && orch.sessionId === null) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
+        <h1 className="font-mono text-lg font-bold tracking-[0.2em] text-foreground">OASIS</h1>
+        <p className="font-mono text-sm text-muted-foreground">Launch a simulation to begin</p>
+        <button
+          type="button"
+          onClick={() => orch.startSession()}
+          className="rounded border border-primary/30 bg-primary/10 px-6 py-2 font-mono text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+        >
+          Start Simulation
+        </button>
+      </div>
+    )
+  }
+
   // Starting — show spinner
-  if (orch.isStarting) {
+  if (orch.isStarting || orch.wsUrl === null) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-3 bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-primary" />
@@ -74,20 +103,20 @@ function OrchestratorGate({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // Idle — waiting for the user to start a session
-  return (
-    <div className="flex h-screen flex-col items-center justify-center gap-4 bg-background">
-      <h1 className="font-mono text-lg font-bold tracking-[0.2em] text-foreground">OASIS</h1>
-      <p className="font-mono text-sm text-muted-foreground">Launch a simulation to begin</p>
-      <button
-        type="button"
-        onClick={() => orch.startSession()}
-        className="rounded border border-primary/30 bg-primary/10 px-6 py-2 font-mono text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
-      >
-        Start Simulation
-      </button>
-    </div>
-  )
+  if (!ws.lastState) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground border-t-primary" />
+        <p className="font-mono text-sm text-muted-foreground">Connecting to simulation...</p>
+        <p className="font-mono text-xs text-muted-foreground/60">
+          Waiting for the first state snapshot
+        </p>
+      </div>
+    )
+  }
+
+  // Session is ready and we have initial state — render the game
+  return <>{children}</>
 }
 
 // ── App ──────────────────────────────────────────────────────────────────────

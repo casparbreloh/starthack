@@ -88,7 +88,10 @@ export function useTrainingSessions(): TrainingSessionsState {
     async (config: TrainingConfig) => {
       try {
         setError(null)
-        const newSession = await orchestrator.startSession(config)
+        const newSession = await orchestrator.startSession({
+          ...config,
+          mode: "training",
+        })
         if (!mountedRef.current) return
 
         setSessions((prev) => [newSession, ...prev])

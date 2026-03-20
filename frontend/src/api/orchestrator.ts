@@ -41,21 +41,30 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
+function normalizeSessionInfo(raw: SessionInfo): SessionInfo {
+  return {
+    ...raw,
+    ws_ready: Boolean(raw.ws_ready),
+  }
+}
+
 export async function startSession(config: TrainingConfig): Promise<SessionInfo> {
-  return request<SessionInfo>("/sessions", {
+  const raw = await request<SessionInfo>("/sessions", {
     method: "POST",
     body: JSON.stringify(config),
   })
+  return normalizeSessionInfo(raw)
 }
 
 export async function listSessions(): Promise<SessionInfo[]> {
-  return request<SessionInfo[]>("/sessions")
+  const raw = await request<SessionInfo[]>("/sessions")
+  return raw.map(normalizeSessionInfo)
 }
 
 export async function getSession(sessionId: string): Promise<SessionDetail> {
   const raw = await request<SessionDetail>(`/sessions/${sessionId}`)
   return {
-    ...raw,
+    ...normalizeSessionInfo(raw),
     current_sol: raw.current_sol != null ? num(raw.current_sol) : undefined,
     final_score: raw.final_score != null ? num(raw.final_score) : undefined,
   }

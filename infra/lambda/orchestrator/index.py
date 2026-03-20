@@ -1,7 +1,7 @@
 """Lambda orchestrator for managing ECS Fargate simulation sessions.
 
 Routes (API Gateway HTTP API):
-    POST   /sessions             — start a new training session
+    POST   /sessions             — start a new interactive or training session
     GET    /sessions             — list active sessions
     GET    /sessions/{id}        — get session detail
     DELETE /sessions/{id}        — stop a session
@@ -36,6 +36,9 @@ AGENT_RUNTIME_ARN = os.environ.get("AGENT_RUNTIME_ARN", "")
 ALB_LISTENER_ARN = os.environ.get("ALB_LISTENER_ARN", "")
 VPC_ID = os.environ.get("VPC_ID", "")
 WS_BASE_URL = os.environ.get("WS_BASE_URL", "")
+DEFAULT_INTERACTIVE_TICK_DELAY_MS = 1000
+SESSION_MODES = {"interactive", "training"}
+READY_TARGET_HEALTH_STATES = {"healthy"}
 
 
 def _json_response(status_code: int, body: dict | list) -> dict:
@@ -80,82 +83,98 @@ def _resolve_ips(eni_id: str) -> tuple[str | None, str | None]:
 # ---------------------------------------------------------------------------
 
 
-def _ensure_alb_routing(run_id: str, private_ip: str) -> None:
+def _find_listener_rule(run_id: str) -> dict | None:
+    """Return the ALB listener rule for a run id, if present."""
+    if not ALB_LISTENER_ARN:
+        return None
+
+    rules_resp = elbv2.describe_rules(ListenerArn=ALB_LISTENER_ARN)
+    for rule in rules_resp["Rules"]:
+        if rule["IsDefault"]:
+            continue
+        for condition in rule.get("Conditions", []):
+            values = condition.get("Values", [])
+            if f"/ws/{run_id}" in values:
+                return rule
+    return None
+
+
+def _ensure_alb_routing(run_id: str, private_ip: str) -> str | None:
     """Create ALB target group and listener rule for a simulation task.
 
-    Idempotent — if the target group already exists, skip.
+    Idempotent — if the target group or rule already exists, reuse it.
     Uses the task's private IP for in-VPC ALB routing.
     """
     if not ALB_LISTENER_ARN:
-        return
+        return None
 
     tg_name = f"oasis-{run_id[:8]}"
+    tg_arn: str | None = None
 
-    # Check if TG already exists (idempotent)
     try:
         resp = elbv2.describe_target_groups(Names=[tg_name])
         if resp["TargetGroups"]:
-            return  # Already set up
+            tg_arn = resp["TargetGroups"][0]["TargetGroupArn"]
     except elbv2.exceptions.TargetGroupNotFoundException:
         pass
     except Exception:
         pass  # TargetGroupNotFound may surface as a generic ClientError
 
-    # Create target group with aggressive health checks so the ALB routes
-    # traffic quickly after the Fargate task starts (default 5×30s = 150s).
-    tg_resp = elbv2.create_target_group(
-        Name=tg_name,
-        TargetType="ip",
-        Protocol="HTTP",
-        Port=8080,
-        VpcId=VPC_ID,
-        HealthCheckEnabled=True,
-        HealthCheckPath="/health",
-        HealthCheckProtocol="HTTP",
-        HealthCheckPort="8080",
-        HealthCheckIntervalSeconds=10,
-        HealthyThresholdCount=2,
-        UnhealthyThresholdCount=2,
-        HealthCheckTimeoutSeconds=5,
-    )
-    tg_arn = tg_resp["TargetGroups"][0]["TargetGroupArn"]
+    if tg_arn is None:
+        tg_resp = elbv2.create_target_group(
+            Name=tg_name,
+            TargetType="ip",
+            Protocol="HTTP",
+            Port=8080,
+            VpcId=VPC_ID,
+            HealthCheckEnabled=True,
+            HealthCheckPath="/health",
+            HealthCheckProtocol="HTTP",
+            HealthCheckPort="8080",
+            HealthCheckIntervalSeconds=10,
+            HealthyThresholdCount=2,
+            UnhealthyThresholdCount=2,
+            HealthCheckTimeoutSeconds=5,
+        )
+        tg_arn = tg_resp["TargetGroups"][0]["TargetGroupArn"]
 
-    # Register the Fargate task's private IP (in-VPC routing via ALB)
     elbv2.register_targets(
         TargetGroupArn=tg_arn,
         Targets=[{"Id": private_ip, "Port": 8080}],
     )
 
-    # Find next available priority
-    rules_resp = elbv2.describe_rules(ListenerArn=ALB_LISTENER_ARN)
-    used_priorities = {
-        int(r["Priority"])
-        for r in rules_resp["Rules"]
-        if r["Priority"] != "default"
-    }
-    priority = 1
-    while priority in used_priorities:
-        priority += 1
+    existing_rule = _find_listener_rule(run_id)
+    if existing_rule is None:
+        rules_resp = elbv2.describe_rules(ListenerArn=ALB_LISTENER_ARN)
+        used_priorities = {
+            int(r["Priority"])
+            for r in rules_resp["Rules"]
+            if r["Priority"] != "default"
+        }
+        priority = 1
+        while priority in used_priorities:
+            priority += 1
 
-    # Create listener rule for this run_id
-    elbv2.create_rule(
-        ListenerArn=ALB_LISTENER_ARN,
-        Conditions=[
-            {
-                "Field": "path-pattern",
-                "Values": [f"/ws/{run_id}", f"/ws/{run_id}/*"],
-            },
-        ],
-        Priority=priority,
-        Actions=[{"Type": "forward", "TargetGroupArn": tg_arn}],
-    )
+        elbv2.create_rule(
+            ListenerArn=ALB_LISTENER_ARN,
+            Conditions=[
+                {
+                    "Field": "path-pattern",
+                    "Values": [f"/ws/{run_id}", f"/ws/{run_id}/*"],
+                },
+            ],
+            Priority=priority,
+            Actions=[{"Type": "forward", "TargetGroupArn": tg_arn}],
+        )
 
-    logger.info(
-        "ALB routing created for run %s → %s (priority %d)",
-        run_id,
-        private_ip,
-        priority,
-    )
+        logger.info(
+            "ALB routing created for run %s → %s (priority %d)",
+            run_id,
+            private_ip,
+            priority,
+        )
+
+    return tg_arn
 
 
 def _cleanup_alb_routing(run_id: str) -> None:
@@ -167,16 +186,10 @@ def _cleanup_alb_routing(run_id: str) -> None:
 
     # Find and delete the listener rule
     try:
-        rules_resp = elbv2.describe_rules(ListenerArn=ALB_LISTENER_ARN)
-        for rule in rules_resp["Rules"]:
-            if rule["IsDefault"]:
-                continue
-            for condition in rule.get("Conditions", []):
-                values = condition.get("Values", [])
-                if f"/ws/{run_id}" in values:
-                    elbv2.delete_rule(RuleArn=rule["RuleArn"])
-                    logger.info("Deleted ALB rule for run %s", run_id)
-                    break
+        rule = _find_listener_rule(run_id)
+        if rule is not None:
+            elbv2.delete_rule(RuleArn=rule["RuleArn"])
+            logger.info("Deleted ALB rule for run %s", run_id)
     except Exception:
         logger.warning(
             "Failed to delete ALB rule for run %s", run_id, exc_info=True
@@ -195,6 +208,25 @@ def _cleanup_alb_routing(run_id: str) -> None:
         )
 
 
+def _describe_target_health(target_group_arn: str) -> tuple[str | None, str | None]:
+    """Return the first target's health state and reason code."""
+    try:
+        resp = elbv2.describe_target_health(TargetGroupArn=target_group_arn)
+        descriptions = resp.get("TargetHealthDescriptions", [])
+        if not descriptions:
+            return "unused", "Target.NotRegistered"
+
+        target_health = descriptions[0].get("TargetHealth", {})
+        return target_health.get("State"), target_health.get("Reason")
+    except Exception:
+        logger.warning(
+            "Failed to describe target health for %s",
+            target_group_arn,
+            exc_info=True,
+        )
+        return None, "TargetHealthUnknown"
+
+
 # ---------------------------------------------------------------------------
 # Route: POST /sessions
 # ---------------------------------------------------------------------------
@@ -203,6 +235,20 @@ def _cleanup_alb_routing(run_id: str) -> None:
 def _start_session(event: dict) -> dict:
     body = _parse_body(event)
     run_id = str(uuid.uuid4())
+    session_mode = str(body.get("mode", "interactive")).lower()
+    if session_mode not in SESSION_MODES:
+        return _json_response(
+            400,
+            {
+                "error": "Invalid session mode",
+                "allowed_modes": sorted(SESSION_MODES),
+            },
+        )
+
+    tick_delay_ms = (
+        0 if session_mode == "training" else DEFAULT_INTERACTIVE_TICK_DELAY_MS
+    )
+    ws_url = f"{WS_BASE_URL}/ws/{run_id}" if WS_BASE_URL else ""
 
     container_overrides = {
         "containerOverrides": [
@@ -215,10 +261,12 @@ def _start_session(event: dict) -> dict:
                         "name": "MISSION_SOLS",
                         "value": str(body.get("mission_sols", 450)),
                     },
-                    {"name": "TICK_DELAY_MS", "value": "0"},
+                    {"name": "TICK_DELAY_MS", "value": str(tick_delay_ms)},
+                    {"name": "SESSION_MODE", "value": session_mode},
                     {"name": "RUN_ID", "value": run_id},
                     {"name": "RESULTS_BUCKET", "value": RESULTS_BUCKET},
                     {"name": "AGENT_RUNTIME_ARN", "value": AGENT_RUNTIME_ARN},
+                    {"name": "SIM_WS_URL", "value": ws_url},
                     {
                         "name": "SCENARIO_PRESET",
                         "value": body.get("scenario_preset", ""),
@@ -264,6 +312,8 @@ def _start_session(event: dict) -> dict:
             "session_id": run_id,
             "run_id": run_id,
             "status": "starting",
+            "ws_ready": False,
+            "ready_reason": "task_starting",
             "task_arn": task["taskArn"],
             "started_at": datetime.now(UTC).isoformat(),
         },
@@ -323,27 +373,42 @@ def _extract_task_info(task: dict) -> dict:
         if private_ip:
             break
 
-    # Set up ALB routing when the task's IP is first resolved.
-    # Only advertise ws_url after routing is confirmed — otherwise the
-    # frontend connects before the ALB listener rule exists and gets 404.
-    alb_ready = False
-    if private_ip and started_by and ALB_LISTENER_ARN:
+    ws_url = None
+    ws_ready = False
+    target_health_state = None
+    ready_reason = None
+
+    if status == "running" and private_ip and started_by and ALB_LISTENER_ARN:
         try:
-            _ensure_alb_routing(started_by, private_ip)
-            alb_ready = True
+            target_group_arn = _ensure_alb_routing(started_by, private_ip)
+            if target_group_arn:
+                target_health_state, ready_reason = _describe_target_health(
+                    target_group_arn
+                )
+                ws_ready = target_health_state in READY_TARGET_HEALTH_STATES
         except Exception:
             logger.warning(
                 "Failed to set up ALB routing for run %s",
                 started_by,
                 exc_info=True,
             )
+            ready_reason = "alb_routing_failed"
+    elif status in {"stopped", "completed", "failed"} and started_by:
+        try:
+            _cleanup_alb_routing(started_by)
+        except Exception:
+            logger.warning(
+                "Failed to clean up ALB routing for run %s",
+                started_by,
+                exc_info=True,
+            )
 
-    if WS_BASE_URL and started_by and alb_ready:
+    if status == "running" and ws_ready and WS_BASE_URL and started_by:
         ws_url = f"{WS_BASE_URL}/ws/{started_by}"
-    elif public_ip:
-        ws_url = f"ws://{public_ip}:8080/ws"
-    else:
-        ws_url = None
+    elif status == "running":
+        status = "starting"
+        if ready_reason is None:
+            ready_reason = "waiting_for_target_health"
 
     return {
         "session_id": started_by,
@@ -352,6 +417,9 @@ def _extract_task_info(task: dict) -> dict:
         "status": status,
         "public_ip": public_ip,
         "ws_url": ws_url,
+        "ws_ready": ws_ready,
+        "target_health_state": target_health_state,
+        "ready_reason": ready_reason,
         "started_at": started_at,
     }
 

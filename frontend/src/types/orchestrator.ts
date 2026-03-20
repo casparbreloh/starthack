@@ -1,10 +1,20 @@
 // ── Orchestrator API types (Training Suite) ──────────────────────────
 
+export type SessionMode = "interactive" | "training"
+export type TargetHealthState =
+  | "initial"
+  | "healthy"
+  | "unhealthy"
+  | "unused"
+  | "draining"
+  | "unavailable"
+
 export interface TrainingConfig {
   seed?: number
   difficulty?: string
   mission_sols?: number
   scenario_preset?: string
+  mode?: SessionMode
 }
 
 export interface SessionInfo {
@@ -13,6 +23,9 @@ export interface SessionInfo {
   status: "starting" | "running" | "completed" | "failed" | "stopped"
   task_arn?: string
   ws_url?: string
+  ws_ready: boolean
+  target_health_state?: TargetHealthState
+  ready_reason?: string
   started_at: string
 }
 

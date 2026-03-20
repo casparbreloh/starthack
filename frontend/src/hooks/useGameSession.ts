@@ -40,8 +40,8 @@ export function isOrchestratorMode(): boolean {
  * Manages session lifecycle via the Lambda orchestrator.
  *
  * 1. Calls `orchestrator.startSession` to spawn a Fargate container.
- * 2. Polls `orchestrator.getSession` until status is "running" and `ws_url`
- *    is available.
+ * 2. Polls `orchestrator.getSession` until status is "running", `ws_ready`
+ *    is true, and `ws_url` is available.
  * 3. Returns the `wsUrl` for `useWebSocket` to connect to.
  *
  * Only used when `VITE_ORCHESTRATOR_URL` is set — see `isOrchestratorMode`.
@@ -86,7 +86,7 @@ export function useGameSession(): GameSessionState {
 
         setStatus(detail.status)
 
-        if (detail.status === "running" && detail.ws_url) {
+        if (detail.status === "running" && detail.ws_ready && detail.ws_url) {
           setWsUrl(detail.ws_url)
           setIsStarting(false)
           return
@@ -94,6 +94,12 @@ export function useGameSession(): GameSessionState {
 
         if (detail.status === "failed") {
           setError("Session failed to start. Check infrastructure logs.")
+          setIsStarting(false)
+          return
+        }
+
+        if (detail.status === "completed" || detail.status === "stopped") {
+          setError("Session ended before it became available.")
           setIsStarting(false)
           return
         }
@@ -127,6 +133,7 @@ export function useGameSession(): GameSessionState {
       const sessionConfig: TrainingConfig = {
         difficulty: "normal",
         mission_sols: 450,
+        mode: "interactive",
         ...config,
       }
 
@@ -138,7 +145,7 @@ export function useGameSession(): GameSessionState {
           setStatus(info.status)
 
           // If already running with a ws_url (unlikely but possible)
-          if (info.status === "running" && info.ws_url) {
+          if (info.status === "running" && info.ws_ready && info.ws_url) {
             setWsUrl(info.ws_url)
             setIsStarting(false)
             return
