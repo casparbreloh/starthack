@@ -100,20 +100,26 @@ def _start_session(event: dict) -> dict:
         ]
     }
 
-    resp = ecs.run_task(
-        cluster=CLUSTER_NAME,
-        taskDefinition=TASK_DEFINITION_ARN,
-        launchType="FARGATE",
-        networkConfiguration={
-            "awsvpcConfiguration": {
-                "subnets": SUBNET_IDS,
-                "securityGroups": [SECURITY_GROUP_ID],
-                "assignPublicIp": "ENABLED",
-            }
-        },
-        overrides=container_overrides,
-        startedBy=run_id,
-    )
+    try:
+        resp = ecs.run_task(
+            cluster=CLUSTER_NAME,
+            taskDefinition=TASK_DEFINITION_ARN,
+            launchType="FARGATE",
+            networkConfiguration={
+                "awsvpcConfiguration": {
+                    "subnets": SUBNET_IDS,
+                    "securityGroups": [SECURITY_GROUP_ID],
+                    "assignPublicIp": "ENABLED",
+                }
+            },
+            overrides=container_overrides,
+            startedBy=run_id,
+        )
+    except Exception as exc:
+        logger.exception("ecs.run_task raised for run %s", run_id)
+        return _json_response(
+            500, {"error": f"ECS RunTask failed: {exc}"}
+        )
 
     tasks = resp.get("tasks", [])
     if not tasks:
@@ -322,6 +328,14 @@ def handler(event, context):
 
     logger.info("Request: %s %s", method, path)
 
+    try:
+        return _route(method, path, event)
+    except Exception as exc:
+        logger.exception("Unhandled error in handler")
+        return _json_response(500, {"error": str(exc)})
+
+
+def _route(method: str, path: str, event: dict) -> dict:
     # GET /sessions/{id}/results
     match = SESSION_RESULTS_RE.match(path)
     if match and method == "GET":
