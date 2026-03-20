@@ -347,17 +347,18 @@ class OasisStack(Stack):
         )
 
         # ELBv2 permissions for ALB target group / listener rule management
+        # NOTE: IAM uses "elasticloadbalancing:" for both v1 and v2 APIs
         orchestrator_fn.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
-                    "elasticloadbalancingv2:CreateTargetGroup",
-                    "elasticloadbalancingv2:DeleteTargetGroup",
-                    "elasticloadbalancingv2:RegisterTargets",
-                    "elasticloadbalancingv2:DeregisterTargets",
-                    "elasticloadbalancingv2:CreateRule",
-                    "elasticloadbalancingv2:DeleteRule",
-                    "elasticloadbalancingv2:DescribeRules",
-                    "elasticloadbalancingv2:DescribeTargetGroups",
+                    "elasticloadbalancing:CreateTargetGroup",
+                    "elasticloadbalancing:DeleteTargetGroup",
+                    "elasticloadbalancing:RegisterTargets",
+                    "elasticloadbalancing:DeregisterTargets",
+                    "elasticloadbalancing:CreateRule",
+                    "elasticloadbalancing:DeleteRule",
+                    "elasticloadbalancing:DescribeRules",
+                    "elasticloadbalancing:DescribeTargetGroups",
                 ],
                 resources=["*"],
             )
