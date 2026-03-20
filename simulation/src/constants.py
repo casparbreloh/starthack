@@ -24,17 +24,20 @@ CREW_DAILY_PROTEIN_G = 400  # 100 g/person/day (1.5 g/kg for 70 kg astronaut)
 CREW_DAILY_WATER_L = 12.0
 
 # ── Initial food rations (per food type, kg — freeze-dried/dehydrated equivalent)
-# Potato: caloric backbone (77 kcal/100g × 1200 kg = 924 000 kcal)
-# Beans:  protein source  (100 kcal/100g ×  250 kg = 250 000 kcal, 90 g prot/100g)
-# Lettuce: micronutrient supplement (15 kcal/100g × 30 kg)
-# Radish:  fast-cycle emergency buffer (16 kcal/100g × 15 kg)
-# Herbs:   crew morale / flavour (40 kcal/100g × 10 kg)
+# Sized to provide ~291-sol buffer (3.49M kcal) so the agent has time to ramp up
+# greenhouse production. The greenhouse can produce ~4,600 kcal/sol at steady
+# state, so the agent must actively farm to cover the remaining ~1.9M kcal.
+# Potato: caloric backbone (77 kcal/100g × 3600 kg = 2 772 000 kcal)
+# Beans:  protein source  (100 kcal/100g ×  700 kg = 700 000 kcal, 90 g prot/100g)
+# Lettuce: micronutrient supplement (15 kcal/100g × 50 kg)
+# Radish:  fast-cycle emergency buffer (16 kcal/100g × 25 kg)
+# Herbs:   crew morale / flavour (40 kcal/100g × 15 kg)
 INITIAL_FOOD_KG: dict[str, float] = {
-    "potato": 1200.0,
-    "beans": 250.0,
-    "lettuce": 30.0,
-    "radish": 15.0,
-    "herbs": 10.0,
+    "potato": 3600.0,
+    "beans": 700.0,
+    "lettuce": 50.0,
+    "radish": 25.0,
+    "herbs": 15.0,
 }
 # Caloric and protein density per kg (matches CROP_CATALOG values × 10)
 FOOD_KCAL_PER_KG: dict[str, float] = {
@@ -54,10 +57,10 @@ FOOD_PROTEIN_G_PER_KG: dict[str, float] = {
 
 # ── Initial stores (NORMAL difficulty) ───────────────────────────────────────
 # Derived from INITIAL_FOOD_KG × FOOD_KCAL_PER_KG / FOOD_PROTEIN_G_PER_KG
-# potato 924 000 + beans 250 000 + lettuce 4 500 + radish 2 400 + herbs 4 000
-INITIAL_STORED_KCAL = 1_184_900  # ~99-sol buffer
-# potato 24 000 + beans 22 500 + lettuce 390 + radish 105 + herbs 300
-INITIAL_STORED_PROTEIN_G = 47_295
+# potato 2 772 000 + beans 700 000 + lettuce 7 500 + radish 4 000 + herbs 6 000
+INITIAL_STORED_KCAL = 3_489_500  # ~291-sol buffer at 12,000 kcal/day
+# potato 72 000 + beans 63 000 + lettuce 650 + radish 175 + herbs 450
+INITIAL_STORED_PROTEIN_G = 136_275  # ~341-sol buffer at 400 g/day
 INITIAL_WATER_RESERVOIR_L = 600.0  # +100 L added as mission starting ration
 INITIAL_BATTERY_WH = 12_000.0
 INITIAL_NUTRIENT_STOCK_PCT = 100.0
