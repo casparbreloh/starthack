@@ -1,6 +1,7 @@
 """Energy Crisis specialist agent for the Mars greenhouse.
 
 Handles the energy_disruption crisis type. [CRITICAL-1]
+Advisory-only: returns text recommendations, does NOT execute actions.
 """
 
 from __future__ import annotations
@@ -8,9 +9,8 @@ from __future__ import annotations
 from strands import Agent, tool
 from strands.models.bedrock import BedrockModel
 
-from ..config import AGENT_TEMPERATURE, MODEL_ID
+from ..config import AGENT_TEMPERATURE, SPECIALIST_MODEL_ID
 from ..prompts import ENERGY_CRISIS_PROMPT
-from ..tools.actions import create_action_tools
 
 
 @tool
@@ -20,12 +20,10 @@ def energy_crisis_agent(
     weather_forecast: str,
     current_sol: int,
 ) -> str:
-    """Handle an energy_disruption crisis by rebalancing power allocation.
+    """Get expert advice on handling an energy_disruption crisis.
 
-    Pass the exact crisis type string from get_active_crises() as context.
-    The crisis type is 'energy_disruption' (NOT 'energy_crisis'). [CRITICAL-1]
-    Handles battery preservation, heating priority, and photoperiod reduction.
-    Does NOT call advance_simulation.
+    Returns text recommendations for energy rebalancing. The orchestrator
+    should read the advice and then execute actions itself.
 
     Args:
         energy_status: JSON string from get_energy_status()
@@ -34,14 +32,15 @@ def energy_crisis_agent(
         current_sol: Current simulation sol number for context
 
     Returns:
-        String describing the energy crisis response actions taken.
+        String describing recommended energy crisis response actions.
     """
-    actions = create_action_tools()
-    model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
+    model = BedrockModel(model_id=SPECIALIST_MODEL_ID, temperature=AGENT_TEMPERATURE)
     agent = Agent(
         model=model,
-        system_prompt=ENERGY_CRISIS_PROMPT,
-        tools=[actions["allocate_energy"], actions["set_zone_environment"]],
+        system_prompt=ENERGY_CRISIS_PROMPT
+        + "\n\nIMPORTANT: You are an ADVISOR. Describe exactly what actions "
+        "should be taken with specific parameter values, but do NOT call any "
+        "action tools. The orchestrator will execute your recommendations.",
     )
 
     prompt = (
@@ -49,10 +48,10 @@ def energy_crisis_agent(
         f"Energy Status:\n{energy_status}\n\n"
         f"Greenhouse Environment:\n{environment}\n\n"
         f"Weather Forecast:\n{weather_forecast}\n\n"
-        "Analyze the energy situation and take immediate actions to prevent "
-        "battery depletion. Prioritize heating over lighting. Reduce "
-        "photoperiods to cut consumption. Calculate how many sols the "
-        "battery can sustain at current drain rate."
+        "Analyze the energy situation and recommend immediate actions to prevent "
+        "battery depletion. Prioritize heating over lighting. Recommend "
+        "photoperiod reductions. Calculate how many sols the battery can sustain "
+        "at current drain rate. Be specific with exact parameter values."
     )
 
     result = agent(prompt)

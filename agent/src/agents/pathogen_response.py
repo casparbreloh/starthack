@@ -1,6 +1,7 @@
 """Pathogen Response specialist agent for the Mars greenhouse.
 
 Handles the pathogen_outbreak crisis type. [CRITICAL-3]
+Advisory-only: returns text recommendations, does NOT execute actions.
 """
 
 from __future__ import annotations
@@ -8,9 +9,8 @@ from __future__ import annotations
 from strands import Agent, tool
 from strands.models.bedrock import BedrockModel
 
-from ..config import AGENT_TEMPERATURE, MODEL_ID
+from ..config import AGENT_TEMPERATURE, SPECIALIST_MODEL_ID
 from ..prompts import PATHOGEN_RESPONSE_PROMPT
-from ..tools.actions import create_action_tools
 
 
 @tool
@@ -19,13 +19,10 @@ def pathogen_response_agent(
     environment: str,
     current_sol: int,
 ) -> str:
-    """Handle a pathogen_outbreak crisis by triaging crops and controlling spread.
+    """Get expert advice on handling a pathogen outbreak.
 
-    The crisis type is 'pathogen_outbreak' — it is returned by get_active_crises()
-    after admin injection via events.open_crisis(). [CRITICAL-3]
-    Triages crops: remove health < 20% (lost cause), keep health > 20%
-    (recoverable). Adjusts humidity to < 70% to reduce fungal risk.
-    Does NOT call advance_simulation.
+    Returns text recommendations for pathogen response. The orchestrator
+    should read the advice and then execute actions itself.
 
     Args:
         crops_status: JSON string from get_crops_status()
@@ -33,29 +30,26 @@ def pathogen_response_agent(
         current_sol: Current simulation sol number for context
 
     Returns:
-        String describing the pathogen response actions taken.
+        String describing recommended pathogen response actions.
     """
-    actions = create_action_tools()
-    model = BedrockModel(model_id=MODEL_ID, temperature=AGENT_TEMPERATURE)
+    model = BedrockModel(model_id=SPECIALIST_MODEL_ID, temperature=AGENT_TEMPERATURE)
     agent = Agent(
         model=model,
-        system_prompt=PATHOGEN_RESPONSE_PROMPT,
-        tools=[
-            actions["remove_crop"],
-            actions["plant_crop"],
-            actions["set_zone_environment"],
-        ],
+        system_prompt=PATHOGEN_RESPONSE_PROMPT
+        + "\n\nIMPORTANT: You are an ADVISOR. Describe exactly what actions "
+        "should be taken with specific parameter values, but do NOT call any "
+        "action tools. The orchestrator will execute your recommendations.",
     )
 
     prompt = (
         f"Sol {current_sol} — Pathogen Outbreak Response\n\n"
         f"Crops Status:\n{crops_status}\n\n"
         f"Greenhouse Environment:\n{environment}\n\n"
-        "Identify infected crops and assess their health. Remove crops with "
-        "health < 20% (lost cause). Adjust zone humidity to < 70% to reduce "
-        "fungal spread risk. For freed area, plan replanting based on "
+        "Identify infected crops and assess their health. Recommend removing crops "
+        "with health < 20% (lost cause). Recommend zone humidity < 70% to reduce "
+        "fungal spread. For freed area, recommend replanting based on "
         f"current sol ({current_sol}): if sol < 350, prefer potatoes; "
-        "otherwise use fast crops (radish)."
+        "otherwise use fast crops (radish). Be specific with crop IDs and exact values."
     )
 
     result = agent(prompt)

@@ -66,6 +66,7 @@ export interface WebSocketState {
   isPaused: boolean
   lastState: TickPayload | null
   lastEvents: unknown[]
+  stateHistory: TickPayload[]
   injectCrisis: (scenario: string, params?: Record<string, unknown>) => void
   setTickDelay: (ms: number) => void
   pause: () => void
@@ -100,6 +101,7 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
   const [isPaused, setIsPaused] = useState(true)
   const [lastState, setLastState] = useState<TickPayload | null>(null)
   const [lastEvents, setLastEvents] = useState<unknown[]>([])
+  const [stateHistory, setStateHistory] = useState<TickPayload[]>([])
 
   const wsRef = useRef<WebSocket | null>(null)
   const retriesRef = useRef(0)
@@ -140,6 +142,10 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
         case "tick": {
           setLastState(msg.payload)
           setLastEvents((msg.payload.events as unknown[]) ?? [])
+          setStateHistory((prev) => {
+            const next = prev.length >= 500 ? prev.slice(1) : prev
+            return [...next, msg.payload]
+          })
           // Keep isPaused in sync with the simulation's actual state
           const simStatus = msg.payload.sim_status as { paused?: boolean } | undefined
           if (simStatus && typeof simStatus.paused === "boolean") {
@@ -320,6 +326,7 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
     (config?: Partial<CreateSessionConfig>) => {
       setLastEvents([])
       setLastState(null)
+      setStateHistory([])
       setIsPaused(true)
       // Clear stored session — reset creates a new one
       sessionStorage.removeItem(SESSION_STORAGE_KEY)
@@ -352,6 +359,7 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
     isPaused,
     lastState,
     lastEvents,
+    stateHistory,
     injectCrisis,
     setTickDelay,
     pause,
