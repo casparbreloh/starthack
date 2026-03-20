@@ -81,6 +81,31 @@ const MAX_RECONNECT_RETRIES = 5
 const BASE_RECONNECT_DELAY_MS = 1000
 const SESSION_STORAGE_KEY = "oasis_session_id"
 
+// sessionStorage may throw DOMException in restricted contexts (e.g. Amplify, iframes)
+function safeGetSession(): string | null {
+  try {
+    return sessionStorage.getItem(SESSION_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+function safeSetSession(id: string): void {
+  try {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, id)
+  } catch {
+    // Storage blocked — session won't survive refresh, but app still works
+  }
+}
+
+function safeClearSession(): void {
+  try {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+  } catch {
+    // Storage blocked — nothing to clear
+  }
+}
+
 function buildWsUrl(): string {
   const envUrl = import.meta.env.VITE_SIM_WS_URL as string | undefined
   if (envUrl) return envUrl
@@ -156,20 +181,20 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
 
         case "session_created":
           setSessionId(msg.session_id)
-          sessionStorage.setItem(SESSION_STORAGE_KEY, msg.session_id)
+          safeSetSession(msg.session_id)
           setIsPaused("paused" in msg.payload && Boolean(msg.payload.paused))
           break
 
         case "session_joined":
           setSessionId(msg.session_id)
-          sessionStorage.setItem(SESSION_STORAGE_KEY, msg.session_id)
+          safeSetSession(msg.session_id)
           pendingJoinRef.current = false
           // isPaused will be synced from the follow-up tick snapshot
           break
 
         case "mission_end":
           setLastState(msg.payload.snapshot)
-          sessionStorage.removeItem(SESSION_STORAGE_KEY)
+          safeClearSession()
           break
 
         case "paused":
@@ -184,7 +209,7 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
           // If a join_session failed (session gone), fall back to create
           if (pendingJoinRef.current) {
             pendingJoinRef.current = false
-            sessionStorage.removeItem(SESSION_STORAGE_KEY)
+            safeClearSession()
             const ws = wsRef.current
             if (ws && ws.readyState === WebSocket.OPEN) {
               ws.send(
@@ -225,7 +250,7 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
       ws.send(JSON.stringify({ type: "register", payload: { role: "frontend" } }))
 
       // Try to rejoin an existing session (from ref, or sessionStorage on refresh)
-      const existingId = sessionIdRef.current || sessionStorage.getItem(SESSION_STORAGE_KEY)
+      const existingId = sessionIdRef.current || safeGetSession()
       if (existingId) {
         pendingJoinRef.current = true
         ws.send(
@@ -329,7 +354,7 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
       setStateHistory([])
       setIsPaused(true)
       // Clear stored session — reset creates a new one
-      sessionStorage.removeItem(SESSION_STORAGE_KEY)
+      safeClearSession()
       send({
         type: "reset_session",
         session_id: sessionIdRef.current ?? undefined,
