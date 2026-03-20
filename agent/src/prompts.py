@@ -198,7 +198,8 @@ _SPECIALIST_BREVITY = (
     "State the problem, your recommended actions with exact parameter values, and the expected outcome."
 )
 
-WATER_CRISIS_PROMPT = """\
+WATER_CRISIS_PROMPT = (
+    """\
 You are a water crisis specialist for the Mars greenhouse mission.
 Zone areas: A=12m2, B=18m2, C=20m2. Target reservoir: >100L.
 Target recycling efficiency: >85%. Water is non-negotiable — without it,
@@ -235,10 +236,13 @@ Decision process:
 
 advance_simulation is NEVER available to you. Preventive actions are
 recorded automatically when you call clean_water_filters.
-""" + _SPECIALIST_BREVITY
+"""
+    + _SPECIALIST_BREVITY
+)
 
 
-ENERGY_CRISIS_PROMPT = """\
+ENERGY_CRISIS_PROMPT = (
+    """\
 You are an energy crisis specialist for the Mars greenhouse mission.
 Zone areas: A=12m2, B=18m2, C=20m2. The crisis type is energy_disruption
 (NOT energy_crisis). The crew will die without heat — do not let the
@@ -272,10 +276,13 @@ Decision process:
 
 advance_simulation is NEVER available to you. Preventive actions are
 recorded automatically when you call allocate_energy.
-""" + _SPECIALIST_BREVITY
+"""
+    + _SPECIALIST_BREVITY
+)
 
 
-PATHOGEN_RESPONSE_PROMPT = """\
+PATHOGEN_RESPONSE_PROMPT = (
+    """\
 You are a pathogen response specialist for the Mars greenhouse mission.
 Zone areas: A=12m2, B=18m2, C=20m2. The crisis type is pathogen_outbreak.
 Pathogens are logged as crises after admin injection — they ARE returned by
@@ -306,10 +313,13 @@ crops, and replant to recover food production.
 
 advance_simulation is NEVER available to you. Preventive actions are
 recorded automatically when you call relevant tools.
-""" + _SPECIALIST_BREVITY
+"""
+    + _SPECIALIST_BREVITY
+)
 
 
-CLIMATE_EMERGENCY_PROMPT = """\
+CLIMATE_EMERGENCY_PROMPT = (
+    """\
 You are a climate emergency specialist for the Mars greenhouse mission.
 Zone areas: A=12m2, B=18m2, C=20m2. You handle TWO crisis types:
 
@@ -349,10 +359,13 @@ without causing secondary stress from rapid changes.
 
 advance_simulation is NEVER available to you. Preventive actions are
 recorded automatically when you call allocate_energy.
-""" + _SPECIALIST_BREVITY
+"""
+    + _SPECIALIST_BREVITY
+)
 
 
-NUTRITION_PLANNER_PROMPT = """\
+NUTRITION_PLANNER_PROMPT = (
+    """\
 You are a nutrition planner and nutrient crisis specialist for the Mars
 greenhouse mission. Zone areas: A=12m2, B=18m2, C=20m2. You handle TWO
 crisis types:
@@ -393,10 +406,13 @@ stock for the remainder of the mission.
 
 advance_simulation is NEVER available to you. Preventive actions are
 recorded automatically when you call relevant tools.
-""" + _SPECIALIST_BREVITY
+"""
+    + _SPECIALIST_BREVITY
+)
 
 
-STORM_PREPARATION_PROMPT = """\
+STORM_PREPARATION_PROMPT = (
+    """\
 You are a dust storm preparation specialist for the Mars greenhouse mission.
 Zone areas: A=12m2, B=18m2, C=20m2.
 
@@ -437,10 +453,13 @@ heating failure or battery depletion.
 
 advance_simulation is NEVER available to you. Preventive actions are
 recorded automatically when you call allocate_energy.
-""" + _SPECIALIST_BREVITY
+"""
+    + _SPECIALIST_BREVITY
+)
 
 
-TRIAGE_PROMPT = """\
+TRIAGE_PROMPT = (
+    """\
 You are the triage coordinator for the Mars greenhouse mission.
 Zone areas: A=12m2, B=18m2, C=20m2.
 
@@ -484,7 +503,9 @@ Process:
 
 advance_simulation is NEVER available to you or any specialist you invoke.
 Preventive actions are recorded automatically via specialist tool calls.
-""" + _SPECIALIST_BREVITY
+"""
+    + _SPECIALIST_BREVITY
+)
 
 
 # =============================================================================
