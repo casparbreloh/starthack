@@ -3,13 +3,8 @@
  * shapes into the types the UI components expect.
  */
 
+import { num } from "@/lib/num"
 import type * as T from "@/types/game"
-
-/** Safely coerce any value to a finite number, falling back to `fallback`. */
-function num(v: unknown, fallback = 0): number {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : fallback
-}
 
 // ─── Raw simulation snapshot shapes (mirrors snapshots.py) ──────────────────
 

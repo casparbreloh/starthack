@@ -4,6 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 
 import { useStateHistory } from "@/hooks/useGameData"
 import type { TickPayload } from "@/hooks/useWebSocket"
+import { num } from "@/lib/num"
 
 // ── The 5 mission-critical metrics ───────────────────────────────────────────
 
@@ -62,7 +63,7 @@ const METRICS: MetricDef[] = [
       return Math.round((n.today.calories_consumed_kcal / n.today.calories_target_kcal) * 1000) / 10
     },
     domain: [0, "auto"],
-    formatValue: (v) => v.toFixed(1),
+    formatValue: (v) => num(v).toFixed(1),
   },
   {
     key: "avg_crop_health",
@@ -94,7 +95,7 @@ function MiniChart({
       ? metric.formatValue(latest.value)
       : latest.value % 1 === 0
         ? String(latest.value)
-        : latest.value.toFixed(1)
+        : num(latest.value).toFixed(1)
     : "—"
 
   return (
@@ -132,7 +133,7 @@ function MiniChart({
                     ? metric.formatValue(val)
                     : val % 1 === 0
                       ? String(val)
-                      : val.toFixed(1)
+                      : num(val).toFixed(1)
                   return (
                     <div className="rounded-sm border border-border bg-card/90 px-2 py-1">
                       <span className="font-mono text-[9px] tabular-nums text-foreground">

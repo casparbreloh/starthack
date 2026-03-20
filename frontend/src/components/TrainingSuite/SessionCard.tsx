@@ -1,3 +1,4 @@
+import { num } from "@/lib/num"
 import type { SessionInfo, SessionStatus } from "@/types/orchestrator"
 
 // ── Status badge config ──────────────────────────────────────────────
@@ -90,7 +91,7 @@ export default function SessionCard({ session, detail, onSelect, onStop }: Sessi
         <div className="flex items-baseline gap-2">
           <span className="label-aerospace">Score</span>
           <span className="font-mono text-lg font-semibold text-green-400">
-            {detail.final_score.toFixed(1)}
+            {num(detail.final_score).toFixed(1)}
           </span>
         </div>
       )}
