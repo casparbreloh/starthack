@@ -184,7 +184,12 @@ async def _invoke_via_agentcore(runtime_arn: str, session_id: str, ws_url: str) 
 
 
 async def _invoke_via_http(agent_url: str, session_id: str, ws_url: str) -> None:
-    """POST to the agent's /invocations endpoint to start a join_mission."""
+    """POST to the agent's /invocations endpoint to start a join_mission.
+
+    Fire-and-forget: we only wait for the HTTP connection to be accepted,
+    then let the agent run in the background.  The agent communicates back
+    to the simulation via WebSocket — we don't need the streaming response.
+    """
     payload = {
         "action": "join_mission",
         "config": {
@@ -200,17 +205,26 @@ async def _invoke_via_http(agent_url: str, session_id: str, ws_url: str) -> None
         ws_url,
     )
 
-    async with httpx.AsyncClient(
-        timeout=httpx.Timeout(connect=5.0, read=300.0, write=5.0, pool=5.0)
-    ) as client:
-        async with client.stream(
-            "POST", f"{agent_url}/invocations", json=payload
-        ) as resp:
-            resp.raise_for_status()
-            async for line in resp.aiter_lines():
-                if not line.strip():
-                    continue
-                logger.info("Agent event: %s", line.rstrip())
+    async def _fire_and_forget() -> None:
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(connect=5.0, read=600.0, write=5.0, pool=5.0)
+            ) as client:
+                async with client.stream(
+                    "POST", f"{agent_url}/invocations", json=payload
+                ) as resp:
+                    resp.raise_for_status()
+                    async for line in resp.aiter_lines():
+                        if not line.strip():
+                            continue
+                        logger.debug("Agent event: %s", line.rstrip())
+        except httpx.ReadTimeout:
+            logger.warning("Agent HTTP stream timed out (expected for long missions)")
+        except Exception:
+            logger.exception("Agent HTTP stream error for session %s", session_id)
+
+    # Launch in background — don't block the session creation
+    asyncio.create_task(_fire_and_forget())
 
 
 # ---------------------------------------------------------------------------
