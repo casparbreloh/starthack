@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 import TrainingSuite from "@/components/TrainingSuite/TrainingSuite"
 import { Toaster as Sonner } from "@/components/ui/sonner"
 import { Toaster } from "@/components/ui/toaster"
@@ -96,25 +97,27 @@ const App = () => {
   const toggle = () => setView((v) => (v === "game" ? "training" : "game"))
 
   return (
-    <GameDataProvider>
-      {view === "training" ? (
-        <TrainingView onSwitch={toggle} />
-      ) : (
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <ViewSwitcher view="game" onSwitch={toggle} />
-          <OrchestratorGate>
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </OrchestratorGate>
-        </TooltipProvider>
-      )}
-    </GameDataProvider>
+    <ErrorBoundary>
+      <GameDataProvider>
+        {view === "training" ? (
+          <TrainingView onSwitch={toggle} />
+        ) : (
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <ViewSwitcher view="game" onSwitch={toggle} />
+            <OrchestratorGate>
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </OrchestratorGate>
+          </TooltipProvider>
+        )}
+      </GameDataProvider>
+    </ErrorBoundary>
   )
 }
 

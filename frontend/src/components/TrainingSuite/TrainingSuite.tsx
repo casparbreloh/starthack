@@ -23,7 +23,7 @@ export default function TrainingSuite() {
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-border px-6 py-5">
+      <div className="flex items-center justify-between border-b border-border px-6 py-5 pr-36">
         <div className="flex items-center gap-4">
           <span className="font-mono text-sm font-bold tracking-[0.2em] text-foreground">
             OASIS
