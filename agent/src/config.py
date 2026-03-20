@@ -15,9 +15,9 @@ MODEL_ID: str = os.environ.get(
 )
 SPECIALIST_MODEL_ID: str = os.environ.get(
     "SPECIALIST_MODEL_ID",
-    "us.anthropic.claude-haiku-4-5-20251001",
+    "us.amazon.nova-2-lite-v1:0",
 )
-AGENT_TEMPERATURE: float = float(os.environ.get("AGENT_TEMPERATURE", "0.3"))
+AGENT_TEMPERATURE: float = float(os.environ.get("AGENT_TEMPERATURE", "0.2"))
 AGENTCORE_GATEWAY_URL: str = os.environ.get(
     "AGENTCORE_GATEWAY_URL",
     "https://kb-start-hack-gateway-buyjtibfpg.gateway.bedrock-agentcore.us-east-2.amazonaws.com/mcp",

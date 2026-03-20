@@ -66,6 +66,7 @@ class EnergyRates:
     lighting_delivery_ratio: float = 1.0
     heating_delivery_ratio: float = 1.0
     water_pumps_delivery_ratio: float = 1.0
+    nutrient_pumps_delivery_ratio: float = 1.0
 
 
 class EnergyModel:
@@ -135,6 +136,9 @@ class EnergyModel:
         )
         self.rates.water_pumps_delivery_ratio = (
             recycling / requested_recycling if requested_recycling > 0 else 1.0
+        )
+        self.rates.nutrient_pumps_delivery_ratio = (
+            pumps / requested_pumps if requested_pumps > 0 else 1.0
         )
 
         total = heating + lighting + recycling + pumps + sensors

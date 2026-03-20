@@ -290,6 +290,7 @@ def _crew_nutrition(engine: SimulationEngine) -> dict[str, Any]:
             "level": engine.crew.health.micronutrient_level.value,
             "consecutive_deficit_sols": engine.crew.health.consecutive_micronutrient_deficit_sols,
             "health_penalty_pct": engine.crew.health.micronutrient_health_penalty,
+            "vitamin_supplement_remaining_sols": engine.crew.health.vitamin_supplement_remaining_sols,
         },
         "food_inventory": {
             food_type: {
@@ -432,6 +433,7 @@ def _crew_health(engine: SimulationEngine) -> dict[str, Any]:
             "level": h.micronutrient_level.value,
             "consecutive_deficit_sols": h.consecutive_micronutrient_deficit_sols,
             "health_penalty_pct": h.micronutrient_health_penalty,
+            "vitamin_supplement_remaining_sols": h.vitamin_supplement_remaining_sols,
         },
         "illness": {
             "active": h.illness.active,
