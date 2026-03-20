@@ -196,6 +196,11 @@ def create_app() -> FastAPI:
     async def health() -> dict:
         return {"status": "ok"}
 
+    @application.get("/sessions")
+    async def list_sessions() -> list:
+        """Stub for local dev — the real endpoint lives on the orchestrator Lambda."""
+        return []
+
     @application.get("/status")
     async def status() -> dict:
         if _bootstrap_session is None:

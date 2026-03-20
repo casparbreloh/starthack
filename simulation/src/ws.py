@@ -30,6 +30,11 @@ from src.state import session_manager
 
 logger = logging.getLogger(__name__)
 
+
+class _JoinSessionNotFound(Exception):
+    """Raised when join_session targets a session that no longer exists."""
+
+
 # Agent invocation is handled inside invoke_agent() which reads
 # AGENT_RUNTIME_ARN / AGENT_URL from environment directly.
 _AGENT_CONFIGURED = bool(
@@ -168,6 +173,8 @@ async def websocket_endpoint(ws: WebSocket, run_id: str | None = None) -> None:
                     )
             except WebSocketDisconnect:
                 raise
+            except _JoinSessionNotFound:
+                pass  # already handled with error response + info log
             except Exception:
                 logger.exception("Error handling message type '%s'", msg_type)
                 try:
@@ -292,7 +299,16 @@ async def _handle_join_session(
 ) -> str:
     """Re-register a WebSocket with an existing session (e.g. after reconnect)."""
     target_id = str(payload.get("session_id") or run_id or "")
-    session = session_manager.get(target_id)
+    session = session_manager.try_get(target_id)
+    if session is None:
+        logger.info("join_session: session %s not found (stale?)", target_id)
+        await ws.send_json(
+            {
+                "type": "error",
+                "payload": {"message": f"Session '{target_id}' not found"},
+            }
+        )
+        raise _JoinSessionNotFound(target_id)
     session.connections.register(ws, role or "frontend")
 
     await ws.send_json(
