@@ -96,7 +96,8 @@ def _ensure_alb_routing(run_id: str, public_ip: str) -> None:
     except Exception:
         pass  # TargetGroupNotFound may surface as a generic ClientError
 
-    # Create target group
+    # Create target group with aggressive health checks so the ALB routes
+    # traffic quickly after the Fargate task starts (default 5×30s = 150s).
     tg_resp = elbv2.create_target_group(
         Name=tg_name,
         TargetType="ip",
@@ -107,6 +108,10 @@ def _ensure_alb_routing(run_id: str, public_ip: str) -> None:
         HealthCheckPath="/health",
         HealthCheckProtocol="HTTP",
         HealthCheckPort="8080",
+        HealthCheckIntervalSeconds=10,
+        HealthyThresholdCount=2,
+        UnhealthyThresholdCount=2,
+        HealthCheckTimeoutSeconds=5,
     )
     tg_arn = tg_resp["TargetGroups"][0]["TargetGroupArn"]
 
@@ -310,10 +315,14 @@ def _extract_task_info(task: dict) -> dict:
         if public_ip:
             break
 
-    # Set up ALB routing when the task's IP is first resolved
+    # Set up ALB routing when the task's IP is first resolved.
+    # Only advertise ws_url after routing is confirmed — otherwise the
+    # frontend connects before the ALB listener rule exists and gets 404.
+    alb_ready = False
     if public_ip and started_by and ALB_LISTENER_ARN:
         try:
             _ensure_alb_routing(started_by, public_ip)
+            alb_ready = True
         except Exception:
             logger.warning(
                 "Failed to set up ALB routing for run %s",
@@ -321,7 +330,7 @@ def _extract_task_info(task: dict) -> dict:
                 exc_info=True,
             )
 
-    if WS_BASE_URL and started_by:
+    if WS_BASE_URL and started_by and alb_ready:
         ws_url = f"{WS_BASE_URL}/ws/{started_by}"
     elif public_ip:
         ws_url = f"ws://{public_ip}:8080/ws"

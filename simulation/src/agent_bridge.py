@@ -36,17 +36,24 @@ async def _resolve_public_ip() -> str | None:
     """Discover this container's public IPv4 via an external service.
 
     Uses ``checkip.amazonaws.com`` which is fast and reliable from within AWS.
-    Returns ``None`` on any failure.
+    Retries a few times since DNS may not be ready immediately at container
+    startup.  Returns ``None`` on persistent failure.
     """
-    try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as client:
-            resp = await client.get("https://checkip.amazonaws.com")
-            resp.raise_for_status()
-            return resp.text.strip()
-    except BaseException:
-        # Must catch BaseException — asyncio.CancelledError is not an Exception
-        # in Python 3.9+ and will crash the lifespan if it escapes.
-        logger.warning("Failed to resolve public IP", exc_info=True)
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(5.0)) as client:
+                resp = await client.get("https://checkip.amazonaws.com")
+                resp.raise_for_status()
+                return resp.text.strip()
+        except BaseException:
+            # Must catch BaseException — asyncio.CancelledError is not an
+            # Exception in Python 3.9+ and will crash the lifespan if it escapes.
+            if attempt < 2:
+                await asyncio.sleep(2)
+            else:
+                logger.warning(
+                    "Failed to resolve public IP after 3 attempts", exc_info=True
+                )
     return None
 
 
@@ -124,7 +131,10 @@ async def get_own_ws_url() -> str:
 
 
 async def _invoke_via_agentcore(runtime_arn: str, session_id: str, ws_url: str) -> None:
-    """Invoke the agent via Bedrock AgentCore Runtime SDK."""
+    """Invoke the agent via Bedrock AgentCore Runtime SDK.
+
+    Uses the ``bedrock-agentcore`` client (boto3 >= 1.39.8).
+    """
     import boto3
 
     payload = json.dumps(
@@ -145,16 +155,23 @@ async def _invoke_via_agentcore(runtime_arn: str, session_id: str, ws_url: str) 
     )
 
     def _call() -> None:
-        client = boto3.client("bedrock-agent-runtime")
+        client = boto3.client("bedrock-agentcore")
         response = client.invoke_agent_runtime(
             agentRuntimeArn=runtime_arn,
+            runtimeSessionId=session_id,
             payload=payload.encode(),
         )
-        # Read the streaming response to completion
-        for event in response.get("completion", []):
-            chunk = event.get("chunk", {}).get("bytes", b"")
-            if chunk:
-                logger.info("Agent event: %s", chunk.decode(errors="replace"))
+        # Process the streaming response
+        content_type = response.get("contentType", "")
+        if "text/event-stream" in content_type:
+            for line in response["response"].iter_lines(chunk_size=10):
+                if line:
+                    decoded = line.decode("utf-8") if isinstance(line, bytes) else line
+                    logger.info("Agent event: %s", decoded)
+        elif response.get("response"):
+            for chunk in response["response"]:
+                decoded = chunk.decode("utf-8") if isinstance(chunk, bytes) else chunk
+                logger.info("Agent event: %s", decoded)
 
     # boto3 is synchronous — run in a thread to avoid blocking the event loop
     loop = asyncio.get_running_loop()

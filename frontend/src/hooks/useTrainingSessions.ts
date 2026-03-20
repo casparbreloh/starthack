@@ -105,26 +105,23 @@ export function useTrainingSessions(): TrainingSessionsState {
 
   // ── Stop session ─────────────────────────────────────────────────
 
-  const stopSession = useCallback(
-    async (sessionId: string) => {
-      try {
-        setError(null)
-        await orchestrator.stopSession(sessionId)
-        if (!mountedRef.current) return
-
-        // Optimistic update
-        setSessions((prev) =>
-          prev.map((s) => (s.session_id === sessionId ? { ...s, status: "stopped" as const } : s)),
-        )
-        await refreshSessions()
-      } catch (err) {
-        if (!mountedRef.current) return
-        const message = err instanceof Error ? err.message : "Failed to stop session"
-        setError(message)
-      }
-    },
-    [refreshSessions],
-  )
+  const stopSession = useCallback(async (sessionId: string) => {
+    try {
+      setError(null)
+      // Optimistic update — button disappears immediately
+      setSessions((prev) =>
+        prev.map((s) => (s.session_id === sessionId ? { ...s, status: "stopped" as const } : s)),
+      )
+      await orchestrator.stopSession(sessionId)
+      // Don't refreshSessions() here — the optimistic update already
+      // hides the stop button, and the next poll cycle will pick up
+      // the real ECS status (STOPPING → "stopped").
+    } catch (err) {
+      if (!mountedRef.current) return
+      const message = err instanceof Error ? err.message : "Failed to stop session"
+      setError(message)
+    }
+  }, [])
 
   // ── Select session ───────────────────────────────────────────────
 
