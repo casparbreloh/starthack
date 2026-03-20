@@ -96,9 +96,9 @@ FILTER_HEALTH_MIN_EFFICIENCY_FACTOR = 0.5  # recycling can fall to 50 % of nomin
 # ── Ice mining ────────────────────────────────────────────────────────────────
 # Source: docs/mcp-data/01_MARS_ENVIRONMENT_EXTENDED.MD §1.8: subsurface ice deposits
 ICE_MINING_ENERGY_COST_WH = 800.0
-ICE_MINING_BASE_YIELD_L = 15.0
-ICE_MINING_MIN_YIELD_L = 5.0  # Yield formula: MIN + (BASE - MIN) * drill_health_pct / 100; range at usable health (10-100%): 6.0-15.0 L
-ICE_MINING_DRILL_DEGRADATION_PCT = 5.0
+ICE_MINING_BASE_YIELD_L = 22.0
+ICE_MINING_MIN_YIELD_L = 8.0  # Yield formula: MIN + (BASE - MIN) * drill_health_pct / 100; range at usable health (10-100%): 9.4-22.0 L
+ICE_MINING_DRILL_DEGRADATION_PCT = 3.0
 ICE_MINING_DRILL_MAINTENANCE_RESTORE_PCT = 20.0
 ICE_MINING_DRILL_MIN_HEALTH_PCT = 10.0
 ICE_MINING_DRILL_INITIAL_HEALTH_PCT = 100.0
@@ -169,10 +169,19 @@ MICRONUTRIENT_ONSET_DEFICIT_SOLS = 7  # ADEQUATE → DEFICIENT (subclinical)
 MICRONUTRIENT_SEVERE_DEFICIT_SOLS = 21  # DEFICIENT → DEPLETED (clinical symptoms)
 MICRONUTRIENT_PENALTY_DEFICIENT_PER_SOL = 1.0  # max 14 pts over 14 DEFICIENT sols
 MICRONUTRIENT_PENALTY_DEPLETED_PER_SOL = 3.0  # 3 pts/sol → death ~50 DEPLETED sols
+# Stored vitamin supplements — crew brings a finite supply that covers the first
+# N sols, buying time for lettuce to mature (35-sol cycle). After depletion,
+# fresh lettuce harvests are the only micronutrient source.
+CREW_VITAMIN_SUPPLEMENT_SOLS = 40
 
 # ── Nutrient system ───────────────────────────────────────────────────────────
 NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL = 0.08  # stock depletion rate
 NUTRIENT_RESTOCK_AMOUNT_PCT = 10.0  # per /nutrients/adjust call
+# Auto-dosing: nutrient pumps automatically replenish N/K from stock each sol.
+# Base efficiency at 100% pump delivery; scales linearly with pump energy ratio.
+NUTRIENT_AUTO_DOSE_EFFICIENCY = 0.90  # replenish 90% of consumed N/K at full pump power
+# Stock cost per ppm replenished (across all zones combined per sol)
+NUTRIENT_AUTO_DOSE_STOCK_COST_PER_PPM = 0.004  # % of stock per ppm dosed
 
 # ── Mars dust / atmosphere ────────────────────────────────────────────────────
 # Beer-Lambert effective extinction coefficient for broadband solar through

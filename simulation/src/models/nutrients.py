@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 from src.catalog import CROP_CATALOG
 from src.constants import (
     INITIAL_NUTRIENT_STOCK_PCT,
+    NUTRIENT_AUTO_DOSE_EFFICIENCY,
+    NUTRIENT_AUTO_DOSE_STOCK_COST_PER_PPM,
     NUTRIENT_RESTOCK_AMOUNT_PCT,
     NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL,
     PH_ACIDIFICATION_PER_SOL,
@@ -125,22 +127,48 @@ class NutrientModel:
         # Record which zones have active crops (drives pH acidification in integrate)
         self._zone_has_demand = {z: zone_demand_n.get(z, 0.0) > 0 for z in self.state}
 
-    def integrate(self) -> None:
-        """Apply nutrient uptake; deplete global stock."""
+    def integrate(self, pump_delivery_ratio: float = 1.0) -> None:
+        """Apply nutrient uptake, auto-dose from stock, deplete global stock.
+
+        Args:
+            pump_delivery_ratio: fraction of requested nutrient pump energy
+                actually delivered (0.0–1.0). Scales auto-dosing efficiency.
+        """
+        total_dosed_ppm = 0.0  # track total ppm dosed for stock cost
+
         for z_id, z in self.state.items():
             # Reset per-sol boost flags before applying this tick
             z.nitrogen_boost = False
             z.potassium_boost = False
             # Nutrient concentrations drop with crop uptake
-            z.nitrogen_ppm = round(
-                max(0.0, z.nitrogen_ppm + self.rates.d_nitrogen.get(z_id, 0.0)), 2
-            )
-            z.phosphorus_ppm = round(
-                max(0.0, z.phosphorus_ppm + self.rates.d_phosphorus.get(z_id, 0.0)), 2
-            )
-            z.potassium_ppm = round(
-                max(0.0, z.potassium_ppm + self.rates.d_potassium.get(z_id, 0.0)), 2
-            )
+            n_consumed = abs(self.rates.d_nitrogen.get(z_id, 0.0))
+            k_consumed = abs(self.rates.d_potassium.get(z_id, 0.0))
+            p_consumed = abs(self.rates.d_phosphorus.get(z_id, 0.0))
+
+            z.nitrogen_ppm = round(max(0.0, z.nitrogen_ppm - n_consumed), 2)
+            z.phosphorus_ppm = round(max(0.0, z.phosphorus_ppm - p_consumed), 2)
+            z.potassium_ppm = round(max(0.0, z.potassium_ppm - k_consumed), 2)
+
+            # ── Auto-dosing from nutrient stock ─────────────────────────
+            # Nutrient pumps automatically replenish a fraction of consumed
+            # N/K from the finite fertiliser stock. Efficiency scales with
+            # pump energy allocation (pump_delivery_ratio).
+            if self.stock_remaining_pct > 0 and (n_consumed > 0 or k_consumed > 0):
+                efficiency = NUTRIENT_AUTO_DOSE_EFFICIENCY * pump_delivery_ratio
+                n_dose = round(n_consumed * efficiency, 2)
+                k_dose = round(k_consumed * efficiency, 2)
+                p_dose = round(p_consumed * efficiency, 2)
+
+                # Cap replenishment at target levels
+                n_dose = min(n_dose, max(0.0, TARGET_N_PPM - z.nitrogen_ppm))
+                k_dose = min(k_dose, max(0.0, TARGET_K_PPM - z.potassium_ppm))
+
+                z.nitrogen_ppm = round(z.nitrogen_ppm + n_dose, 2)
+                z.potassium_ppm = round(z.potassium_ppm + k_dose, 2)
+                z.phosphorus_ppm = round(z.phosphorus_ppm + p_dose, 2)
+
+                total_dosed_ppm += n_dose + k_dose
+
             # Salt accumulation: mineral residue from water that doesn't fully recycle
             z.base_salt_ppm = round(
                 min(500.0, z.base_salt_ppm + SALT_ACCUMULATION_PPM_PER_SOL), 2
@@ -159,15 +187,15 @@ class NutrientModel:
             else:
                 z.solution_ph = round(min(8.0, z.solution_ph + 0.01), 2)
 
-        # Global stock depletion
+        # Global stock depletion: passive + auto-dosing cost
+        dosing_cost = total_dosed_ppm * NUTRIENT_AUTO_DOSE_STOCK_COST_PER_PPM
+        total_depletion = NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL + dosing_cost
         self.stock_remaining_pct = round(
-            max(0.0, self.stock_remaining_pct - NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL),
+            max(0.0, self.stock_remaining_pct - total_depletion),
             2,
         )
         self.days_of_stock_remaining = round(
-            self.stock_remaining_pct / NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL
-            if NUTRIENT_STOCK_DEGRADATION_PCT_PER_SOL > 0
-            else 999.0,
+            self.stock_remaining_pct / max(0.001, total_depletion),
             1,
         )
 

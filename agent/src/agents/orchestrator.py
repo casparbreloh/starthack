@@ -267,20 +267,9 @@ def _build_consultation_prompt(
         )
 
     prompt_parts.append(
-        "\n### Your Tasks This Consultation\n"
-        "1. Call `read_all_telemetry()` to get full current state\n"
-        "2. Make ALL routine decisions: environment setpoints, irrigation, "
-        "energy allocation, planting (check free area), harvesting (check is_ready), "
-        "nutrient adjustments\n"
-        "3. Check weather for dust_opacity > 1.0 → call storm_preparation_agent if detected\n"
-        "4. Provide a BRIEF reasoning summary (3-5 sentences, plain text, no markdown)\n"
-        "5. Set next_checkin: N where N is sols until next check-in.\n"
-        "   IMPORTANT: Use high values to avoid unnecessary consultations:\n"
-        "   - Stable, no crises: next_checkin: 7-10\n"
-        "   - Minor issues (low nutrients, mild stress): next_checkin: 3-5\n"
-        "   - Active crisis, situation CHANGING: next_checkin: 1-2\n"
-        "   - Active crisis, situation STABLE/UNRESOLVABLE (e.g. battery stuck at 0% "
-        "with solar surplus): next_checkin: 3-5 (you cannot fix it by checking more often)\n"
+        "\n### Instructions\n"
+        "Follow the Consultation Checklist from your system prompt. "
+        "Start by calling `read_all_telemetry()`, then make decisions and call tools.\n"
     )
 
     return "".join(prompt_parts)
@@ -372,21 +361,22 @@ def run_consultation(
 
     if result is not None:
         message = getattr(result, "message", result)
-        candidate_fragments = _collect_text_fragments(message)
+        fragments = _collect_text_fragments(message)
 
-        # Keep string fallbacks too; some SDK responses stringify useful text
-        # even when the structured payload is sparse.
-        for fallback in (str(message), str(result)):
-            text = fallback.strip()
-            if text:
-                candidate_fragments.append(text)
+        # Only use string fallback if structured extraction yielded nothing
+        if not fragments:
+            for fallback in (str(message), str(result)):
+                text = fallback.strip()
+                if text:
+                    fragments.append(text)
+                    break
 
-        deduped_fragments: list[str] = []
-        for fragment in candidate_fragments:
-            if fragment not in deduped_fragments:
-                deduped_fragments.append(fragment)
-
-        reasoning = "\n".join(deduped_fragments)
+        # Deduplicate fragments (same text can appear in multiple payload paths)
+        seen: list[str] = []
+        for f in fragments:
+            if f not in seen:
+                seen.append(f)
+        reasoning = "\n".join(seen)
 
         # Extract next_checkin from any recovered model text. Accept minor
         # formatting variations like markdown emphasis or `next checkin`.
