@@ -117,6 +117,10 @@ class SessionManager:
             raise HTTPException(404, f"Session '{session_id}' not found")
         return session
 
+    def try_get(self, session_id: str) -> Session | None:
+        """Look up a session by id; returns None if not found."""
+        return self._sessions.get(session_id)
+
     def get_or_default(self, session_id: str | None) -> Session:
         """Return the requested session, or the default if session_id is None."""
         if session_id is None:
