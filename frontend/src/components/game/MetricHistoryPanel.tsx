@@ -1,6 +1,6 @@
+import { ChevronDown } from "lucide-react"
 import { useState } from "react"
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
-import { ChevronDown } from "lucide-react"
 
 import { useStateHistory } from "@/hooks/useGameData"
 import type { TickPayload } from "@/hooks/useWebSocket"
@@ -90,11 +90,11 @@ function MiniChart({
 }) {
   const latest = data.at(-1)
   const display = latest
-    ? (metric.formatValue
-        ? metric.formatValue(latest.value)
-        : latest.value % 1 === 0
-          ? String(latest.value)
-          : latest.value.toFixed(1))
+    ? metric.formatValue
+      ? metric.formatValue(latest.value)
+      : latest.value % 1 === 0
+        ? String(latest.value)
+        : latest.value.toFixed(1)
     : "—"
 
   return (

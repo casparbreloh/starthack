@@ -1,6 +1,7 @@
-import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, Bot } from "lucide-react"
+import { useState } from "react"
+
 import type { AgentDecision } from "@/types/game"
 
 interface AgentDecisionPanelProps {
@@ -46,7 +47,7 @@ export function AgentDecisionPanel({ decision }: AgentDecisionPanelProps) {
             <div className="px-4 py-3">
               {decision ? (
                 <>
-                  <span className="block mb-2 font-mono text-xs tracking-widest text-primary">
+                  <span className="mb-2 block font-mono text-xs tracking-widest text-primary">
                     DECISION FOR SOL {decision.sol}:
                   </span>
                   <p className="font-mono text-xs leading-relaxed text-foreground">

@@ -3,6 +3,7 @@ import { ArrowLeft, Heart, Droplets, Radiation } from "lucide-react"
 
 import crewHabitat from "@/assets/crew-habitat.png"
 import type { CrewMember, CrewNutrition, CrewHealth, AgentDecision } from "@/types/game"
+
 import { AgentDecisionPanel } from "./AgentDecisionPanel"
 import { MetricHistoryPanel } from "./MetricHistoryPanel"
 
@@ -40,7 +41,13 @@ const CREW_POSITIONS = [
   { bottom: "28%", left: "72%" },
 ]
 
-export function CrewDetailView({ members, nutrition, health, agentDecision, onBack }: CrewDetailViewProps) {
+export function CrewDetailView({
+  members,
+  nutrition,
+  health,
+  agentDecision,
+  onBack,
+}: CrewDetailViewProps) {
   const calPct = Math.round(
     (nutrition.daily_calories_consumed / nutrition.daily_calories_target) * 100,
   )
