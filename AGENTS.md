@@ -1,6 +1,6 @@
 ## Project
 
-Mars Greenhouse Agent System — Syngenta START Hack challenge. Autonomous AI agents manage a Martian greenhouse simulation for a 450-day crew mission (4 astronauts).
+Oasis — Syngenta START Hack challenge. Autonomous AI agents manage a Martian greenhouse simulation for a 450-day crew mission (4 astronauts).
 
 ## Stack
 

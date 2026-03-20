@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import HTTPException
 
@@ -30,7 +32,6 @@ class SessionConfig:
     mission_sols: int = 450
     starting_reserves: dict[str, float] = field(default_factory=dict)
     autonomous_events_enabled: bool = True
-    agent_url: str | None = None
 
 
 class Session:
@@ -69,6 +70,14 @@ class Session:
         self.tick_task: asyncio.Task | None = None  # type: ignore[type-arg]
         self.crisis_interrupt_pending: bool = False
         self.last_interrupt_sols: dict[str, int] = {}
+
+        # Optional callback invoked when the mission ends (Fargate mode)
+        self.on_mission_end: Callable[[Session], Coroutine[Any, Any, None]] | None = (
+            None
+        )
+
+        # Run ID for results upload (set by Fargate mode)
+        self.run_id: str | None = None
 
     def start(self) -> None:
         """Start the self-ticking loop as an asyncio Task."""

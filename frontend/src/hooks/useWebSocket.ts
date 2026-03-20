@@ -81,6 +81,31 @@ const MAX_RECONNECT_RETRIES = 5
 const BASE_RECONNECT_DELAY_MS = 1000
 const SESSION_STORAGE_KEY = "oasis_session_id"
 
+// sessionStorage may throw DOMException in restricted contexts (e.g. Amplify, iframes)
+function safeGetSession(): string | null {
+  try {
+    return sessionStorage.getItem(SESSION_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+function safeSetSession(id: string): void {
+  try {
+    sessionStorage.setItem(SESSION_STORAGE_KEY, id)
+  } catch {
+    // Storage blocked — session won't survive refresh, but app still works
+  }
+}
+
+function safeClearSession(): void {
+  try {
+    sessionStorage.removeItem(SESSION_STORAGE_KEY)
+  } catch {
+    // Storage blocked — nothing to clear
+  }
+}
+
 function buildWsUrl(): string {
   const envUrl = import.meta.env.VITE_SIM_WS_URL as string | undefined
   if (envUrl) return envUrl
@@ -90,7 +115,12 @@ function buildWsUrl(): string {
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useWebSocket(): WebSocketState {
+/**
+ * @param wsUrl  Optional WebSocket URL override. When provided, the hook
+ *               connects to this URL instead of the default `buildWsUrl()`.
+ *               Pass `null` to delay connection until a URL is available.
+ */
+export function useWebSocket(wsUrl?: string | null): WebSocketState {
   const [connected, setConnected] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [isPaused, setIsPaused] = useState(true)
@@ -151,20 +181,20 @@ export function useWebSocket(): WebSocketState {
 
         case "session_created":
           setSessionId(msg.session_id)
-          sessionStorage.setItem(SESSION_STORAGE_KEY, msg.session_id)
+          safeSetSession(msg.session_id)
           setIsPaused("paused" in msg.payload && Boolean(msg.payload.paused))
           break
 
         case "session_joined":
           setSessionId(msg.session_id)
-          sessionStorage.setItem(SESSION_STORAGE_KEY, msg.session_id)
+          safeSetSession(msg.session_id)
           pendingJoinRef.current = false
           // isPaused will be synced from the follow-up tick snapshot
           break
 
         case "mission_end":
           setLastState(msg.payload.snapshot)
-          sessionStorage.removeItem(SESSION_STORAGE_KEY)
+          safeClearSession()
           break
 
         case "paused":
@@ -179,7 +209,7 @@ export function useWebSocket(): WebSocketState {
           // If a join_session failed (session gone), fall back to create
           if (pendingJoinRef.current) {
             pendingJoinRef.current = false
-            sessionStorage.removeItem(SESSION_STORAGE_KEY)
+            safeClearSession()
             const ws = wsRef.current
             if (ws && ws.readyState === WebSocket.OPEN) {
               ws.send(
@@ -201,11 +231,29 @@ export function useWebSocket(): WebSocketState {
     }
   })
 
-  // connect is stable (no deps) — only fires once per mount
+  // Resolve the effective URL: explicit parameter > env > inferred from location.
+  // `null` means "don't connect yet" (orchestrator hasn't provided a URL).
+  const effectiveUrl = wsUrl === null ? null : (wsUrl ?? buildWsUrl())
+
+  // connect is recreated when effectiveUrl changes so we reconnect to new containers
   const connect = useCallback(() => {
     if (!mountedRef.current) return
+    if (effectiveUrl === null) return
 
-    const ws = new WebSocket(buildWsUrl())
+    // Upgrade ws:// to wss:// when running on HTTPS to avoid mixed-content block
+    let url = effectiveUrl
+    if (window.location.protocol === "https:" && url.startsWith("ws://")) {
+      url = "wss://" + url.slice(5)
+    }
+
+    let ws: WebSocket
+    try {
+      ws = new WebSocket(url)
+    } catch {
+      // DOMException: "The operation is insecure" on mixed content
+      console.error("[WebSocket] Failed to connect — insecure context or invalid URL:", url)
+      return
+    }
     wsRef.current = ws
 
     ws.onopen = () => {
@@ -215,7 +263,7 @@ export function useWebSocket(): WebSocketState {
       ws.send(JSON.stringify({ type: "register", payload: { role: "frontend" } }))
 
       // Try to rejoin an existing session (from ref, or sessionStorage on refresh)
-      const existingId = sessionIdRef.current || sessionStorage.getItem(SESSION_STORAGE_KEY)
+      const existingId = sessionIdRef.current || safeGetSession()
       if (existingId) {
         pendingJoinRef.current = true
         ws.send(
@@ -253,9 +301,9 @@ export function useWebSocket(): WebSocketState {
     ws.onerror = () => {
       // onclose will fire after onerror, handling reconnect there
     }
-  }, [])
+  }, [effectiveUrl])
 
-  // Connect on mount, clean up on unmount
+  // Connect on mount (or when URL changes), clean up on unmount
   useEffect(() => {
     mountedRef.current = true
     connect()
@@ -319,7 +367,7 @@ export function useWebSocket(): WebSocketState {
       setStateHistory([])
       setIsPaused(true)
       // Clear stored session — reset creates a new one
-      sessionStorage.removeItem(SESSION_STORAGE_KEY)
+      safeClearSession()
       send({
         type: "reset_session",
         session_id: sessionIdRef.current ?? undefined,

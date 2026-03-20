@@ -1,0 +1,17 @@
+[project]
+name = "mars-infra"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "aws-cdk-lib>=2.180.0",
+    "constructs>=10.4.0",
+]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.408",
+    "ruff>=0.15.6",
+]
+
+[tool.ruff.lint]
+extend-select = ["I", "B", "UP"]

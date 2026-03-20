@@ -1,4 +1,4 @@
-# Mars Greenhouse Agent — Architecture
+# Oasis — Architecture
 
 ## Concept
 

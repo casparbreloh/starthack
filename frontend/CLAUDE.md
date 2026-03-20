@@ -2,7 +2,7 @@
 
 ## Purpose
 
-React/TypeScript dashboard UI for the Mars Greenhouse simulation.
+React/TypeScript dashboard UI for the Oasis simulation.
 
 ## Tech
 

@@ -1,5 +1,5 @@
 """
-Mars Greenhouse Simulation Engine — entry point.
+Oasis Simulation Engine — entry point.
 
 Run with:  uv run uvicorn main:app --reload
 """

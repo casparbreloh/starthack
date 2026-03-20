@@ -1,0 +1,9 @@
+# Override for local Fargate-parity testing.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.fargate.yml up
+services:
+  simulation:
+    environment:
+      - FARGATE_MODE=1
+      - TICK_DELAY_MS=0
+      - RESULTS_BUCKET=
+      - ML_SERVICE_URL=http://ml:8090

@@ -1,6 +1,7 @@
 import { motion } from "framer-motion"
 import { Thermometer, Gauge, Wind, Sun, CloudFog } from "lucide-react"
 
+import { num } from "@/lib/num"
 import type { WeatherCurrent } from "@/types/game"
 
 interface WeatherPanelProps {
@@ -14,7 +15,7 @@ export function WeatherPanel({ weather }: WeatherPanelProps) {
     {
       icon: Wind,
       label: "CO₂",
-      value: `${(weather.dust_opacity * 100).toFixed(0) || "95.3"}%`,
+      value: `${(num(weather.dust_opacity) * 100).toFixed(0) || "95.3"}%`,
       color: "",
     },
     { icon: Sun, label: "Solar", value: `${weather.solar_irradiance_w_m2}`, color: "" },

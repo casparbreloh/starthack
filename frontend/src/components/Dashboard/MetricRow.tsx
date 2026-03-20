@@ -1,3 +1,5 @@
+import { num } from "@/lib/num"
+
 interface MetricRowProps {
   label: string
   value: string | number | null
@@ -34,7 +36,8 @@ export default function MetricRow({ label, value, unit, sublabel, dimValue }: Me
 }
 
 function formatNum(n: number): string {
-  if (Number.isInteger(n) && Math.abs(n) < 10000) return String(n)
-  if (Math.abs(n) >= 10000) return n.toLocaleString("en-US", { maximumFractionDigits: 0 })
-  return n.toFixed(1)
+  const v = num(n)
+  if (Number.isInteger(v) && Math.abs(v) < 10000) return String(v)
+  if (Math.abs(v) >= 10000) return v.toLocaleString("en-US", { maximumFractionDigits: 0 })
+  return v.toFixed(1)
 }
