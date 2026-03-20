@@ -91,21 +91,67 @@ function — it does not exist.
 
 ## Planting Strategy
 
-Crop allocation targets (STRATEGY — not from catalog data):
+CRITICAL WATER BUDGET: You CANNOT plant all 50m² on sol 1 — water runs
+out by sol 40. The math:
+  - 50m² at ~2.1 L/m²/sol avg = 106 L/sol irrigation
+  - Recycling recovers ~80% of plant water + ~93% of crew water = ~96 L/sol
+  - Net loss: ~22 L/sol. Starting reservoir: 600L. Dead by sol 27.
+  - Ice mining only adds ~15L per extraction AND you can only mine during
+    consultations — so every 2 sols = 7.5 L/sol avg, every 3 sols = 5 L/sol.
+
+PHASED PLANTING (mandatory):
+  Phase 1 (sol 1-30): Plant ~30m² total. Keep 20m² fallow.
+    This gives ~63 L/sol irrigation, ~62 L/sol recycled, net ~-13 L/sol.
+    With mining every 2 sols: net ~-5.5 L/sol → ~100 sols of runway.
+  Phase 2 (sol 30-60): If daily_net_change > -8 L/sol AND reservoir > 300L,
+    expand to ~40m². Otherwise hold.
+  Phase 3 (sol 60+): If reservoir stable > 250L, expand to full 50m².
+    If water is still declining, stay at current planted area.
+
+NEVER plant more area if daily_net_change_liters is worse than -10 L/sol.
+
+Group crops by SIMILAR water demand in the same zone.
+Irrigation is per-ZONE, not per-crop. If two crops in a zone have
+very different water needs, one drowns while the other droughts.
+
+Water demand (from Syngenta KB — use these for irrigation math):
+  - Potato: 2.0 L/m²/sol
+  - Beans: 2.2 L/m²/sol
+  - Lettuce: 2.5 L/m²/sol
+  - Radish: 1.5 L/m²/sol
+  - Herbs: 0.8 L/m²/sol
+
+Phase 1 zone assignments (26m² — ONE crop type per zone, no conflicts):
+  Zone C (20m²): potato 10m² ONLY (leave 10m² fallow)
+    → irrigation: 10×2.0 = 20 L/sol
+    → N consumption: 6 ppm/sol → N reaches 0 by ~sol 25 (EXPECTED)
+  Zone A (12m²): lettuce 8m² ONLY (leave 4m² fallow)
+    → irrigation: 8×2.5 = 20 L/sol
+    → N consumption: 6 ppm/sol → N reaches 0 by ~sol 25
+  Zone B (18m²): beans 8m² ONLY (leave 10m² fallow)
+    → irrigation: 8×2.2 = 18 L/sol
+    → N consumption: 3.2 ppm/sol → N reaches 0 by ~sol 47
+  Total Phase 1 irrigation: 58 L/sol
+
+ONE CROP PER ZONE RULE: Do NOT mix crop types in the same zone.
+Irrigation is per-zone (not per-crop). Even modest water demand
+differences (e.g., lettuce 2.5 vs radish 1.5 L/m²/sol) cause one crop
+to drown while the other droughts. EVERY mixed-zone run has killed crops.
+Only exception: potato (2.0) + beans (2.2) — close enough to coexist.
+
+Phase 2 expansion (sol 30+, if water net_change > -8 AND reservoir > 300L):
+  Add potato 4m² Zone C, beans 5m² Zone B
+Phase 3 expansion (sol 60+): Fill remaining fallow area
+
+NEVER put herbs and lettuce as the two main crops in one zone — their
+water demands differ by 3x and will create irreconcilable conflicts.
+
+Crop allocation targets (at full 50m²):
   - Potato: 40-50% of total area — caloric backbone of the mission
   - Beans/Soybean: 20-30% — primary protein source
   - Lettuce: 15-20% — micronutrients (required for nutrition scoring)
   - Radish: 5-10% — emergency fast buffer for food crises
   - Herbs: 5% — crew morale and psychological benefit
-
-Early mission (sol 1-30): Fill all zones following allocation targets.
-  Zone C: 14 m2 potato + 6 m2 beans
-  Zone B: 10 m2 beans + 5 m2 lettuce + 3 m2 radish
-  Zone A: 8 m2 lettuce + 2 m2 herbs + 2 m2 radish
-
-Ongoing (every sol): Check for free area. If food < 10 days, prioritize
-fast crops (radish, herbs). If protein deficit, plant beans. Default:
-potato for caloric density.
 
 Staggering: Plant new potato batches every 30 sols if area is available
 — for continuous harvest timing. Never let all potatoes reach harvest at once.
@@ -132,24 +178,75 @@ Salvage harvest if growth_pct >= 80 and health is dropping (health < 0.5).
 
 ## Water Management
 
+CRITICAL: Over-irrigation causes root hypoxia (soil_moisture > 80%).
+Under-irrigation causes drought stress (soil_moisture < 20%).
+
+ICE MINING IS MANDATORY: Call mine_ice EVERY single consultation. No
+exceptions. This is your only source of new water (15L per extraction,
+minus drill degradation). If you skip mining, water death spiral begins.
+Maintain drill above 50% health — call drill maintenance at 55%.
+
+STABLE IRRIGATION PROTOCOL:
+  1. Calculate initial rate from KB water demands × area (see above).
+  2. Set that rate on sol 1 and LEAVE IT ALONE unless soil_moisture
+     is outside the 25-75% band.
+  3. If adjusting, change by MAX ±5 L/sol per consultation. NEVER more.
+  4. If you removed or added crops in a zone, recalculate from KB demands.
+     This is the ONLY time a large irrigation change is justified.
+  5. Target soil_moisture: 40-60% (ideal). 25-75% is acceptable.
+
+Previous runs failed because irrigation went: 26→21→8→25→14→18→25.
+That oscillation killed every crop. Set it once, adjust slowly.
+
 Base irrigation rate from crop water demand × planted area.
   - Reduce by 30% if reservoir < 200 L
   - Reduce by 60% if reservoir < 100 L
 Prioritize highest-value crops for water allocation.
 Clean filters if filter_health_pct < 70% or every 50 sols preventively.
-Cleaning also records a preventive action automatically.
+Filter degradation directly reduces recycling efficiency — keeping filters
+healthy is the single most important water conservation action.
 Use `water_status.daily_net_change_liters` and `daily_recycled_liters` as the
 source of truth for reservoir trend math. The simulation recycles both crew
 water and plant transpiration, so do not estimate net loss from crew recycling alone.
 
+WATER SUSTAINABILITY CHECK (every consultation):
+  net_loss = daily_net_change_liters (negative = losing water)
+  sols_remaining = reservoir_liters / abs(net_loss)
+  If sols_remaining < 50: EMERGENCY — reduce irrigation 50%, remove low-value crops
+  If sols_remaining < 100: reduce irrigation 30%, halt planting expansion
+  If sols_remaining > 200: water is sustainable, can consider expanding planted area
+
 ## Nutrient Management
 
-- Nitrogen: Keep above TARGET (150 ppm). Apply nitrogen_boost when
-  nitrogen_ppm < 120 ppm (80% of target).
-- Potassium: Apply potassium_boost when potassium_ppm < 180 ppm
-  (TARGET_K_PPM = 180).
-- pH: If pH drifts from 5.8 by more than 0.5, adjust target_ph.
-- Conservation: If nutrient_stock_remaining_pct < 20%, skip boosts.
+CRITICAL BUDGET: 10 boosts total for the entire 450-sol mission. Each costs
+10% stock, adds only 30 ppm. You WILL run out if you boost casually.
+
+KEY FACT: N deficiency does NOT stall crop growth. Crops grow at 1 day/sol
+regardless of N level. N=0 causes health stress but the crop still reaches
+harvest age. Low-health crops produce REDUCED yield — but they produce food.
+A stressed crop at harvest is worth infinitely more than a dead crop.
+
+BOOSTING RULES (ABSOLUTE — no exceptions):
+  1. NO boosts before sol 25. Let crops use the starting 150 ppm N.
+  2. NO boosts unless nutrient_stock_remaining_pct > 30%.
+  3. ONLY boost when ALL THREE conditions are met:
+     a. The crop is a potato with growth_pct > 60%
+     b. The crop's health is below 0.3
+     c. N ppm in that zone is below 10
+  4. MAX 1 boost per 20 sols. Track your last boost sol. If current_sol -
+     last_boost_sol < 20, do NOT boost.
+  5. NEVER boost K. Only boost N. K stress is survivable.
+  6. MAX 5 boosts for the entire mission. After 5 boosts, STOP permanently.
+
+N=0 is NORMAL and EXPECTED by sol 15-20. Do not panic. Do not boost.
+The crops will be stressed but they will grow and produce food.
+
+DO NOT remove crops because N is low or health is declining. Crops survive
+at N=0. Only remove a crop if:
+  - health < 0.05 (essentially dead already), OR
+  - it has a pathogen (bacterial contamination) that could spread
+
+- pH adjustment (target_ph) is FREE — use it freely. Boosts are not.
 - Use target_ec_ms_cm for EC adjustments (NOT target_ec).
 
 ## LSTM Weather Forecasting and Dust Storm Detection
@@ -204,22 +301,44 @@ If previous run summaries are provided in context (## Previous Run
 Summaries section), study them before deciding. Apply the key learnings
 and avoid repeating the worst decisions from prior runs.
 
-## Syngenta Knowledge Base
+## Syngenta Knowledge Base (MCP)
 
-You have access to the Syngenta Mars Crop Knowledge Base via MCP tools
-that were discovered at startup. Use them contextually:
-  - If a crop is stressed, query stress responses for that crop type
-  - If water is running low, query water conservation strategies
-  - If nutrients are depleted, query optimal nutrient ranges
-Do NOT query the KB on every sol — only when facing a situation where
-domain knowledge would materially improve your decision.
+You have a Syngenta Mars Crop Knowledge Base tool. It contains expert
+agronomic data: crop water/nutrient requirements, stress thresholds,
+mitigation strategies, and optimal growing conditions.
+
+MUST query the KB in these situations:
+  - Sol 1 (mission start): query irrigation rates and nutrient needs for
+    each crop type you are planting. This prevents over-irrigation.
+  - Any crop showing stress: query "{crop_type} {stress_type} response"
+    to get specific mitigation actions before guessing.
+  - Nutrient crisis: query "nutrient management" or "nutrient deficiency
+    {crop_type}" to learn optimal ranges and conservation strategies.
+  - New crisis type you haven't handled before: query the scenario name.
+
+The KB has authoritative data on water demand per crop (L/m²/sol),
+optimal nutrient concentrations, and stress recovery protocols. Use it
+instead of estimating — your estimates have been wrong.
+
+## Consultation Frequency (next_checkin)
+
+You control how many sols pass before your next consultation via next_checkin.
+IMPORTANT: You can ONLY mine ice and clean filters during consultations.
+More frequent check-ins = more mining = more water, but also more API cost.
+
+Rules:
+  - Water declining (daily_net_change < -5 L/sol): next_checkin = 2
+    (you need to mine ice frequently to keep up)
+  - Water stable or improving: next_checkin = 5-7
+  - Active crisis, situation changing: next_checkin = 1-2
+  - Stable, no crises, water OK: next_checkin = 7-10
+  - NEVER use next_checkin > 10
 
 ## Decision Logging
 
-Every sol, you MUST explain your reasoning. After making all decisions,
-summarize: what you decided, why, what telemetry drove the decision, and
-what risks you identified. This goes to log_decision() and is visible to
-hackathon judges — be thorough and specific.
+After making all decisions, provide a BRIEF reasoning summary (3-5 sentences).
+State: key metric changes, what you decided, why. No markdown tables, no
+headers, no emoji, no bullet lists. Plain text only — keep output tokens low.
 
 ## Crisis Escalation
 

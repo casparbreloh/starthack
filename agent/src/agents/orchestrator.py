@@ -155,6 +155,39 @@ def create_orchestrator(
     )
 
 
+def _dedup_actions(actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Deduplicate actions, keeping the last call per endpoint+key.
+
+    When the LLM (or a specialist sub-agent) calls the same tool twice for the
+    same target (e.g. set_environment zone B), only the final call should take
+    effect.  The dedup key is (endpoint, zone_id or crop_id) so that different
+    zones are preserved but repeated calls to the same zone collapse.
+    """
+    seen: dict[str, int] = {}
+    for idx, act in enumerate(actions):
+        endpoint = act.get("endpoint", "")
+        body = act.get("body", {})
+        # Build a key from the endpoint + discriminators.
+        # For planting, include crop type so different crops in the same
+        # zone are NOT deduped (potatoes + beans in zone C are distinct).
+        key_parts = [endpoint]
+        for field in ("zone_id", "crop_id"):
+            if field in body:
+                key_parts.append(f"{field}={body[field]}")
+        if endpoint == "crops/plant" and "type" in body:
+            key_parts.append(f"type={body['type']}")
+        if endpoint == "crops/plant" and "batch_name" in body:
+            key_parts.append(f"batch={body['batch_name']}")
+        # For endpoints without zone_id/crop_id (e.g. water/maintenance),
+        # include the "action" field to distinguish clean_filters vs maintain_drill.
+        if "action" in body and "zone_id" not in body and "crop_id" not in body:
+            key_parts.append(f"action={body['action']}")
+        key = "|".join(key_parts)
+        seen[key] = idx  # last write wins
+
+    return [actions[i] for i in sorted(seen.values())]
+
+
 def _extract_key_stats(snapshot: dict[str, Any]) -> str:
     """Extract a one-line summary from a state snapshot."""
     energy = snapshot.get("energy_status", {})
@@ -240,10 +273,14 @@ def _build_consultation_prompt(
         "energy allocation, planting (check free area), harvesting (check is_ready), "
         "nutrient adjustments\n"
         "3. Check weather for dust_opacity > 1.0 → call storm_preparation_agent if detected\n"
-        "4. After all decisions, provide reasoning summary for decision logging\n"
-        "5. After making decisions, specify how many sols to skip before next "
-        "check-in using next_checkin (1-10). Use 1 during active crises, 5-10 when stable. "
-        "State your choice as: next_checkin: N\n"
+        "4. Provide a BRIEF reasoning summary (3-5 sentences, plain text, no markdown)\n"
+        "5. Set next_checkin: N where N is sols until next check-in.\n"
+        "   IMPORTANT: Use high values to avoid unnecessary consultations:\n"
+        "   - Stable, no crises: next_checkin: 7-10\n"
+        "   - Minor issues (low nutrients, mild stress): next_checkin: 3-5\n"
+        "   - Active crisis, situation CHANGING: next_checkin: 1-2\n"
+        "   - Active crisis, situation STABLE/UNRESOLVABLE (e.g. battery stuck at 0% "
+        "with solar surplus): next_checkin: 3-5 (you cannot fix it by checking more often)\n"
     )
 
     return "".join(prompt_parts)
@@ -434,6 +471,30 @@ async def _consultation_loop(
             cross_session_context,
             kb_tools,
         )
+
+        # Deduplicate actions (last call per endpoint+target wins)
+        raw_count = len(actions)
+        actions = _dedup_actions(actions)
+        if len(actions) < raw_count:
+            logger.info(
+                "Sol %d: deduped %d → %d actions",
+                sol,
+                raw_count,
+                len(actions),
+            )
+
+        # Log reasoning and actions for observability
+        _stats = _extract_key_stats(snapshot)
+        logger.info("Sol %d state: %s", sol, _stats)
+        if reasoning:
+            logger.info("Sol %d reasoning: %s", sol, reasoning[:500])
+        for act in actions:
+            logger.info(
+                "Sol %d action: %s %s",
+                sol,
+                act.get("endpoint", "?"),
+                json.dumps(act.get("body", {})),
+            )
 
         log_decision = {
             "reasoning": reasoning[:500] if reasoning else "",

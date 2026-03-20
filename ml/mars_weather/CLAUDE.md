@@ -23,8 +23,10 @@ Python package implementing the full ML pipeline: data loading, feature engineer
 - Rolling means: 7-sol and 30-sol windows
 - Derived: diurnal_range, ground_air_diff, sol_in_year, mars_year, uv_index
 
-## Dependencies
+## Conventions
 
-- Uses `from .data import ...` relative imports throughout
+- Relative imports within package (`from .data import ...`)
 - Scalers (StandardScaler) saved as pickle, metadata as JSON
 - `TARGETS` imported from `data.py`; `MODEL_DIR` defined locally in each module
+- Temporal split at sol 4000/4400 — no shuffling, no data leakage
+- Forward-fill + train-set means for imputation (no bfill)
