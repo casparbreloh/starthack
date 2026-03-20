@@ -54,3 +54,5 @@ make dev       # start all services (simulation + agent + frontend + ML sidecar)
 ```
 
 Open the dashboard, hit start, and watch the agent keep four astronauts alive for 450 sols on Mars.
+
+Created at START Hack 2026
