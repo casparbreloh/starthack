@@ -242,7 +242,7 @@ class OasisStack(Stack):
         # Allow simulation to invoke the agent via AgentCore
         task_definition.task_role.add_to_policy(
             iam.PolicyStatement(
-                actions=["bedrock-agent-runtime:InvokeAgentRuntime"],
+                actions=["bedrock-agentcore:InvokeAgentRuntime"],
                 resources=[agent_runtime.attr_agent_runtime_arn],
             )
         )
