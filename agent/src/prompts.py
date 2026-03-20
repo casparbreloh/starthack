@@ -202,7 +202,7 @@ Base irrigation rate from crop water demand × planted area.
   - Reduce by 30% if reservoir < 200 L
   - Reduce by 60% if reservoir < 100 L
 Prioritize highest-value crops for water allocation.
-Clean filters if filter_health_pct < 70% or every 30 sols preventively.
+Clean filters if filter_health_pct < 70% or every 50 sols preventively.
 Filter degradation directly reduces recycling efficiency — keeping filters
 healthy is the single most important water conservation action.
 Use `water_status.daily_net_change_liters` and `daily_recycled_liters` as the

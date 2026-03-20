@@ -178,6 +178,10 @@ def _dedup_actions(actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
             key_parts.append(f"type={body['type']}")
         if endpoint == "crops/plant" and "batch_name" in body:
             key_parts.append(f"batch={body['batch_name']}")
+        # For endpoints without zone_id/crop_id (e.g. water/maintenance),
+        # include the "action" field to distinguish clean_filters vs maintain_drill.
+        if "action" in body and "zone_id" not in body and "crop_id" not in body:
+            key_parts.append(f"action={body['action']}")
         key = "|".join(key_parts)
         seen[key] = idx  # last write wins
 
