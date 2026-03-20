@@ -61,7 +61,8 @@ class _CreateSessionPayload(BaseModel):
 
 
 @router.websocket("/ws")
-async def websocket_endpoint(ws: WebSocket) -> None:
+@router.websocket("/ws/{run_id}")
+async def websocket_endpoint(ws: WebSocket, run_id: str | None = None) -> None:
     """Main WebSocket endpoint with message dispatch."""
     await ws.accept()
 
