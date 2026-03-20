@@ -3,7 +3,9 @@
 Exposes the LSTM weather prediction models as HTTP endpoints so the
 agent doesn't need torch/sklearn/pandas as dependencies.
 
-Models and scalers are loaded once at startup and reused across requests.
+Models are loaded as ONNX sessions at startup (no PyTorch dependency at
+serve time). ONNX Runtime provides faster cold-start and smaller memory
+footprint compared to loading full PyTorch models.
 
 Run with: uv run uvicorn serve:app --reload --port 8090
 """
@@ -22,7 +24,7 @@ from pydantic import BaseModel
 
 from mars_weather import MODEL_DIR
 from mars_weather.predict import (
-    load_model_and_scalers,
+    load_model_onnx,
     predict_at_horizon_from_context,
     predict_from_context,
 )
@@ -62,22 +64,19 @@ _model_cache: dict[str, Any] = {}
 
 
 def _load_all_models() -> None:
-    """Load all LSTM models, scalers, and seasonal baseline into cache."""
+    """Load all ONNX sessions, scalers, and seasonal baseline into cache."""
     for horizon in (1, 7, 30):
         try:
-            model, meta, feat_scaler, tgt_scaler, device = load_model_and_scalers(
-                horizon=horizon
-            )
+            session, meta, feat_scaler, tgt_scaler = load_model_onnx(horizon=horizon)
             _model_cache[f"h{horizon}"] = {
-                "model": model,
+                "session": session,
                 "meta": meta,
                 "feature_scaler": feat_scaler,
                 "target_scaler": tgt_scaler,
-                "device": device,
             }
-            logger.info("Loaded LSTM h=%d model", horizon)
+            logger.info("Loaded ONNX session h=%d", horizon)
         except Exception as exc:
-            logger.warning("Failed to load LSTM h=%d: %s", horizon, exc)
+            logger.warning("Failed to load ONNX h=%d: %s", horizon, exc)
 
     seasonal_pkl = os.path.join(MODEL_DIR, "seasonal_baseline.pkl")
     try:

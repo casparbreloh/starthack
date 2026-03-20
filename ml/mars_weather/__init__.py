@@ -2,11 +2,11 @@
 
 import os
 
-import torch
-
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "..", "models")
 
 
-def get_device() -> torch.device:
+def get_device():
     """Return CUDA device if available, else CPU."""
+    import torch
+
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")

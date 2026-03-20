@@ -89,7 +89,12 @@ function buildWsUrl(): string {
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useWebSocket(): WebSocketState {
+/**
+ * @param wsUrl  Optional WebSocket URL override. When provided, the hook
+ *               connects to this URL instead of the default `buildWsUrl()`.
+ *               Pass `null` to delay connection until a URL is available.
+ */
+export function useWebSocket(wsUrl?: string | null): WebSocketState {
   const [connected, setConnected] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [isPaused, setIsPaused] = useState(true)
@@ -195,11 +200,16 @@ export function useWebSocket(): WebSocketState {
     }
   })
 
-  // connect is stable (no deps) — only fires once per mount
+  // Resolve the effective URL: explicit parameter > env > inferred from location.
+  // `null` means "don't connect yet" (orchestrator hasn't provided a URL).
+  const effectiveUrl = wsUrl === null ? null : (wsUrl ?? buildWsUrl())
+
+  // connect is recreated when effectiveUrl changes so we reconnect to new containers
   const connect = useCallback(() => {
     if (!mountedRef.current) return
+    if (effectiveUrl === null) return
 
-    const ws = new WebSocket(buildWsUrl())
+    const ws = new WebSocket(effectiveUrl)
     wsRef.current = ws
 
     ws.onopen = () => {
@@ -247,9 +257,9 @@ export function useWebSocket(): WebSocketState {
     ws.onerror = () => {
       // onclose will fire after onerror, handling reconnect there
     }
-  }, [])
+  }, [effectiveUrl])
 
-  // Connect on mount, clean up on unmount
+  // Connect on mount (or when URL changes), clean up on unmount
   useEffect(() => {
     mountedRef.current = true
     connect()

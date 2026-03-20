@@ -1,4 +1,4 @@
-"""Crisis outcome tracker for the Mars Greenhouse Agent.
+"""Crisis outcome tracker for the Oasis Agent.
 
 Tracks crisis responses over 5/15/50-sol observation windows, detects
 secondary crises, synthesizes learnings via LLM, and persists them to
