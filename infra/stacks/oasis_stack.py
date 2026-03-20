@@ -239,11 +239,15 @@ class OasisStack(Stack):
 
         results_bucket.grant_put(task_definition.task_role)
 
-        # Allow simulation to invoke the agent via AgentCore
+        # Allow simulation to invoke the agent via AgentCore.
+        # AgentCore evaluates access against both the runtime and endpoint.
         task_definition.task_role.add_to_policy(
             iam.PolicyStatement(
                 actions=["bedrock-agentcore:InvokeAgentRuntime"],
-                resources=[agent_runtime.attr_agent_runtime_arn],
+                resources=[
+                    agent_runtime.attr_agent_runtime_arn,
+                    agent_runtime_endpoint.attr_agent_runtime_endpoint_arn,
+                ],
             )
         )
 
@@ -262,7 +266,6 @@ class OasisStack(Stack):
                 ecs.PortMapping(container_port=8080, protocol=ecs.Protocol.TCP),
             ],
             environment={
-                "FARGATE_MODE": "1",
                 "ML_SERVICE_URL": ml_fn_url.url,
                 "AGENT_RUNTIME_ARN": agent_runtime.attr_agent_runtime_arn,
             },
@@ -353,6 +356,7 @@ class OasisStack(Stack):
                 actions=[
                     "elasticloadbalancing:CreateTargetGroup",
                     "elasticloadbalancing:DeleteTargetGroup",
+                    "elasticloadbalancing:DescribeTargetHealth",
                     "elasticloadbalancing:RegisterTargets",
                     "elasticloadbalancing:DeregisterTargets",
                     "elasticloadbalancing:CreateRule",

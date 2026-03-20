@@ -37,8 +37,12 @@ class SessionConfig:
 class Session:
     """A single simulation session with its engine, config, and metadata."""
 
-    def __init__(self, config: SessionConfig | None = None) -> None:
-        self.id: str = str(uuid.uuid4())
+    def __init__(
+        self,
+        config: SessionConfig | None = None,
+        session_id: str | None = None,
+    ) -> None:
+        self.id: str = session_id or str(uuid.uuid4())
         self.config: SessionConfig = config or SessionConfig()
         self.engine: SimulationEngine = SimulationEngine()
         self.created_at: datetime = datetime.now(UTC)
@@ -71,12 +75,12 @@ class Session:
         self.crisis_interrupt_pending: bool = False
         self.last_interrupt_sols: dict[str, int] = {}
 
-        # Optional callback invoked when the mission ends (Fargate mode)
+        # Optional callback invoked when the mission ends (bootstrap mode)
         self.on_mission_end: Callable[[Session], Coroutine[Any, Any, None]] | None = (
             None
         )
 
-        # Run ID for results upload (set by Fargate mode)
+        # Run ID for results upload (set by bootstrap mode)
         self.run_id: str | None = None
 
     def start(self) -> None:
@@ -104,11 +108,21 @@ class SessionManager:
         self._default_session: Session = Session()
         self._sessions[self._default_session.id] = self._default_session
 
-    def create(self, config: SessionConfig | None = None) -> Session:
+    def create(
+        self,
+        config: SessionConfig | None = None,
+        session_id: str | None = None,
+    ) -> Session:
         """Create a new session and register it."""
-        session = Session(config)
+        if session_id is not None and session_id in self._sessions:
+            raise HTTPException(409, f"Session '{session_id}' already exists")
+        session = Session(config, session_id=session_id)
         self._sessions[session.id] = session
         return session
+
+    def exists(self, session_id: str) -> bool:
+        """Return whether a session id is present in the registry."""
+        return session_id in self._sessions
 
     def get(self, session_id: str) -> Session:
         """Look up a session by id; raises HTTP 404 if not found."""

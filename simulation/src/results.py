@@ -1,5 +1,5 @@
 """
-S3 results upload module for Fargate mode.
+S3 results upload module for bootstrap session mode.
 
 Builds a results JSON from a completed session and optionally uploads it
 to S3.  The `build_results_json` function is pure (no AWS dependency) so

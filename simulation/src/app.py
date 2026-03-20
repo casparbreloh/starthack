@@ -5,8 +5,9 @@ Wires together the app instance, CORS middleware, and the WebSocket router.
 REST routers are kept in src/routers/ for OpenAPI schema generation only
 (see scripts/export_openapi.py) — the running app is WebSocket-only.
 
-When ``FARGATE_MODE=1`` is set, the app auto-creates a single session at
-startup, runs the mission at max speed, uploads results to S3, then exits.
+When ``SESSION_MODE`` is set to ``interactive`` or ``training``, the app
+auto-creates a single bootstrap session at startup. Interactive sessions start
+paused for the frontend to join, while training sessions auto-run at max speed.
 """
 
 from __future__ import annotations
@@ -28,14 +29,14 @@ from src.ws import router as ws_router
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Fargate mode configuration (all from environment)
+# Bootstrap session mode configuration (all from environment)
 # ---------------------------------------------------------------------------
-FARGATE_MODE = os.environ.get("FARGATE_MODE") == "1"
 FARGATE_TIMEOUT_S = 2 * 60 * 60  # 2 hours
+INTERACTIVE_DEFAULT_TICK_DELAY_MS = 1000
 
-# Populated during startup when FARGATE_MODE is active
-_fargate_session: Session | None = None
-_fargate_started_at: datetime | None = None
+# Populated during startup when SESSION_MODE is active
+_bootstrap_session: Session | None = None
+_bootstrap_started_at: datetime | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +44,17 @@ _fargate_started_at: datetime | None = None
 # ---------------------------------------------------------------------------
 
 
-async def _on_fargate_mission_end(session: Session) -> None:
+def _get_session_mode() -> str:
+    """Return the configured bootstrap session mode, if any."""
+    return os.environ.get("SESSION_MODE", "").strip().lower()
+
+
+def _is_bootstrap_mode() -> bool:
+    """Return whether the process should auto-create a bootstrap session."""
+    return _get_session_mode() in {"interactive", "training"}
+
+
+async def _on_bootstrap_mission_end(session: Session) -> None:
     """Upload results to S3 and terminate the process."""
     from src.results import upload_results
 
@@ -51,59 +62,70 @@ async def _on_fargate_mission_end(session: Session) -> None:
     run_id = os.environ.get("RUN_ID", session.id)
 
     logger.info(
-        "Fargate mission ended (sol=%d, phase=%s) — uploading results",
+        "Bootstrap session ended (sol=%d, phase=%s) — uploading results",
         session.engine.current_sol,
         session.engine.mission_phase.value,
     )
     await upload_results(session, bucket, run_id)
 
-    logger.info("Fargate run complete — shutting down")
+    logger.info("Bootstrap run complete — shutting down")
     sys.exit(0)
 
 
-async def _fargate_timeout_watchdog(session: Session) -> None:
+async def _bootstrap_timeout_watchdog(session: Session) -> None:
     """Force shutdown if the mission hasn't completed within the timeout."""
     await asyncio.sleep(FARGATE_TIMEOUT_S)
     if session.engine.mission_phase.value == "active":
         logger.error(
-            "Fargate timeout (%ds) reached at sol %d — forcing shutdown",
+            "Bootstrap timeout (%ds) reached at sol %d — forcing shutdown",
             FARGATE_TIMEOUT_S,
             session.engine.current_sol,
         )
         # Still try to upload partial results
-        await _on_fargate_mission_end(session)
+        await _on_bootstrap_mission_end(session)
 
 
-async def _start_fargate_session() -> None:
-    """Create and start a single auto-running session for Fargate mode."""
-    global _fargate_session, _fargate_started_at  # noqa: PLW0603
+async def _start_bootstrap_session() -> None:
+    """Create and start a single bootstrap session for deployed mode."""
+    global _bootstrap_session, _bootstrap_started_at  # noqa: PLW0603
 
+    session_mode = _get_session_mode()
     seed_env = os.environ.get("SEED")
+    default_tick_delay_ms = (
+        0 if session_mode == "training" else INTERACTIVE_DEFAULT_TICK_DELAY_MS
+    )
     config = SessionConfig(
         seed=int(seed_env) if seed_env else None,
         difficulty=os.environ.get("DIFFICULTY", "normal"),
         mission_sols=int(os.environ.get("MISSION_SOLS", "450")),
-        tick_delay_ms=int(os.environ.get("TICK_DELAY_MS", "0")),
+        tick_delay_ms=int(os.environ.get("TICK_DELAY_MS", str(default_tick_delay_ms))),
     )
 
-    session = session_manager.create(config)
+    run_id = os.environ.get("RUN_ID")
+    session_id = run_id if session_mode == "interactive" and run_id else None
+    session = session_manager.create(config, session_id=session_id)
     session.run_id = os.environ.get("RUN_ID", session.id)
-    session.on_mission_end = _on_fargate_mission_end
+    session.on_mission_end = _on_bootstrap_mission_end
 
-    # Start unpaused (immediate auto-run)
-    session.paused = False
-    session.engine.paused = False
+    if session_mode == "training":
+        session.paused = False
+        session.engine.paused = False
+    else:
+        session.paused = True
+        session.engine.paused = True
     session.start()
 
-    _fargate_session = session
-    _fargate_started_at = datetime.now(UTC)
+    _bootstrap_session = session
+    _bootstrap_started_at = datetime.now(UTC)
 
     logger.info(
-        "Fargate session %s started (seed=%s, difficulty=%s, sols=%d)",
+        "Bootstrap session %s started (mode=%s, seed=%s, difficulty=%s, sols=%d, paused=%s)",
         session.id,
+        session_mode,
         config.seed,
         config.difficulty,
         config.mission_sols,
+        session.paused,
     )
 
     # Auto-invoke agent if configured (AGENT_RUNTIME_ARN or AGENT_URL)
@@ -123,8 +145,8 @@ async def _start_fargate_session() -> None:
 
     # Start timeout watchdog
     asyncio.create_task(
-        _fargate_timeout_watchdog(session),
-        name=f"fargate-timeout-{session.id[:8]}",
+        _bootstrap_timeout_watchdog(session),
+        name=f"bootstrap-timeout-{session.id[:8]}",
     )
 
 
@@ -136,9 +158,12 @@ async def _start_fargate_session() -> None:
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     """Manage startup/shutdown lifecycle."""
-    if FARGATE_MODE:
-        logger.info("FARGATE_MODE=1 detected — auto-starting session")
-        await _start_fargate_session()
+    if _is_bootstrap_mode():
+        logger.info(
+            "SESSION_MODE=%s detected — auto-starting bootstrap session",
+            _get_session_mode(),
+        )
+        await _start_bootstrap_session()
 
     yield
 
@@ -178,20 +203,22 @@ def create_app() -> FastAPI:
 
     @application.get("/status")
     async def status() -> dict:
-        if _fargate_session is None:
+        if _bootstrap_session is None:
             return {
                 "session_id": None,
                 "current_sol": None,
                 "mission_phase": None,
                 "started_at": None,
+                "session_mode": None,
             }
         return {
-            "session_id": _fargate_session.id,
-            "current_sol": _fargate_session.engine.current_sol,
-            "mission_phase": _fargate_session.engine.mission_phase.value,
-            "started_at": _fargate_started_at.isoformat()
-            if _fargate_started_at
+            "session_id": _bootstrap_session.id,
+            "current_sol": _bootstrap_session.engine.current_sol,
+            "mission_phase": _bootstrap_session.engine.mission_phase.value,
+            "started_at": _bootstrap_started_at.isoformat()
+            if _bootstrap_started_at
             else None,
+            "session_mode": _get_session_mode() or None,
         }
 
     application.include_router(ws_router)

@@ -25,7 +25,7 @@ Run the simulation in Fargate-parity mode (auto-start session, max tick speed, n
 docker compose -f docker-compose.yml -f docker-compose.fargate.yml up
 ```
 
-This sets `FARGATE_MODE=1` and `TICK_DELAY_MS=0` on the simulation container.
+This sets `SESSION_MODE=training` and `TICK_DELAY_MS=0` on the simulation container.
 
 ## Fargate / AgentCore
 

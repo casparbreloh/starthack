@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+
+import type { CreateSessionRequest } from "../types/simulation"
 
 // ── WebSocket message types ──────────────────────────────────────────────────
 
 /** Raw tick payload from the simulation — field names match Python snapshot builder. */
 export type TickPayload = Record<string, unknown>
-import type { CreateSessionRequest } from "../types/simulation"
 
 type WsIncoming =
   | { type: "tick"; payload: TickPayload }
@@ -39,7 +40,14 @@ type WsIncoming =
       session_id: string
       payload: { tick_delay_ms: number }
     }
-  | { type: "error"; payload: { message: string } }
+  | {
+      type: "error"
+      payload: {
+        message: string
+        code?: string
+        session_id?: string
+      }
+    }
 
 interface WsOutgoing {
   type: string
@@ -67,12 +75,18 @@ export interface WebSocketState {
   lastState: TickPayload | null
   lastEvents: unknown[]
   stateHistory: TickPayload[]
+  error: string | null
   injectCrisis: (scenario: string, params?: Record<string, unknown>) => void
   setTickDelay: (ms: number) => void
   pause: () => void
   resume: () => void
   reset: (config?: Partial<CreateSessionConfig>) => void
   createSession: (config?: CreateSessionConfig) => void
+}
+
+export interface UseWebSocketOptions {
+  url?: string | null
+  bootstrapSessionId?: string | null
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -116,28 +130,37 @@ function buildWsUrl(): string {
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 /**
- * @param wsUrl  Optional WebSocket URL override. When provided, the hook
- *               connects to this URL instead of the default `buildWsUrl()`.
- *               Pass `null` to delay connection until a URL is available.
+ * @param options.url  Optional WebSocket URL override. When provided, the hook
+ *                     connects to this URL instead of the default `buildWsUrl()`.
+ *                     Pass `null` to delay connection until a URL is available.
+ * @param options.bootstrapSessionId  When provided, the hook joins this
+ *                                    pre-created session instead of creating one.
  */
-export function useWebSocket(wsUrl?: string | null): WebSocketState {
+export function useWebSocket(options?: UseWebSocketOptions | null): WebSocketState {
   const [connected, setConnected] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [isPaused, setIsPaused] = useState(true)
   const [lastState, setLastState] = useState<TickPayload | null>(null)
   const [lastEvents, setLastEvents] = useState<unknown[]>([])
   const [stateHistory, setStateHistory] = useState<TickPayload[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   const wsRef = useRef<WebSocket | null>(null)
   const retriesRef = useRef(0)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
   const sessionIdRef = useRef<string | null>(null)
+  const bootstrapSessionIdRef = useRef<string | null>(options?.bootstrapSessionId ?? null)
+  const lastErrorRef = useRef<string | null>(null)
 
-  // Keep ref in sync with state for use in send callbacks
+  // Keep refs in sync with state for use in callbacks
   useEffect(() => {
     sessionIdRef.current = sessionId
   }, [sessionId])
+
+  useEffect(() => {
+    bootstrapSessionIdRef.current = options?.bootstrapSessionId ?? null
+  }, [options?.bootstrapSessionId])
 
   const send = useCallback((msg: WsOutgoing) => {
     const ws = wsRef.current
@@ -171,7 +194,6 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
             const next = prev.length >= 500 ? prev.slice(1) : prev
             return [...next, msg.payload]
           })
-          // Keep isPaused in sync with the simulation's actual state
           const simStatus = msg.payload.sim_status as { paused?: boolean } | undefined
           if (simStatus && typeof simStatus.paused === "boolean") {
             setIsPaused(simStatus.paused)
@@ -183,13 +205,14 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
           setSessionId(msg.session_id)
           safeSetSession(msg.session_id)
           setIsPaused("paused" in msg.payload && Boolean(msg.payload.paused))
+          setError(null)
           break
 
         case "session_joined":
           setSessionId(msg.session_id)
           safeSetSession(msg.session_id)
           pendingJoinRef.current = false
-          // isPaused will be synced from the follow-up tick snapshot
+          setError(null)
           break
 
         case "mission_end":
@@ -205,9 +228,10 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
           setIsPaused(false)
           break
 
-        case "error":
-          // If a join_session failed (session gone), fall back to create
-          if (pendingJoinRef.current) {
+        case "error": {
+          lastErrorRef.current = msg.payload.message
+
+          if (pendingJoinRef.current && bootstrapSessionIdRef.current === null) {
             pendingJoinRef.current = false
             safeClearSession()
             const ws = wsRef.current
@@ -219,28 +243,34 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
                 }),
               )
             }
+            break
+          }
+
+          pendingJoinRef.current = false
+          if (bootstrapSessionIdRef.current !== null) {
+            const ws = wsRef.current
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.close()
+            }
           }
           break
+        }
 
         case "registered":
         case "crisis_injected":
         case "tick_delay_set":
-          // Acknowledged; no state change needed
           break
       }
     }
   })
 
-  // Resolve the effective URL: explicit parameter > env > inferred from location.
-  // `null` means "don't connect yet" (orchestrator hasn't provided a URL).
-  const effectiveUrl = wsUrl === null ? null : (wsUrl ?? buildWsUrl())
+  const explicitUrl = options?.url
+  const effectiveUrl = explicitUrl === null ? null : (explicitUrl ?? buildWsUrl())
 
-  // connect is recreated when effectiveUrl changes so we reconnect to new containers
   const connect = useCallback(() => {
     if (!mountedRef.current) return
     if (effectiveUrl === null) return
 
-    // Upgrade ws:// to wss:// when running on HTTPS to avoid mixed-content block
     let url = effectiveUrl
     if (window.location.protocol === "https:" && url.startsWith("ws://")) {
       url = "wss://" + url.slice(5)
@@ -250,19 +280,31 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
     try {
       ws = new WebSocket(url)
     } catch {
-      // DOMException: "The operation is insecure" on mixed content
       console.error("[WebSocket] Failed to connect — insecure context or invalid URL:", url)
+      setError("Failed to initialize the simulation connection.")
       return
     }
     wsRef.current = ws
 
     ws.onopen = () => {
       setConnected(true)
+      setError(null)
+      lastErrorRef.current = null
       retriesRef.current = 0
-      // Register as frontend
       ws.send(JSON.stringify({ type: "register", payload: { role: "frontend" } }))
 
-      // Try to rejoin an existing session (from ref, or sessionStorage on refresh)
+      const bootstrapSessionId = bootstrapSessionIdRef.current
+      if (bootstrapSessionId) {
+        pendingJoinRef.current = true
+        ws.send(
+          JSON.stringify({
+            type: "join_session",
+            payload: { session_id: bootstrapSessionId },
+          }),
+        )
+        return
+      }
+
       const existingId = sessionIdRef.current || safeGetSession()
       if (existingId) {
         pendingJoinRef.current = true
@@ -290,11 +332,12 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
 
       if (!mountedRef.current) return
 
-      // Exponential backoff reconnect
       if (retriesRef.current < MAX_RECONNECT_RETRIES) {
         const delay = BASE_RECONNECT_DELAY_MS * Math.pow(2, retriesRef.current)
         retriesRef.current += 1
         reconnectTimerRef.current = setTimeout(connect, delay)
+      } else {
+        setError(lastErrorRef.current ?? "Unable to connect to the simulation.")
       }
     }
 
@@ -303,7 +346,6 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
     }
   }, [effectiveUrl])
 
-  // Connect on mount (or when URL changes), clean up on unmount
   useEffect(() => {
     mountedRef.current = true
     connect()
@@ -321,8 +363,6 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
       }
     }
   }, [connect])
-
-  // ── Control methods ──────────────────────────────────────────────────────
 
   const injectCrisis = useCallback(
     (scenario: string, params?: Record<string, unknown>) => {
@@ -366,7 +406,6 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
       setLastState(null)
       setStateHistory([])
       setIsPaused(true)
-      // Clear stored session — reset creates a new one
       safeClearSession()
       send({
         type: "reset_session",
@@ -398,6 +437,7 @@ export function useWebSocket(wsUrl?: string | null): WebSocketState {
     lastState,
     lastEvents,
     stateHistory,
+    error,
     injectCrisis,
     setTickDelay,
     pause,

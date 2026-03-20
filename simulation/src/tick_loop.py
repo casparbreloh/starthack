@@ -113,7 +113,7 @@ async def run_session_loop(session: Session) -> None:
                     }
                 )
 
-                # Invoke mission-end callback (used by Fargate mode for
+                # Invoke mission-end callback (used by bootstrap mode for
                 # results upload and process shutdown)
                 if session.on_mission_end is not None:
                     try:

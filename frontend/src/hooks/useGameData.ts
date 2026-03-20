@@ -102,10 +102,17 @@ export function GameDataProvider({ children }: { children: ReactNode }) {
   const useOrchestrator = isOrchestratorMode()
   const gameSession = useGameSession()
 
-  // In orchestrator mode: pass the ws_url from the orchestrator (null until ready).
-  // In local mode: pass undefined so useWebSocket falls back to buildWsUrl().
-  const wsUrlParam = useOrchestrator ? gameSession.wsUrl : undefined
-  const ws = useWebSocket(wsUrlParam)
+  // In orchestrator mode: pass the ws_url once ready and always join the
+  // bootstrap session created by the container. In local mode, let the hook
+  // infer the URL and create sessions on demand.
+  const ws = useWebSocket(
+    useOrchestrator
+      ? {
+          url: gameSession.wsUrl,
+          bootstrapSessionId: gameSession.sessionId,
+        }
+      : undefined,
+  )
 
   const orch = useOrchestrator ? gameSession : null
   const state = useMemo(() => adaptSnapshot(ws, orch), [ws, orch])

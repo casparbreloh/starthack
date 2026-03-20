@@ -65,6 +65,22 @@ class _CreateSessionPayload(BaseModel):
     autonomous_events_enabled: bool = True
 
 
+async def _send_ws_error(
+    ws: WebSocket,
+    message: str,
+    *,
+    code: str | None = None,
+    extra: dict[str, Any] | None = None,
+) -> None:
+    """Send a structured error payload to the client."""
+    payload: dict[str, Any] = {"message": message}
+    if code is not None:
+        payload["code"] = code
+    if extra:
+        payload.update(extra)
+    await ws.send_json({"type": "error", "payload": payload})
+
+
 @router.websocket("/ws")
 @router.websocket("/ws/{run_id}")
 async def websocket_endpoint(ws: WebSocket, run_id: str | None = None) -> None:
@@ -100,16 +116,35 @@ async def websocket_endpoint(ws: WebSocket, run_id: str | None = None) -> None:
 
             try:
                 if msg_type == "create_session":
-                    new_session_id = await _handle_create_session(ws, role, payload)
+                    bootstrap_exists = bool(run_id and session_manager.exists(run_id))
+                    if bootstrap_exists:
+                        await _send_ws_error(
+                            ws,
+                            "Bootstrap session already exists for this run. Join it instead.",
+                            code="bootstrap_session_only",
+                            extra={"session_id": run_id},
+                        )
+                        continue
+
+                    new_session_id = await _handle_create_session(
+                        ws,
+                        role,
+                        payload,
+                        session_id_override=run_id,
+                    )
                     if new_session_id is not None:
                         session_id = new_session_id
 
                 elif msg_type == "join_session":
-                    session_id = await _handle_join_session(ws, role, payload)
+                    session_id = await _handle_join_session(ws, role, payload, run_id)
 
                 elif msg_type == "reset_session":
                     new_session_id = await _handle_reset_session(
-                        ws, role, msg_session_id, payload
+                        ws,
+                        role,
+                        msg_session_id,
+                        payload,
+                        run_id,
                     )
                     if new_session_id is not None:
                         session_id = new_session_id
@@ -169,7 +204,11 @@ async def websocket_endpoint(ws: WebSocket, run_id: str | None = None) -> None:
 
 
 async def _handle_create_session(
-    ws: WebSocket, role: str | None, payload: dict[str, Any]
+    ws: WebSocket,
+    role: str | None,
+    payload: dict[str, Any],
+    *,
+    session_id_override: str | None = None,
 ) -> str | None:
     """Create a session, register the WS, start the tick loop, return session_id."""
     normalized_payload = dict(payload)
@@ -198,7 +237,15 @@ async def _handle_create_session(
         starting_reserves=req.starting_reserves,
         autonomous_events_enabled=req.autonomous_events_enabled,
     )
-    session = session_manager.create(config)
+    try:
+        session = session_manager.create(config, session_id=session_id_override)
+    except Exception as exc:
+        await _send_ws_error(
+            ws,
+            str(exc),
+            code="session_create_failed",
+        )
+        return None
     session.engine.autonomous_events_enabled = config.autonomous_events_enabled
     session.connections.register(ws, role or "frontend")
 
@@ -245,10 +292,13 @@ async def _handle_create_session(
 
 
 async def _handle_join_session(
-    ws: WebSocket, role: str | None, payload: dict[str, Any]
+    ws: WebSocket,
+    role: str | None,
+    payload: dict[str, Any],
+    run_id: str | None = None,
 ) -> str:
     """Re-register a WebSocket with an existing session (e.g. after reconnect)."""
-    target_id = payload.get("session_id", "")
+    target_id = str(payload.get("session_id") or run_id or "")
     session = session_manager.try_get(target_id)
     if session is None:
         logger.info("join_session: session %s not found (stale?)", target_id)
@@ -286,6 +336,7 @@ async def _handle_reset_session(
     role: str | None,
     old_session_id: str | None,
     payload: dict[str, Any],
+    run_id: str | None = None,
 ) -> str | None:
     """Destroy the current session and create a fresh one (paused by default)."""
     if old_session_id:
@@ -294,7 +345,12 @@ async def _handle_reset_session(
         except Exception:
             pass  # session may already be gone
 
-    return await _handle_create_session(ws, role, payload)
+    return await _handle_create_session(
+        ws,
+        role,
+        payload,
+        session_id_override=run_id,
+    )
 
 
 async def _handle_agent_actions(
