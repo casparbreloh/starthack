@@ -57,18 +57,22 @@ def _parse_body(event: dict) -> dict:
     return json.loads(raw)
 
 
-def _resolve_public_ip(eni_id: str) -> str | None:
-    """Resolve a public IPv4 address from an ENI ID via EC2 API."""
+def _resolve_ips(eni_id: str) -> tuple[str | None, str | None]:
+    """Resolve private and public IPv4 addresses from an ENI ID via EC2 API.
+
+    Returns (private_ip, public_ip).  Private IP is used for ALB target
+    registration (in-VPC routing), public IP for direct WS fallback URLs.
+    """
     try:
         resp = ec2.describe_network_interfaces(NetworkInterfaceIds=[eni_id])
         for ni in resp.get("NetworkInterfaces", []):
-            assoc = ni.get("Association", {})
-            public_ip = assoc.get("PublicIp")
-            if public_ip:
-                return public_ip
+            private_ip = ni.get("PrivateIpAddress")
+            public_ip = ni.get("Association", {}).get("PublicIp")
+            if private_ip:
+                return private_ip, public_ip
     except Exception:
-        logger.warning("Failed to resolve public IP for ENI %s", eni_id, exc_info=True)
-    return None
+        logger.warning("Failed to resolve IPs for ENI %s", eni_id, exc_info=True)
+    return None, None
 
 
 # ---------------------------------------------------------------------------
@@ -76,10 +80,11 @@ def _resolve_public_ip(eni_id: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def _ensure_alb_routing(run_id: str, public_ip: str) -> None:
+def _ensure_alb_routing(run_id: str, private_ip: str) -> None:
     """Create ALB target group and listener rule for a simulation task.
 
     Idempotent — if the target group already exists, skip.
+    Uses the task's private IP for in-VPC ALB routing.
     """
     if not ALB_LISTENER_ARN:
         return
@@ -115,10 +120,10 @@ def _ensure_alb_routing(run_id: str, public_ip: str) -> None:
     )
     tg_arn = tg_resp["TargetGroups"][0]["TargetGroupArn"]
 
-    # Register the Fargate task's public IP
+    # Register the Fargate task's private IP (in-VPC routing via ALB)
     elbv2.register_targets(
         TargetGroupArn=tg_arn,
-        Targets=[{"Id": public_ip, "Port": 8080, "AvailabilityZone": "all"}],
+        Targets=[{"Id": private_ip, "Port": 8080}],
     )
 
     # Find next available priority
@@ -148,7 +153,7 @@ def _ensure_alb_routing(run_id: str, public_ip: str) -> None:
     logger.info(
         "ALB routing created for run %s → %s (priority %d)",
         run_id,
-        public_ip,
+        private_ip,
         priority,
     )
 
@@ -303,25 +308,28 @@ def _extract_task_info(task: dict) -> dict:
     started_by = task.get("startedBy", "")
     started_at = task.get("startedAt")
 
-    # Extract ENI ID from task attachments, then resolve public IP via EC2
+    # Extract ENI ID from task attachments, then resolve IPs via EC2.
+    # Private IP is used for ALB target registration (in-VPC routing).
+    # Public IP is kept for direct WS fallback and API response.
+    private_ip = None
     public_ip = None
     for attachment in task.get("attachments", []):
         if attachment.get("type") != "ElasticNetworkInterface":
             continue
         for detail in attachment.get("details", []):
             if detail.get("name") == "networkInterfaceId":
-                public_ip = _resolve_public_ip(detail["value"])
+                private_ip, public_ip = _resolve_ips(detail["value"])
                 break
-        if public_ip:
+        if private_ip:
             break
 
     # Set up ALB routing when the task's IP is first resolved.
     # Only advertise ws_url after routing is confirmed — otherwise the
     # frontend connects before the ALB listener rule exists and gets 404.
     alb_ready = False
-    if public_ip and started_by and ALB_LISTENER_ARN:
+    if private_ip and started_by and ALB_LISTENER_ARN:
         try:
-            _ensure_alb_routing(started_by, public_ip)
+            _ensure_alb_routing(started_by, private_ip)
             alb_ready = True
         except Exception:
             logger.warning(
