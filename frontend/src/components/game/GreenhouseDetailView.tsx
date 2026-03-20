@@ -101,7 +101,7 @@ export function GreenhouseDetailView({
             {zoneCrops[2] && <CropBed crop={zoneCrops[2]} index={2} />}
           </div>
           {zoneCrops[3] && (
-            <div className={zoneCrops[1] || zoneCrops[2] ? "-mt-40" : ""}>
+            <div className={zoneCrops[1] || zoneCrops[2] ? "-mt-36" : ""}>
               <CropBed crop={zoneCrops[3]} index={3} />
             </div>
           )}

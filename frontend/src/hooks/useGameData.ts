@@ -13,10 +13,11 @@ import {
   adaptCrises,
   adaptScore,
   adaptEvents,
+  adaptAgentDecision,
 } from "@/lib/api"
 import type * as T from "@/types/game"
 
-import { useWebSocket, type WebSocketState } from "./useWebSocket"
+import { useWebSocket, type WebSocketState, type TickPayload } from "./useWebSocket"
 
 // ── Adapted game state ──────────────────────────────────────────────────────
 
@@ -34,6 +35,8 @@ interface GameState {
   crises: T.ActiveCrisis[] | undefined
   score: T.ScoreCurrent | undefined
   events: T.EventLogEntry[] | undefined
+  agentDecision: T.AgentDecision | undefined
+  stateHistory: TickPayload[]
   ws: WebSocketState
 }
 
@@ -64,6 +67,8 @@ function adaptSnapshot(ws: WebSocketState): GameState {
       crises: undefined,
       score: undefined,
       events: undefined,
+      agentDecision: undefined,
+      stateHistory: ws.stateHistory,
       ws,
     }
   }
@@ -82,6 +87,8 @@ function adaptSnapshot(ws: WebSocketState): GameState {
     crises: adaptCrises(s.active_crises),
     score: adaptScore(s.score_current),
     events: ws.lastEvents ? adaptEvents(ws.lastEvents) : undefined,
+    agentDecision: adaptAgentDecision(s.last_agent_decision),
+    stateHistory: ws.stateHistory,
     ws,
   }
 }
@@ -108,4 +115,6 @@ export const useCrewHealth = () => ({ data: useGame().crewHealth })
 export const useActiveCrises = () => ({ data: useGame().crises })
 export const useScore = () => ({ data: useGame().score })
 export const useEventLog = () => ({ data: useGame().events })
+export const useAgentDecision = () => ({ data: useGame().agentDecision })
+export const useStateHistory = () => useGame().stateHistory
 export const useWebSocketControls = () => useGame().ws

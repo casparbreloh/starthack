@@ -265,6 +265,16 @@ relying on the event log for historical records.
 - allocate_energy() and log_decision() automatically record preventive
   actions. Do NOT call a separate preventive scoring function.
 - Preventive scoring is AUTOMATIC — no explicit call needed.
+
+## Decision Summary (Required)
+
+After completing your reasoning, you MUST end your response with exactly
+this line (no markdown, no extra punctuation around it):
+
+DECISION_SUMMARY: <one concise sentence in English describing your key action and the main reason>
+
+Example:
+DECISION_SUMMARY: Planted potatoes in Zone B to replenish food supply after harvest and adjusted irrigation to conserve water reserves.
 """
 
 

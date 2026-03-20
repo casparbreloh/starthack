@@ -333,3 +333,23 @@ export function adaptEvents(r: unknown): T.EventLogEntry[] {
     message: e.message,
   }))
 }
+
+export function adaptAgentDecision(r: unknown): T.AgentDecision | undefined {
+  if (!r) return undefined
+  const d = r as {
+    sol: number
+    risk_assessment: string
+    reasoning: string
+    summary: string
+    actions_count: number
+    actions_summary: string[]
+  }
+  return {
+    sol: d.sol,
+    risk_assessment: d.risk_assessment ?? "nominal",
+    reasoning: d.reasoning ?? "",
+    summary: d.summary ?? "",
+    actions_count: d.actions_count ?? 0,
+    actions_summary: d.actions_summary ?? [],
+  }
+}

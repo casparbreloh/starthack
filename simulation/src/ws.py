@@ -302,6 +302,8 @@ async def _handle_agent_actions(
             sol=session.engine.current_sol,
             decisions=session.pending_actions,
             risk_assessment=log_decision.get("risk_assessment", "nominal"),
+            reasoning=log_decision.get("reasoning", ""),
+            summary=log_decision.get("summary", ""),
         )
         session.engine.log_agent_decision(decision)
 

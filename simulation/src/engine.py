@@ -46,6 +46,8 @@ class AgentDecision:
     decisions: list[dict[str, Any]]
     weather_forecast_used: dict[str, Any] | None = None
     risk_assessment: str = "nominal"
+    reasoning: str = ""
+    summary: str = ""
 
 
 class SimulationEngine:
